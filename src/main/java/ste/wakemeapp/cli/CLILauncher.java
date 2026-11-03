@@ -25,13 +25,9 @@ public class CLILauncher extends Application {
         // Hide the primary stage
         primaryStage.hide();
 
-        // Parse command line arguments - strip surrounding quotes (javafx-maven-plugin preserves them)
         List<String> rawArgs = getParameters().getRaw();
         System.out.println("Raw args: " + rawArgs);
-        String[] args = rawArgs.stream()
-            .map(a -> a.length() >= 2 && a.startsWith("\"") && a.endsWith("\"")
-                ? a.substring(1, a.length() - 1) : a)
-            .toArray(String[]::new);
+        String[] args = normalizeArgs(rawArgs);
         System.out.println("Processed args: " + java.util.Arrays.toString(args));
         int exitCode = commandLine.execute(args);
 
@@ -51,6 +47,20 @@ public class CLILauncher extends Application {
             Platform.exit();
             System.exit(1);
         }
+    }
+
+    /**
+     * Removes the quotes javafx-maven-plugin leaves in the arguments: it splits
+     * {@code -Djavafx.args='--title="My Meeting"'} into the single token
+     * {@code --title="My Meeting"}, quotes included, which picocli would take literally.
+     * Handles {@code --opt="value"} and a whole argument wrapped in quotes.
+     */
+    static String[] normalizeArgs(List<String> rawArgs) {
+        return rawArgs.stream()
+            .map(a -> a.replaceFirst("^(-{1,2}[\\w-]+)=\"(.*)\"$", "$1=$2"))
+            .map(a -> a.length() >= 2 && a.startsWith("\"") && a.endsWith("\"")
+                ? a.substring(1, a.length() - 1) : a)
+            .toArray(String[]::new);
     }
 
     private MeetingNotification buildNotification() {

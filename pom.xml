@@ -18,6 +18,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>23</javafx.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
+        <!-- Default for javafx:run; override with -Djavafx.mainClass=ste.wakemeapp.cli.CLILauncher -->
+        <javafx.mainClass>ste.wakemeapp.WakeMeApp</javafx.mainClass>
     </properties>
 
     <dependencies>
@@ -132,14 +134,6 @@
                     </options>
                     <commandlineArgs>${javafx.args}</commandlineArgs>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>default-cli</id>
-                        <configuration>
-                            <mainClass>ste.wakemeapp.WakeMeApp</mainClass>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>
