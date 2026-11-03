@@ -66,18 +66,48 @@ class OverlayWindowTest {
         then(controller.getTitleLabel()).isNotNull();
         then(controller.getTimeLabel()).isNotNull();
         then(controller.getJoinButton()).isNotNull();
+        then(controller.getSnoozeButton()).isNotNull();
         then(controller.getDismissButton()).isNotNull();
 
         then(controller.getTitleLabel().getText()).isEqualTo("Team Standup");
     }
 
     @Test
-    void should_display_meeting_start_time() {
+    void should_display_placeholder_when_end_time_is_missing() {
         java.time.LocalDateTime start = java.time.LocalDateTime.of(2026, 11, 3, 19, 30);
 
         overlay.setNotification(new MeetingNotification("Team Standup", start, "https://example.com/join"));
+        OverlayController controller = overlay.getController();
 
-        then(overlay.getController().getTimeLabel().getText()).isEqualTo("19:30");
+        then(controller.getTimeLabel().getText()).isEqualTo("19:30 – --:--");
+        then(controller.getDurationLabel().isVisible()).isFalse();
+    }
+
+    @Test
+    void should_display_time_range_and_duration_when_end_time_is_known() {
+        java.time.LocalDateTime start = java.time.LocalDateTime.of(2026, 11, 3, 19, 30);
+
+        overlay.setNotification(new MeetingNotification(
+            "Team Standup", start, "https://example.com/join", null, null, start.plusMinutes(90)
+        ));
+        OverlayController controller = overlay.getController();
+
+        then(controller.getTimeLabel().getText()).isEqualTo("19:30 – 21:00");
+        then(controller.getDurationLabel().getText()).isEqualTo("1 h 30 min");
+    }
+
+    @Test
+    void should_notify_listener_and_close_when_snoozed(FxRobot robot) {
+        java.util.concurrent.atomic.AtomicBoolean snoozed = new java.util.concurrent.atomic.AtomicBoolean();
+        overlay.setOnSnooze(() -> snoozed.set(true));
+        robot.interact(() -> overlay.show());
+        Stage stage = overlay.getStage();
+
+        robot.interact(() -> overlay.getController().getSnoozeButton().fire());
+        robot.sleep(500);
+
+        then(snoozed.get()).isTrue();
+        then(stage.isShowing()).isFalse();
     }
 
     @Test

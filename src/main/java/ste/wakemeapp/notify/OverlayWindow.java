@@ -5,12 +5,14 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 public final class OverlayWindow {
 
@@ -22,6 +24,7 @@ public final class OverlayWindow {
     private javafx.animation.Timeline countdownTimeline;
     private java.time.Duration autoClose = java.time.Duration.ofSeconds(90);
     private java.time.Instant startedAt;
+    private Runnable onSnooze;
 
     public OverlayWindow() {
         this.stage = createStage();
@@ -40,6 +43,7 @@ public final class OverlayWindow {
 
     private OverlayController loadFXML() {
         try {
+            loadFonts();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/ste/wakemeapp/notify/overlay.fxml"));
             Parent root = loader.load();
             OverlayController controller = loader.getController();
@@ -132,6 +136,45 @@ public final class OverlayWindow {
         controller.updateTimers(remaining, autoClose);
         if (remaining.isZero() || remaining.isNegative()) {
             hide();
+        }
+    }
+
+    /**
+     * Registers a listener called when the user snoozes the notification.
+     * Scheduling the re-notification is up to the listener.
+     */
+    public void setOnSnooze(Runnable onSnooze) {
+        this.onSnooze = onSnooze;
+    }
+
+    /** Closes the overlay on behalf of the user and tells the snooze listener, if any. */
+    public void snooze() {
+        if (onSnooze != null) {
+            onSnooze.run();
+        }
+        hide();
+    }
+
+    private static final String FONT_DIR = "/ste/wakemeapp/notify/fonts/";
+    private static final String[] FONT_FILES = {
+        "Inter-Regular.ttf", "Inter-Bold.ttf", "BricolageGrotesque-Bold.ttf"
+    };
+    private static boolean fontsLoaded;
+
+    /** Registers the bundled (SIL OFL) fonts once; the CSS falls back to system fonts if this fails. */
+    private static synchronized void loadFonts() {
+        if (fontsLoaded) {
+            return;
+        }
+        fontsLoaded = true;
+        for (String file : FONT_FILES) {
+            try (InputStream in = OverlayWindow.class.getResourceAsStream(FONT_DIR + file)) {
+                if (in != null) {
+                    Font.loadFont(in, 12);
+                }
+            } catch (IOException e) {
+                // keep going: the CSS font-family list has system fallbacks
+            }
         }
     }
 

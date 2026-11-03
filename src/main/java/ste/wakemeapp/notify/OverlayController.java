@@ -22,6 +22,9 @@ public class OverlayController implements Initializable {
 
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
 
+    /** Shown in place of the end time when the calendar did not provide one. */
+    static final String END_TIME_PLACEHOLDER = "--:--";
+
     @FXML
     private StackPane root;
 
@@ -41,6 +44,9 @@ public class OverlayController implements Initializable {
     private Label timeLabel;
 
     @FXML
+    private Label durationLabel;
+
+    @FXML
     private HBox organizerBox;
 
     @FXML
@@ -48,6 +54,9 @@ public class OverlayController implements Initializable {
 
     @FXML
     private Button joinButton;
+
+    @FXML
+    private Button snoozeButton;
 
     @FXML
     private Button dismissButton;
@@ -80,7 +89,17 @@ public class OverlayController implements Initializable {
 
     public void setNotification(MeetingNotification notification) {
         titleLabel.setText(notification.title());
-        timeLabel.setText(HOUR_MINUTE.format(notification.startTime()));
+        java.time.LocalDateTime end = notification.endTime();
+        timeLabel.setText(
+            HOUR_MINUTE.format(notification.startTime()) + " – "
+            + (end != null ? HOUR_MINUTE.format(end) : END_TIME_PLACEHOLDER)
+        );
+        String duration = end != null
+            ? formatDuration(java.time.Duration.between(notification.startTime(), end))
+            : "";
+        durationLabel.setText(duration);
+        durationLabel.setVisible(!duration.isEmpty());
+        durationLabel.setManaged(!duration.isEmpty());
 
         boolean hasOrganizer = notification.organizer() != null && !notification.organizer().isBlank();
         organizerLabel.setText(hasOrganizer ? notification.organizer() : "");
@@ -103,6 +122,19 @@ public class OverlayController implements Initializable {
         clockLabel.setText(HOUR_MINUTE.format(LocalTime.now()));
     }
 
+    private static String formatDuration(java.time.Duration duration) {
+        long minutes = duration.toMinutes();
+        if (minutes <= 0) {
+            return "";
+        }
+        long hours = minutes / 60;
+        long rest = minutes % 60;
+        if (hours == 0) {
+            return rest + " min";
+        }
+        return rest == 0 ? hours + " h" : hours + " h " + rest + " min";
+    }
+
     @FXML
     private void handleBackgroundClick() {
         if (overlayWindow != null) {
@@ -115,6 +147,13 @@ public class OverlayController implements Initializable {
         if (overlayWindow != null) {
             // TODO: Open join URL
             overlayWindow.hide();
+        }
+    }
+
+    @FXML
+    private void handleSnooze() {
+        if (overlayWindow != null) {
+            overlayWindow.snooze();
         }
     }
 
@@ -151,6 +190,14 @@ public class OverlayController implements Initializable {
 
     public Button getJoinButton() {
         return joinButton;
+    }
+
+    public Label getDurationLabel() {
+        return durationLabel;
+    }
+
+    public Button getSnoozeButton() {
+        return snoozeButton;
     }
 
     public Button getDismissButton() {

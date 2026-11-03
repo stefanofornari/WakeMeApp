@@ -12,6 +12,8 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 60, 0, 0, 30);
     /* Default text colour for every label in the card */
     -fx-text-background-color: #F4F6FB;
+    /* Fonts bundled in /fonts and registered by OverlayWindow; system fonts as fallback */
+    -fx-font-family: 'Inter', 'Segoe UI', 'System';
 }
 
 /* Status pill */
@@ -35,12 +37,17 @@
 .overlay-title {
     -fx-font-family: 'Bricolage Grotesque', 'Inter', 'System';
     -fx-font-size: 44px;
-    -fx-font-weight: 800;
+    -fx-font-weight: bold;
 }
 
 .overlay-time {
     -fx-font-size: 22px;
     -fx-font-weight: bold;
+}
+
+.overlay-duration {
+    -fx-font-size: 15px;
+    -fx-text-fill: #A3ACC2;
 }
 
 .overlay-organizer {
@@ -115,7 +122,7 @@
     -fx-font-weight: bold;
     -fx-min-height: 60;
     -fx-pref-height: 60;
-    -fx-padding: 0 28 0 28;
+    -fx-padding: 0 22 0 22;
     -fx-cursor: hand;
 }
 

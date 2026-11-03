@@ -20,7 +20,7 @@
 
     <!-- Content card - centered in StackPane, sized to content -->
     <VBox fx:id="contentCard" styleClass="overlay-content-card"
-          spacing="28" prefWidth="560" maxWidth="560" maxHeight="-Infinity"
+          spacing="28" prefWidth="600" maxWidth="600" maxHeight="-Infinity"
           StackPane.alignment="CENTER">
         <padding>
             <Insets top="36" right="36" bottom="36" left="36"/>
@@ -43,7 +43,8 @@
                     <StackPane styleClass="overlay-icon-box">
                         <SVGPath styleClass="overlay-icon" content="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18 M12 7v5l3 2" />
                     </StackPane>
-                    <Label fx:id="timeLabel" text="00:00" styleClass="overlay-time" />
+                    <Label fx:id="timeLabel" text="00:00 – --:--" styleClass="overlay-time" />
+                    <Label fx:id="durationLabel" styleClass="overlay-duration" />
                 </HBox>
                 <HBox fx:id="organizerBox" alignment="CENTER_LEFT" spacing="12">
                     <StackPane styleClass="overlay-icon-box">
@@ -62,6 +63,7 @@
                     <SVGPath styleClass="overlay-join-icon" content="M3 6h13v12H3z M16 10.5l5-3v9l-5-3" />
                 </graphic>
             </Button>
+            <Button fx:id="snoozeButton" text="Snooze" styleClass="overlay-button-secondary" onAction="#handleSnooze" />
             <Button fx:id="dismissButton" text="Dismiss" styleClass="overlay-button-secondary" onAction="#handleDismiss" />
         </HBox>
 
