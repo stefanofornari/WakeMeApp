@@ -37,6 +37,13 @@ public class CLILauncher extends Application {
             return;
         }
 
+        // --help / --version: picocli has already printed the text and no meeting was parsed
+        if (commandLine.isUsageHelpRequested() || commandLine.isVersionHelpRequested()) {
+            Platform.exit();
+            System.exit(0);
+            return;
+        }
+
         parsedCommand = commandLine.getCommand();
 
         try {

@@ -1,16 +1,12 @@
 package ste.wakemeapp;
 
 import javafx.application.Application;
-import ste.wakemeapp.cli.OverlayLauncher;
+import ste.wakemeapp.cli.CLILauncher;
 
 public class WakeMeApp {
 
+    /** Entry point of the jar: options are parsed by {@link CLILauncher} (see {@code --help}). */
     public static void main(String[] args) {
-        if (args.length == 0 || java.util.Arrays.stream(args).allMatch(String::isBlank)) {
-            System.err.println("Error: No arguments provided.");
-            System.err.println("Usage: WakeMeApp <meeting-title> <minutes-from-now> [join-url]");
-            System.exit(1);
-        }
-        Application.launch(OverlayLauncher.class, args);
+        Application.launch(CLILauncher.class, args);
     }
 }

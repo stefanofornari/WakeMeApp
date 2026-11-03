@@ -36,6 +36,21 @@ class CLILauncherTest {
     }
 
     @Test
+    void should_print_all_options_and_succeed_when_help_is_requested_without_other_options() {
+        java.io.StringWriter out = new java.io.StringWriter();
+        picocli.CommandLine commandLine = new picocli.CommandLine(new NotificationCommand());
+        commandLine.setOut(new java.io.PrintWriter(out));
+
+        int exitCode = commandLine.execute("--help");
+
+        then(exitCode).isZero();
+        then(commandLine.isUsageHelpRequested()).isTrue();
+        then(out.toString()).contains(
+            "--title", "--start-date", "--end-date", "--organizer", "--url", "--description"
+        );
+    }
+
+    @Test
     void should_produce_arguments_the_notification_command_accepts() {
         String[] args = CLILauncher.normalizeArgs(List.of(
             "--title=\"Meeting Title\"", "--start-date=\"2026-11-04T12:00\"", "--url=\"https://teams.url\""
