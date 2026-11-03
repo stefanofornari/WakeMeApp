@@ -3,33 +3,76 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+<?import javafx.scene.shape.SVGPath?>
 
 <StackPane fx:id="root" xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ste.wakemeapp.notify.OverlayController">
     <!-- Semi-transparent background - fills entire screen -->
-    <StackPane fx:id="background" styleClass="overlay-background" 
-               prefWidth="1920" prefHeight="1080" 
+    <StackPane fx:id="background" styleClass="overlay-background"
+               prefWidth="1920" prefHeight="1080"
                onMouseClicked="#handleBackgroundClick" />
-    
+
     <!-- Content card - centered in StackPane, sized to content -->
-    <VBox fx:id="contentCard" styleClass="overlay-content-card" 
-          alignment="CENTER" spacing="20" maxWidth="600"
+    <VBox fx:id="contentCard" styleClass="overlay-content-card"
+          spacing="28" prefWidth="560" maxWidth="560" maxHeight="-Infinity"
           StackPane.alignment="CENTER">
         <padding>
-            <Insets top="40" right="40" bottom="40" left="40"/>
+            <Insets top="36" right="36" bottom="36" left="36"/>
         </padding>
-        
-        <Label fx:id="titleLabel" text="Meeting Title" styleClass="overlay-title" />
-        
-        <Label fx:id="countdownLabel" text="00:00" styleClass="overlay-countdown" />
-        
-        <HBox fx:id="buttonBox" alignment="CENTER" spacing="16">
-            <Button fx:id="joinButton" text="Join Meeting" styleClass="overlay-button-primary" onAction="#handleJoin" />
-            <Button fx:id="snoozeButton" text="Snooze" styleClass="overlay-button-secondary" onAction="#handleSnooze" />
-            <Button fx:id="dismissButton" text="Dismiss" styleClass="overlay-button-tertiary" onAction="#handleDismiss" />
+
+        <!-- Status pill -->
+        <HBox alignment="CENTER_LEFT">
+            <HBox styleClass="overlay-pill" alignment="CENTER_LEFT" spacing="10">
+                <Rectangle fx:id="statusDot" styleClass="overlay-dot" width="8" height="8" />
+                <Label text="Meeting starting soon" styleClass="overlay-pill-text" />
+            </HBox>
         </HBox>
+
+        <!-- Meeting data -->
+        <VBox spacing="22">
+            <Label fx:id="titleLabel" text="Meeting Title" styleClass="overlay-title" wrapText="true" />
+
+            <VBox spacing="12">
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <StackPane styleClass="overlay-icon-box">
+                        <SVGPath styleClass="overlay-icon" content="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18 M12 7v5l3 2" />
+                    </StackPane>
+                    <Label fx:id="timeLabel" text="00:00" styleClass="overlay-time" />
+                </HBox>
+                <HBox fx:id="organizerBox" alignment="CENTER_LEFT" spacing="12">
+                    <StackPane styleClass="overlay-icon-box">
+                        <SVGPath styleClass="overlay-icon" content="M12 12a4 4 0 1 0 0-8a4 4 0 1 0 0 8 M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+                    </StackPane>
+                    <Label fx:id="organizerLabel" styleClass="overlay-organizer" />
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- Actions -->
+        <HBox fx:id="buttonBox" alignment="CENTER" spacing="14">
+            <Button fx:id="joinButton" text="Join meeting" styleClass="overlay-button-primary"
+                    maxWidth="Infinity" HBox.hgrow="ALWAYS" onAction="#handleJoin">
+                <graphic>
+                    <SVGPath styleClass="overlay-join-icon" content="M3 6h13v12H3z M16 10.5l5-3v9l-5-3" />
+                </graphic>
+            </Button>
+            <Button fx:id="dismissButton" text="Dismiss" styleClass="overlay-button-secondary" onAction="#handleDismiss" />
+        </HBox>
+
+        <!-- Auto-close timer and current time -->
+        <VBox spacing="10">
+            <ProgressBar fx:id="autoCloseBar" styleClass="overlay-auto-close-bar" maxWidth="Infinity" progress="1.0" />
+            <HBox alignment="CENTER_LEFT">
+                <Label fx:id="autoCloseLabel" text="Closes automatically in 0:00" styleClass="overlay-footnote" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Label fx:id="clockLabel" text="00:00" styleClass="overlay-footnote" />
+            </HBox>
+        </VBox>
     </VBox>
 </StackPane>

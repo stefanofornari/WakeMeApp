@@ -64,12 +64,52 @@ class OverlayWindowTest {
         OverlayController controller = overlay.getController();
 
         then(controller.getTitleLabel()).isNotNull();
-        then(controller.getCountdownLabel()).isNotNull();
+        then(controller.getTimeLabel()).isNotNull();
         then(controller.getJoinButton()).isNotNull();
-        then(controller.getSnoozeButton()).isNotNull();
         then(controller.getDismissButton()).isNotNull();
-        
+
         then(controller.getTitleLabel().getText()).isEqualTo("Team Standup");
+    }
+
+    @Test
+    void should_display_meeting_start_time() {
+        java.time.LocalDateTime start = java.time.LocalDateTime.of(2026, 11, 3, 19, 30);
+
+        overlay.setNotification(new MeetingNotification("Team Standup", start, "https://example.com/join"));
+
+        then(overlay.getController().getTimeLabel().getText()).isEqualTo("19:30");
+    }
+
+    @Test
+    void should_show_auto_close_remaining_time_and_progress() {
+        OverlayController controller = overlay.getController();
+
+        controller.updateTimers(java.time.Duration.ofSeconds(90), java.time.Duration.ofSeconds(120));
+
+        then(controller.getAutoCloseLabel().getText()).isEqualTo("Closes automatically in 1:30");
+        then(controller.getAutoCloseBar().getProgress()).isEqualTo(0.75);
+        then(controller.getClockLabel().getText()).matches("\\d{2}:\\d{2}");
+    }
+
+    @Test
+    void should_close_automatically_after_the_auto_close_period(FxRobot robot) {
+        overlay.setAutoClose(java.time.Duration.ofSeconds(1));
+        robot.interact(() -> {
+            overlay.setNotification(new MeetingNotification(
+                "Team Standup",
+                java.time.LocalDateTime.now().plusMinutes(5),
+                "https://example.com/join"
+            ));
+            overlay.show();
+        });
+        Stage stage = overlay.getStage();
+
+        then(stage.isShowing()).isTrue();
+
+        // 1s auto-close + 200ms fade-out, with margin for the 1s tick granularity
+        robot.sleep(3000);
+
+        then(stage.isShowing()).isFalse();
     }
 
     @Test

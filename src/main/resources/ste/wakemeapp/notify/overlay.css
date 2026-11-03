@@ -1,65 +1,161 @@
-/* Overlay Window Styles */
+/* Overlay Window Styles - flat design, lime accent on dark card */
 
 .overlay-background {
-    -fx-background-color: rgba(0, 0, 0, 0.8);
+    -fx-background-color: rgba(6, 9, 18, 0.6);
     -fx-cursor: hand;
 }
 
 .overlay-content-card {
-    -fx-background-color: white;
-    -fx-background-radius: 12;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10);
-    -fx-max-height: -1; /* Use preferred height */
+    -fx-background-color: #0B0F1A;
+    -fx-border-color: #232C4A;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 60, 0, 0, 30);
+    /* Default text colour for every label in the card */
+    -fx-text-background-color: #F4F6FB;
 }
 
+/* Status pill */
+.overlay-pill {
+    -fx-background-color: #141A2B;
+    -fx-border-color: #232C4A;
+    -fx-border-width: 1;
+    -fx-padding: 8 16 8 14;
+}
+
+.overlay-pill-text {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.overlay-dot {
+    -fx-fill: #C6FF3D;
+}
+
+/* Meeting data */
 .overlay-title {
-    -fx-font-size: 28px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #1a1a2e;
+    -fx-font-family: 'Bricolage Grotesque', 'Inter', 'System';
+    -fx-font-size: 44px;
+    -fx-font-weight: 800;
 }
 
-.overlay-countdown {
-    -fx-font-size: 48px;
+.overlay-time {
+    -fx-font-size: 22px;
     -fx-font-weight: bold;
-    -fx-text-fill: #e94560;
-    -fx-font-family: 'Monospaced';
 }
 
-.overlay-button-primary {
+.overlay-organizer {
     -fx-font-size: 16px;
-    -fx-padding: 12 24;
-    -fx-background-color: #0f3460;
-    -fx-text-fill: white;
-    -fx-background-radius: 8;
+    -fx-text-fill: #D5DAE8;
+}
+
+.overlay-icon-box {
+    -fx-min-width: 20;
+    -fx-min-height: 20;
+    -fx-pref-width: 20;
+    -fx-pref-height: 20;
+    -fx-max-width: 20;
+    -fx-max-height: 20;
+}
+
+.overlay-icon {
+    -fx-fill: transparent;
+    -fx-stroke: #A3ACC2;
+    -fx-stroke-width: 1.8;
+    -fx-stroke-line-cap: square;
+    -fx-stroke-line-join: miter;
+    -fx-scale-x: 0.83;
+    -fx-scale-y: 0.83;
+}
+
+/* Buttons */
+.overlay-button-primary {
+    -fx-background-color: #C6FF3D;
+    -fx-background-radius: 0;
+    -fx-text-fill: #0B0F1A;
+    -fx-font-family: 'Bricolage Grotesque', 'Inter', 'System';
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-min-height: 60;
+    -fx-pref-height: 60;
+    -fx-graphic-text-gap: 12;
     -fx-cursor: hand;
 }
 
 .overlay-button-primary:hover {
-    -fx-background-color: #164a8a;
+    -fx-background-color: #D4FF6B;
+    -fx-translate-y: -2;
+}
+
+.overlay-button-primary:pressed {
+    -fx-translate-y: 0;
+}
+
+.overlay-button-primary:focused {
+    -fx-border-color: white;
+    -fx-border-width: 3;
+    -fx-border-insets: -4;
+}
+
+.overlay-join-icon {
+    -fx-fill: transparent;
+    -fx-stroke: #0B0F1A;
+    -fx-stroke-width: 2.2;
+    -fx-stroke-line-cap: square;
+    -fx-stroke-line-join: miter;
 }
 
 .overlay-button-secondary {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: #3A4360;
+    -fx-border-width: 2;
+    -fx-border-radius: 0;
+    -fx-text-fill: #F4F6FB;
     -fx-font-size: 16px;
-    -fx-padding: 12 24;
-    -fx-background-color: #16213e;
-    -fx-text-fill: white;
-    -fx-background-radius: 8;
+    -fx-font-weight: bold;
+    -fx-min-height: 60;
+    -fx-pref-height: 60;
+    -fx-padding: 0 28 0 28;
     -fx-cursor: hand;
 }
 
 .overlay-button-secondary:hover {
-    -fx-background-color: #1f3a5f;
+    -fx-background-color: #1A2138;
+    -fx-border-color: #56628A;
+    -fx-translate-y: -2;
 }
 
-.overlay-button-tertiary {
-    -fx-font-size: 16px;
-    -fx-padding: 12 24;
+.overlay-button-secondary:pressed {
+    -fx-translate-y: 0;
+}
+
+.overlay-button-secondary:focused {
+    -fx-border-color: white;
+}
+
+/* Auto-close timer */
+.overlay-footnote {
+    -fx-font-size: 13px;
+    -fx-text-fill: #A3ACC2;
+}
+
+.overlay-auto-close-bar {
+    -fx-pref-height: 4;
+    -fx-min-height: 4;
+    -fx-max-height: 4;
+    -fx-padding: 0;
     -fx-background-color: transparent;
-    -fx-text-fill: #666;
-    -fx-background-radius: 8;
-    -fx-cursor: hand;
 }
 
-.overlay-button-tertiary:hover {
-    -fx-background-color: rgba(0,0,0,0.05);
+.overlay-auto-close-bar > .track {
+    -fx-background-color: #1C2440;
+    -fx-background-radius: 0;
+    -fx-background-insets: 0;
+}
+
+.overlay-auto-close-bar > .bar {
+    -fx-background-color: #8A94B5;
+    -fx-background-radius: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 2;
 }

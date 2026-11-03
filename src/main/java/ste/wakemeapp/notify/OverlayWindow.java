@@ -1,7 +1,6 @@
 package ste.wakemeapp.notify;
 
 import javafx.animation.FadeTransition;
-import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -21,6 +20,8 @@ public final class OverlayWindow {
     private final OverlayController controller;
     private MeetingNotification notification;
     private javafx.animation.Timeline countdownTimeline;
+    private java.time.Duration autoClose = java.time.Duration.ofSeconds(90);
+    private java.time.Instant startedAt;
 
     public OverlayWindow() {
         this.stage = createStage();
@@ -100,6 +101,14 @@ public final class OverlayWindow {
         startCountdown();
     }
 
+    /**
+     * Sets how long the overlay stays up before closing by itself.
+     * Takes effect for the next {@link #setNotification(MeetingNotification)}.
+     */
+    public void setAutoClose(java.time.Duration autoClose) {
+        this.autoClose = autoClose;
+    }
+
     private void startCountdown() {
         if (notification == null) return;
 
@@ -107,17 +116,23 @@ public final class OverlayWindow {
             countdownTimeline.stop();
         }
 
+        startedAt = java.time.Instant.now();
+        tick();
+
         countdownTimeline = new javafx.animation.Timeline(
-            new javafx.animation.KeyFrame(Duration.seconds(1), e -> {
-                Platform.runLater(() -> {
-                    if (controller != null && notification != null) {
-                        controller.updateCountdown(notification.startTime());
-                    }
-                });
-            })
+            new javafx.animation.KeyFrame(Duration.seconds(1), e -> tick())
         );
         countdownTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
         countdownTimeline.play();
+    }
+
+    /** Based on the system clock rather than accumulated ticks, so it does not drift. */
+    private void tick() {
+        java.time.Duration remaining = autoClose.minus(java.time.Duration.between(startedAt, java.time.Instant.now()));
+        controller.updateTimers(remaining, autoClose);
+        if (remaining.isZero() || remaining.isNegative()) {
+            hide();
+        }
     }
 
     public void show() {
@@ -126,6 +141,9 @@ public final class OverlayWindow {
     }
 
     public void hide() {
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
         fadeOut.playFromStart();
     }
 
