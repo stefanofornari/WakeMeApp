@@ -1,0 +1,65 @@
+/* Overlay Window Styles */
+
+.overlay-background {
+    -fx-background-color: rgba(0, 0, 0, 0.8);
+    -fx-cursor: hand;
+}
+
+.overlay-content-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10);
+    -fx-max-height: -1; /* Use preferred height */
+}
+
+.overlay-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a1a2e;
+}
+
+.overlay-countdown {
+    -fx-font-size: 48px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e94560;
+    -fx-font-family: 'Monospaced';
+}
+
+.overlay-button-primary {
+    -fx-font-size: 16px;
+    -fx-padding: 12 24;
+    -fx-background-color: #0f3460;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.overlay-button-primary:hover {
+    -fx-background-color: #164a8a;
+}
+
+.overlay-button-secondary {
+    -fx-font-size: 16px;
+    -fx-padding: 12 24;
+    -fx-background-color: #16213e;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.overlay-button-secondary:hover {
+    -fx-background-color: #1f3a5f;
+}
+
+.overlay-button-tertiary {
+    -fx-font-size: 16px;
+    -fx-padding: 12 24;
+    -fx-background-color: transparent;
+    -fx-text-fill: #666;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.overlay-button-tertiary:hover {
+    -fx-background-color: rgba(0,0,0,0.05);
+}
