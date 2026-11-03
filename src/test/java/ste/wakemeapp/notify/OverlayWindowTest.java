@@ -1,5 +1,6 @@
 package ste.wakemeapp.notify;
 
+import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.animation.FadeTransition;
@@ -118,7 +119,18 @@ class OverlayWindowTest {
 
         then(controller.getAutoCloseLabel().getText()).isEqualTo("Closes automatically in 1:30");
         then(controller.getAutoCloseBar().getProgress()).isEqualTo(0.75);
-        then(controller.getClockLabel().getText()).matches("\\d{2}:\\d{2}");
+    }
+
+    @Test
+    void should_keep_the_clock_ticking(FxRobot robot) {
+        Label clock = overlay.getController().getClockLabel();
+
+        then(clock.getText()).matches("\\d{2}:\\d{2}:\\d{2}");
+
+        String before = clock.getText();
+        robot.sleep(2200);
+
+        then(clock.getText()).isNotEqualTo(before);
     }
 
     @Test

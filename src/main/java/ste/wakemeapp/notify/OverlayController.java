@@ -2,6 +2,8 @@ package ste.wakemeapp.notify;
 
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -21,6 +23,7 @@ import java.util.ResourceBundle;
 public class OverlayController implements Initializable {
 
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter HOUR_MINUTE_SECOND = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     /** Shown in place of the end time when the calendar did not provide one. */
     static final String END_TIME_PLACEHOLDER = "--:--";
@@ -71,16 +74,34 @@ public class OverlayController implements Initializable {
     private Label clockLabel;
 
     private OverlayWindow overlayWindow;
+    private FadeTransition pulse;
+    private Timeline clock;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Gentle pulse on the status dot to draw the eye without being loud
-        FadeTransition pulse = new FadeTransition(Duration.millis(900), statusDot);
+        pulse = new FadeTransition(Duration.millis(900), statusDot);
         pulse.setFromValue(1.0);
         pulse.setToValue(0.3);
         pulse.setAutoReverse(true);
         pulse.setCycleCount(Animation.INDEFINITE);
         pulse.play();
+
+        // The clock runs on its own timer so it keeps ticking whatever the auto-close timer does
+        refreshClock();
+        clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> refreshClock()));
+        clock.setCycleCount(Animation.INDEFINITE);
+        clock.play();
+    }
+
+    private void refreshClock() {
+        clockLabel.setText(HOUR_MINUTE_SECOND.format(LocalTime.now()));
+    }
+
+    /** Stops the endless animations; called once the overlay is gone so nothing keeps running. */
+    void stopAnimations() {
+        pulse.stop();
+        clock.stop();
     }
 
     public void setOverlayWindow(OverlayWindow overlayWindow) {
@@ -108,7 +129,7 @@ public class OverlayController implements Initializable {
     }
 
     /**
-     * Refreshes the auto-close countdown and the current time.
+     * Refreshes the auto-close countdown.
      *
      * @param remaining time left before the overlay closes by itself
      * @param total     the full auto-close period, used to size the progress bar
@@ -119,7 +140,6 @@ public class OverlayController implements Initializable {
         autoCloseBar.setProgress(
             total.isZero() ? 0.0 : Math.max(0.0, Math.min(1.0, (double) remaining.toMillis() / total.toMillis()))
         );
-        clockLabel.setText(HOUR_MINUTE.format(LocalTime.now()));
     }
 
     private static String formatDuration(java.time.Duration duration) {

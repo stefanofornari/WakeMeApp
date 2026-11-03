@@ -95,7 +95,10 @@ public final class OverlayWindow {
         FadeTransition ft = new FadeTransition(Duration.millis(200), stage.getScene().getRoot());
         ft.setFromValue(1.0);
         ft.setToValue(0.0);
-        ft.setOnFinished(e -> stage.hide());
+        ft.setOnFinished(e -> {
+            controller.stopAnimations();
+            stage.hide();
+        });
         return ft;
     }
 
