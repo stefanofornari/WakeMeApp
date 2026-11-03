@@ -1,0 +1,93 @@
+package ste.wakemeapp.cli;
+
+import picocli.CommandLine;
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.BDDAssertions.then;
+
+class NotificationCommandTest {
+
+    private final CommandLine commandLine = new CommandLine(new NotificationCommand());
+
+    @Test
+    void should_parse_required_args() {
+        String[] args = {"--title", "Team Standup", "--start-date", "2026-11-03T10:00:00"};
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isEqualTo(0);
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getTitle()).isEqualTo("Team Standup");
+        then(cmd.getStartDate()).isEqualTo(java.time.LocalDateTime.parse("2026-11-03T10:00:00"));
+    }
+
+    @Test
+    void should_parse_all_optional_args() {
+        String[] args = {
+            "--title", "Team Standup",
+            "--start-date", "2026-11-03T10:00:00",
+            "--end-date", "2026-11-03T11:00:00",
+            "--organizer", "John Doe",
+            "--url", "https://teams.microsoft.com/l/meetup-join/...",
+            "--description", "Weekly team sync"
+        };
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isEqualTo(0);
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getTitle()).isEqualTo("Team Standup");
+        then(cmd.getStartDate()).isEqualTo(java.time.LocalDateTime.parse("2026-11-03T10:00:00"));
+        then(cmd.getEndDate()).isEqualTo(java.time.LocalDateTime.parse("2026-11-03T11:00:00"));
+        then(cmd.getOrganizer()).isEqualTo("John Doe");
+        then(cmd.getUrl()).isEqualTo("https://teams.microsoft.com/l/meetup-join/...");
+        then(cmd.getDescription()).isEqualTo("Weekly team sync");
+    }
+
+    @Test
+    void should_fail_on_missing_title() {
+        String[] args = {"--start-date", "2026-11-03T10:00:00"};
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isNotEqualTo(0);
+    }
+
+    @Test
+    void should_fail_on_missing_start_date() {
+        String[] args = {"--title", "Team Standup"};
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isNotEqualTo(0);
+    }
+
+    @Test
+    void should_fail_on_invalid_date_format() {
+        String[] args = {"--title", "Team Standup", "--start-date", "invalid-date"};
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isNotEqualTo(0);
+    }
+
+    @Test
+    void should_show_help() {
+        String[] args = {"--help"};
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isEqualTo(0);
+    }
+
+    @Test
+    void should_parse_short_options() {
+        String[] args = {"-t", "Team Standup", "-s", "2026-11-03T10:00:00"};
+
+        int exitCode = commandLine.execute(args);
+
+        then(exitCode).isEqualTo(0);
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getTitle()).isEqualTo("Team Standup");
+        then(cmd.getStartDate()).isEqualTo(java.time.LocalDateTime.parse("2026-11-03T10:00:00"));
+    }
+}

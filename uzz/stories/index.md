@@ -21,6 +21,7 @@
 | notify/US-000008 | Configurable Sound Notification | TODO |
 | notify/US-000009 | Snooze Options | TODO |
 | notify/US-000010 | Dismiss Action | TODO |
+| notify/US-000022 | Command-Line Trigger for Meeting Notification | DONE |
 
 ## scheduler
 | ID | Title | Status |
@@ -55,4 +56,4 @@
 
 ---
 
-**Total Stories:** 21
+**Total Stories:** 22
