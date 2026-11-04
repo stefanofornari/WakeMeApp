@@ -29,6 +29,11 @@
 | scheduler/US-000011 | Background Scheduler for Automatic Notifications | TODO |
 | scheduler/US-000012 | System Tray / Menu Bar Icon | TODO |
 | scheduler/US-000013 | Auto-Start at Login | TODO |
+| scheduler/US-000023 | Notification Scheduler Core | WIP |
+| scheduler/US-000024 | Schedule a Notification from the Command Line | TODO |
+| scheduler/US-000025 | Background Process Lifecycle | TODO |
+| scheduler/US-000026 | Persist Pending Notifications Across Restart | TODO |
+| scheduler/US-000027 | Catch Up on Missed Notifications After Sleep or Wake | TODO |
 
 ## settings
 | ID | Title | Status |
@@ -56,4 +61,4 @@
 
 ---
 
-**Total Stories:** 22
+**Total Stories:** 27
