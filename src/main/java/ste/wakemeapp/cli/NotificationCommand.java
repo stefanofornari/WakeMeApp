@@ -31,6 +31,10 @@ public class NotificationCommand implements Callable<Integer> {
     @Option(names = {"-d", "--description"}, description = "Meeting description")
     private String description;
 
+    @Option(names = {"-n", "--now"},
+            description = "Show the notification immediately instead of scheduling it before the start date")
+    private boolean now;
+
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
@@ -85,5 +89,9 @@ public class NotificationCommand implements Callable<Integer> {
 
     public String getDescription() {
         return description;
+    }
+
+    public boolean isNow() {
+        return now;
     }
 }

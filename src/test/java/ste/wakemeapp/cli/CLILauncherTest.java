@@ -50,6 +50,29 @@ class CLILauncherTest {
         );
     }
 
+    private static final java.time.LocalDateTime NOW = java.time.LocalDateTime.of(2026, 11, 4, 9, 51);
+
+    @Test
+    void should_say_when_the_notification_will_fire() {
+        String message = CLILauncher.scheduleMessage("Team Standup", NOW.plusMinutes(4), NOW);
+
+        then(message).isEqualTo("Scheduled \"Team Standup\" for 09:55 (in 4 min)");
+    }
+
+    @Test
+    void should_round_a_partial_minute_up() {
+        String message = CLILauncher.scheduleMessage("Team Standup", NOW.plusMinutes(4).plusSeconds(10), NOW);
+
+        then(message).isEqualTo("Scheduled \"Team Standup\" for 09:55 (in 5 min)");
+    }
+
+    @Test
+    void should_say_the_notification_is_shown_now_when_its_time_has_passed() {
+        String message = CLILauncher.scheduleMessage("Team Standup", NOW.minusMinutes(3), NOW);
+
+        then(message).isEqualTo("Showing \"Team Standup\" now");
+    }
+
     @Test
     void should_produce_arguments_the_notification_command_accepts() {
         String[] args = CLILauncher.normalizeArgs(List.of(

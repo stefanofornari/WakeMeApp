@@ -21,6 +21,28 @@ class NotificationCommandTest {
     }
 
     @Test
+    void should_not_show_immediately_by_default() {
+        commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00");
+
+        then(commandLine.<NotificationCommand>getCommand().isNow()).isFalse();
+    }
+
+    @Test
+    void should_show_immediately_with_now_flag() {
+        int exitCode = commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00", "--now");
+
+        then(exitCode).isZero();
+        then(commandLine.<NotificationCommand>getCommand().isNow()).isTrue();
+    }
+
+    @Test
+    void should_accept_short_form_of_now_flag() {
+        commandLine.execute("-t", "Team Standup", "-s", "2026-11-03T10:00:00", "-n");
+
+        then(commandLine.<NotificationCommand>getCommand().isNow()).isTrue();
+    }
+
+    @Test
     void should_parse_all_optional_args() {
         String[] args = {
             "--title", "Team Standup",

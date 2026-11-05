@@ -6,6 +6,11 @@ import javafx.stage.Stage;
 import picocli.CommandLine;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.OverlayManager;
+import ste.wakemeapp.scheduler.NotificationScheduler;
+import ste.wakemeapp.scheduler.ScheduledNotification;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class CLILauncher extends Application {
@@ -13,6 +18,7 @@ public class CLILauncher extends Application {
     private static CommandLine commandLine;
     private static NotificationCommand parsedCommand;
     private OverlayManager overlayManager;
+    private NotificationScheduler scheduler;
 
     @Override
     public void init() {
@@ -48,7 +54,12 @@ public class CLILauncher extends Application {
 
         try {
             MeetingNotification notification = buildNotification();
-            showOverlay(notification);
+            registerShutdownHook();
+            if (parsedCommand.isNow()) {
+                showOverlay(notification);
+            } else {
+                schedule(notification);
+            }
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             Platform.exit();
@@ -89,6 +100,46 @@ public class CLILauncher extends Application {
         }
     }
 
+    /**
+     * Schedules the notification for its start minus the lead time. This process stays alive
+     * (the JavaFX runtime keeps running) and shows the overlay, then exits once it is dismissed.
+     */
+    private void schedule(MeetingNotification notification) {
+        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::showOverlay));
+        ScheduledNotification scheduled = scheduler.schedule(notification);
+
+        System.out.println(scheduleMessage(notification.title(), scheduled.triggerTime(), LocalDateTime.now()));
+        System.out.println("Press Ctrl+C to cancel");
+    }
+
+    /** What to tell the user right after scheduling, so a scheduled run is not mistaken for a hang. */
+    static String scheduleMessage(String title, LocalDateTime triggerTime, LocalDateTime now) {
+        long seconds = Duration.between(now, triggerTime).getSeconds();
+        if (seconds <= 0) {
+            return "Showing \"" + title + "\" now";
+        }
+        long minutes = (seconds + 59) / 60;
+        return "Scheduled \"" + title + "\" for " + DateTimeFormatter.ofPattern("HH:mm").format(triggerTime)
+            + " (in " + minutes + " min)";
+    }
+
+    private void registerShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (scheduler != null) {
+                scheduler.close();
+            }
+            try {
+                Platform.runLater(() -> {
+                    if (overlayManager != null) {
+                        overlayManager.hideAll();
+                    }
+                });
+            } catch (IllegalStateException e) {
+                // JavaFX already shut down: nothing left to hide
+            }
+        }));
+    }
+
     private void showOverlay(MeetingNotification notification) {
         overlayManager = new OverlayManager();
         overlayManager.showNotification(notification);
@@ -102,15 +153,6 @@ public class CLILauncher extends Application {
             System.out.println("Join URL: " + notification.joinUrl());
         }
         System.out.println("Press ESC on overlay to dismiss, or Ctrl+C here to exit");
-
-        // Add shutdown hook to clean up
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Platform.runLater(() -> {
-                if (overlayManager != null) {
-                    overlayManager.hideAll();
-                }
-            });
-        }));
 
         // Wait for all overlays to be dismissed
         new Thread(() -> {
