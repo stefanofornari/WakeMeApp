@@ -7,9 +7,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ste.wakemeapp.notify.MeetingNotification;
 
 /**
@@ -20,7 +20,7 @@ import ste.wakemeapp.notify.MeetingNotification;
  */
 public final class NotificationScheduler implements AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(NotificationScheduler.class);
+    private static final Logger LOG = Logger.getLogger(NotificationScheduler.class.getName());
 
     public static final Duration DEFAULT_LEAD_TIME = Duration.ofMinutes(5);
 
@@ -74,7 +74,7 @@ public final class NotificationScheduler implements AutoCloseable {
             onTrigger.accept(notification);
         } catch (RuntimeException e) {
             // an exception must not escape: it would be swallowed with the task's future
-            LOG.error("Notification handler failed for '{}'", notification.title(), e);
+            LOG.log(Level.SEVERE, e, () -> "Notification handler failed for '" + notification.title() + "'");
         }
     }
 }

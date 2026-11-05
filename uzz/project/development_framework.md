@@ -15,6 +15,8 @@ How `WakeMeUp` is built, tested, and installed.
   - com.github.stefanofornari:xtest (https://github.com/stefanofornari/xtest)
   - Maven Surefire 3.2.5
 - **HTTP Client**: JDK Http Client
+- **Logging**: `java.util.logging`, no logging framework or facade (no SLF4J, Logback, Log4j)
+- **Configuration**: what the JDK provides (`java.util.Properties`, `java.util.prefs`) or Apache Commons Configuration; no other configuration library
 
 ## Development Workflow
 
