@@ -9,7 +9,7 @@
 ## calendar
 | ID | Title | Status |
 |----|-------|--------|
-| calendar/US-000003 | Poll Calendar Events for Timely Notifications | TODO |
+| calendar/US-000003 | Microsoft Graph Calendar Source | TODO |
 | calendar/US-000004 | Extract Meeting Details for Notifications | TODO |
 | calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | TODO |
 | calendar/US-000029 | Notify Only for Relevant Meetings | TODO |
@@ -29,7 +29,7 @@
 ## scheduler
 | ID | Title | Status |
 |----|-------|--------|
-| scheduler/US-000011 | Background Scheduler for Automatic Notifications | TODO |
+| scheduler/US-000011 | Background Scheduler for Automatic Notifications | CANCELED |
 | scheduler/US-000012 | System Tray / Menu Bar Icon | TODO |
 | scheduler/US-000013 | Auto-Start at Login | TODO |
 | scheduler/US-000023 | Notification Scheduler Core | WIP |
