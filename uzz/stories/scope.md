@@ -40,6 +40,9 @@ global lead-time configuration.
   - [ ] Windows: jpackage .msi + Registry Run key + SystemTray integration
   - [ ] Linux: jpackage .deb/.AppImage + systemd user service / autostart .desktop
 
+## Detailed Scopes
+* Calendar synchronisation (polling policy, eligibility, scheduler reconciliation): `calendar/scope.md`
+
 ## Out-of-Scope / Future Enhancements
 * Rule-based filtering (organizer, keywords, categories, calendar selection)
 * Multiple notification rules with different conditions
