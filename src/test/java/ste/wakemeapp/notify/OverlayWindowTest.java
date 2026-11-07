@@ -253,4 +253,33 @@ class OverlayWindowTest {
         // Stage should not request focus on show
         then(stage.isFocused()).isFalse();
     }
+
+    @Test
+    void should_show_the_countdown_in_the_status_pill() {
+        overlay.setNotification(new MeetingNotification(
+            "Team Standup", java.time.LocalDateTime.now().plusMinutes(15), "https://teams.example.com/join"));
+
+        then(overlay.getController().getCountdownLabel().getText()).matches("Meeting starting in 00:1[45]:\\d\\d");
+    }
+
+    @Test
+    void should_count_down_as_time_passes(FxRobot robot) {
+        overlay.setNotification(new MeetingNotification(
+            "Team Standup", java.time.LocalDateTime.now().plusMinutes(15), "https://teams.example.com/join"));
+        String before = overlay.getController().getCountdownLabel().getText();
+
+        robot.sleep(2500);
+
+        then(overlay.getController().getCountdownLabel().getText()).isNotEqualTo(before);
+    }
+
+    @Test
+    void should_count_down_to_the_original_start_after_a_snooze() {
+        MeetingNotification meeting = new MeetingNotification(
+            "Team Standup", java.time.LocalDateTime.now().plusMinutes(15), "https://teams.example.com/join");
+
+        overlay.setNotification(meeting.withSnooze(5, java.time.LocalDateTime.now().plusMinutes(5)));
+
+        then(overlay.getController().getCountdownLabel().getText()).matches("Meeting starting in 00:1[45]:\\d\\d");
+    }
 }
