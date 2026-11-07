@@ -66,7 +66,11 @@
                     <SVGPath styleClass="overlay-join-icon" content="M3 6h13v12H3z M16 10.5l5-3v9l-5-3" />
                 </graphic>
             </Button>
-            <Button fx:id="snoozeButton" text="Snooze" styleClass="overlay-button-secondary" />
+            <Button fx:id="snoozeButton" text="Snooze" styleClass="overlay-button-secondary" contentDisplay="RIGHT">
+                <graphic>
+                    <SVGPath styleClass="overlay-chevron-icon" content="M5 9l7 7 7-7" />
+                </graphic>
+            </Button>
             <Button fx:id="dismissButton" text="Dismiss" styleClass="overlay-button-secondary" onAction="#handleDismiss" />
         </HBox>
 
