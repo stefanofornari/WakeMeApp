@@ -30,7 +30,7 @@
         <HBox alignment="CENTER_LEFT">
             <HBox styleClass="overlay-pill" alignment="CENTER_LEFT" spacing="10">
                 <Rectangle fx:id="statusDot" styleClass="overlay-dot" width="8" height="8" />
-                <Label text="Meeting starting soon" styleClass="overlay-pill-text" />
+                <Label fx:id="countdownLabel" text="Meeting starting soon" styleClass="overlay-pill-text" />
             </HBox>
         </HBox>
 
@@ -55,8 +55,6 @@
                 </HBox>
             </VBox>
         </VBox>
-
-        <Label fx:id="meetingCountdownLabel" styleClass="overlay-meeting-countdown" visible="false" managed="false" />
 
         <!-- Actions -->
         <HBox fx:id="buttonBox" alignment="CENTER" spacing="14">

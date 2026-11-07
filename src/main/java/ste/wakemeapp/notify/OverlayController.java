@@ -27,7 +27,6 @@ public class OverlayController implements Initializable {
 
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter HOUR_MINUTE_SECOND = DateTimeFormatter.ofPattern("HH:mm:ss");
-    private static final DateTimeFormatter MINUTE_SECOND = DateTimeFormatter.ofPattern("mm:ss");
 
     /** Shown in place of the end time when the calendar did not provide one. */
     static final String END_TIME_PLACEHOLDER = "--:--";
@@ -81,7 +80,10 @@ public class OverlayController implements Initializable {
     private Label snoozeStatusLabel;
 
     @FXML
-    private Label meetingCountdownLabel;
+    private Label countdownLabel;
+
+    /** The real meeting start (not the snooze end); the countdown runs towards it. */
+    private LocalDateTime meetingStart;
 
     private OverlayWindow overlayWindow;
     private FadeTransition pulse;
@@ -143,6 +145,22 @@ public class OverlayController implements Initializable {
 
     private void refreshClock() {
         clockLabel.setText(HOUR_MINUTE_SECOND.format(LocalTime.now()));
+        refreshCountdown();
+    }
+
+    /** Based on the system clock rather than accumulated ticks, so it does not drift. */
+    private void refreshCountdown() {
+        if (meetingStart != null) {
+            countdownLabel.setText(countdownText(java.time.Duration.between(LocalDateTime.now(), meetingStart)));
+        }
+    }
+
+    static String countdownText(java.time.Duration remaining) {
+        long seconds = (remaining.toMillis() + 999) / 1000;
+        if (seconds <= 0) {
+            return "Meeting started";
+        }
+        return String.format("Meeting starting in %02d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
     }
 
     /** Stops the endless animations; called once the overlay is gone so nothing keeps running. */
@@ -163,7 +181,7 @@ public class OverlayController implements Initializable {
         titleLabel.setText(notification.title());
         java.time.LocalDateTime end = notification.endTime();
         // After a snooze startTime is the re-notification time: always show the real meeting time
-        LocalDateTime meetingStart = notification.originalStartTime() != null
+        meetingStart = notification.originalStartTime() != null
             ? notification.originalStartTime() : notification.startTime();
         timeLabel.setText(
             HOUR_MINUTE.format(meetingStart) + " – "
@@ -184,8 +202,7 @@ public class OverlayController implements Initializable {
         // Update snooze status
         updateSnoozeStatus(notification);
 
-        // Update meeting countdown
-        updateMeetingCountdown(notification);
+        refreshCountdown();
     }
 
     private void updateSnoozeStatus(MeetingNotification notification) {
@@ -205,39 +222,6 @@ public class OverlayController implements Initializable {
         snoozeButton.setManaged(canSnooze);
     }
 
-    private void updateMeetingCountdown(MeetingNotification notification) {
-        LocalDateTime meetingStart = notification.originalStartTime();
-        if (meetingStart != null) {
-            java.time.Duration remaining = java.time.Duration.between(LocalDateTime.now(), meetingStart);
-            if (!remaining.isNegative() && !remaining.isZero()) {
-                meetingCountdownLabel.setText("Meeting in " + formatCountdown(remaining));
-                meetingCountdownLabel.setVisible(true);
-                meetingCountdownLabel.setManaged(true);
-            } else {
-                meetingCountdownLabel.setVisible(false);
-                meetingCountdownLabel.setManaged(false);
-            }
-        } else {
-            meetingCountdownLabel.setVisible(false);
-            meetingCountdownLabel.setManaged(false);
-        }
-    }
-
-    private String formatCountdown(java.time.Duration duration) {
-        long totalSeconds = duration.getSeconds();
-        if (totalSeconds <= 0) {
-            return "00:00";
-        }
-        long minutes = totalSeconds / 60;
-        long seconds = totalSeconds % 60;
-        if (minutes >= 60) {
-            long hours = minutes / 60;
-            long mins = minutes % 60;
-            return String.format("%dh %02dm", hours, mins);
-        }
-        return String.format("%02d:%02d", minutes, seconds);
-    }
-
     /**
      * Refreshes the auto-close countdown.
      *
@@ -250,11 +234,6 @@ public class OverlayController implements Initializable {
         autoCloseBar.setProgress(
             total.isZero() ? 0.0 : Math.max(0.0, Math.min(1.0, (double) remaining.toMillis() / total.toMillis()))
         );
-
-        // Also update meeting countdown
-        if (overlayWindow != null && overlayWindow.getNotification() != null) {
-            updateMeetingCountdown(overlayWindow.getNotification());
-        }
     }
 
     private static String formatDuration(java.time.Duration duration) {
@@ -348,8 +327,8 @@ public class OverlayController implements Initializable {
         return snoozeStatusLabel;
     }
 
-    public Label getMeetingCountdownLabel() {
-        return meetingCountdownLabel;
+    public Label getCountdownLabel() {
+        return countdownLabel;
     }
 
     public ContextMenu getSnoozeMenu() {
