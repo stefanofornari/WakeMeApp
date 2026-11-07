@@ -11,6 +11,9 @@
 |----|-------|--------|
 | calendar/US-000003 | Poll Calendar Events for Timely Notifications | TODO |
 | calendar/US-000004 | Extract Meeting Details for Notifications | TODO |
+| calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | TODO |
+| calendar/US-000029 | Notify Only for Relevant Meetings | TODO |
+| calendar/US-000031 | Configure Poll Interval and Window from the Command Line | TODO |
 
 ## notify
 | ID | Title | Status |
@@ -34,6 +37,7 @@
 | scheduler/US-000025 | Background Process Lifecycle | TODO |
 | scheduler/US-000026 | Persist Pending Notifications Across Restart | TODO |
 | scheduler/US-000027 | Catch Up on Missed Notifications After Sleep or Wake | TODO |
+| scheduler/US-000030 | Keep Scheduled Notifications in Sync with Calendar Changes | TODO |
 
 ## settings
 | ID | Title | Status |
@@ -61,4 +65,4 @@
 
 ---
 
-**Total Stories:** 27
+**Total Stories:** 31
