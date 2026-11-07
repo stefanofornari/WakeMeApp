@@ -8,7 +8,12 @@ import org.testfx.framework.junit5.ApplicationExtension;
 import org.testfx.framework.junit5.Start;
 import static org.assertj.core.api.BDDAssertions.then;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import ste.wakemeapp.scheduler.NotificationScheduler;
 
 @ExtendWith(ApplicationExtension.class)
 class OverlayManagerTest {
@@ -171,5 +176,27 @@ class OverlayManagerTest {
         
         then(expectedSnoozeUntil).isAfter(now);
         then(java.time.Duration.between(now, expectedSnoozeUntil).toMinutes()).isEqualTo(5);
+    }
+
+    @Test
+    void should_notify_again_when_the_snooze_expires(FxRobot robot) throws Exception {
+        CountDownLatch triggered = new CountDownLatch(1);
+        AtomicReference<MeetingNotification> fired = new AtomicReference<>();
+        // The scheduler's clock runs 59 s ahead, so a 1 minute snooze is due in about a second
+        Clock ahead = Clock.offset(Clock.systemDefaultZone(), java.time.Duration.ofSeconds(59));
+        try (NotificationScheduler scheduler = new NotificationScheduler(
+                NotificationScheduler.onFxThread(n -> { fired.set(n); triggered.countDown(); }),
+                NotificationScheduler.DEFAULT_LEAD_TIME, ahead)) {
+            OverlayManager withScheduler = new OverlayManager(scheduler);
+            MeetingNotification meeting = new MeetingNotification(
+                "Standup", LocalDateTime.now().plusMinutes(30), "https://teams.example.com");
+            robot.interact(() -> withScheduler.showNotification(meeting));
+
+            robot.interact(() -> withScheduler.getOverlays().get(0).snooze(1));
+
+            then(triggered.await(5, TimeUnit.SECONDS)).as("snoozed notification was triggered").isTrue();
+            then(fired.get().snoozeCount()).isEqualTo(1);
+            then(fired.get().originalStartTime()).isEqualTo(meeting.startTime());
+        }
     }
 }

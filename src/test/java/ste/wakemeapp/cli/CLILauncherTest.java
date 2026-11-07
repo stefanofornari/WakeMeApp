@@ -87,4 +87,18 @@ class CLILauncherTest {
         then(command.getStartDate()).isEqualTo(java.time.LocalDateTime.of(2026, 11, 4, 12, 0));
         then(command.getUrl()).isEqualTo("https://teams.url");
     }
+
+    /**
+     * The launcher never shows its primary stage, so once the overlay closes no window is left and
+     * JavaFX would shut the toolkit down (implicit exit): a snoozed notification, due later,
+     * could then no longer be shown.
+     */
+    @Test
+    void should_keep_the_toolkit_running_after_the_last_window_closes() {
+        javafx.application.Platform.setImplicitExit(true); // the JavaFX default
+
+        new CLILauncher().init();
+
+        then(javafx.application.Platform.isImplicitExit()).isFalse();
+    }
 }
