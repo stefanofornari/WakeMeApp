@@ -25,6 +25,7 @@ real Microsoft Graph source is delivered separately (auth and calendar domains).
   - [ ] Polls the calendar source every poll interval (default 5 min) on a background thread, never on the JavaFX Application Thread
   - [ ] Asks for the meetings starting in the next window (default 15 min)
   - [ ] Poll interval and window can be changed from the command line (defaults apply when omitted)
+  - [ ] A command line where the window is shorter than poll interval + lead time is rejected with an error
   - [ ] A failed poll is logged and the next poll runs at the normal interval; already scheduled notifications keep firing
 * **Eligibility filter**:
   - [ ] Include accepted (committed) and tentative meetings, and meetings the user organises
@@ -33,7 +34,7 @@ real Microsoft Graph source is delivered separately (auth and calendar domains).
   - [ ] Exclude meetings the user has not answered
 * **Scheduler reconciliation**:
   - [ ] A meeting not yet known is scheduled
-  - [ ] A meeting whose start time changed has its pending notification rescheduled (same event id, same notification)
+  - [ ] A meeting whose start time changed has its pending notification rescheduled (same event id, same notification) and its snooze count reset to zero
   - [ ] A meeting that disappeared from the result, or is no longer eligible, has its pending notification cancelled
   - [ ] An unchanged meeting is not rescheduled and does not notify twice
   - [ ] Snoozes already scheduled are not dropped by a poll
