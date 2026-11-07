@@ -5,6 +5,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Callable;
@@ -13,10 +15,10 @@ import java.util.concurrent.Callable;
          mixinStandardHelpOptions = true, version = "1.0.0")
 public class NotificationCommand implements Callable<Integer> {
 
-    @Option(names = {"-t", "--title"}, description = "Meeting title", required = true)
+    @Option(names = {"-t", "--title"}, description = "Meeting title (required unless --events-file is given)")
     private String title;
 
-    @Option(names = {"-s", "--start-date"}, description = "Meeting start date/time (ISO-8601)", required = true)
+    @Option(names = {"-s", "--start-date"}, description = "Meeting start date/time (ISO-8601) (required unless --events-file is given)")
     private String startDateStr;
 
     @Option(names = {"-e", "--end-date"}, description = "Meeting end date/time (ISO-8601)")
@@ -35,12 +37,25 @@ public class NotificationCommand implements Callable<Integer> {
             description = "Show the notification immediately instead of scheduling it before the start date")
     private boolean now;
 
+    @Option(names = "--events-file",
+            description = "CSV file of meetings to poll like a calendar, instead of a single meeting")
+    private Path eventsFile;
+
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
     @Override
     public Integer call() {
         try {
+            if (eventsFile != null) {
+                if (!Files.isReadable(eventsFile)) {
+                    throw new IllegalArgumentException("Cannot read the events file: " + eventsFile);
+                }
+                return 0;
+            }
+            if (title == null || startDateStr == null) {
+                throw new IllegalArgumentException("--title and --start-date are required (or use --events-file)");
+            }
             validateAndParseDates();
             return 0;
         } catch (Exception e) {
@@ -89,6 +104,10 @@ public class NotificationCommand implements Callable<Integer> {
 
     public String getDescription() {
         return description;
+    }
+
+    public Path getEventsFile() {
+        return eventsFile;
     }
 
     public boolean isNow() {

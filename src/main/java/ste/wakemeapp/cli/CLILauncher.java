@@ -4,10 +4,13 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import picocli.CommandLine;
+import ste.wakemeapp.calendar.CalendarPoller;
+import ste.wakemeapp.calendar.CsvCalendarSource;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +23,8 @@ public class CLILauncher extends Application {
     private static NotificationCommand parsedCommand;
     private OverlayManager overlayManager;
     private NotificationScheduler scheduler;
+    private CalendarPoller poller;
+    private boolean calendarMode;
     private final AtomicInteger pendingNotifications = new AtomicInteger(0);
 
     @Override
@@ -58,8 +63,12 @@ public class CLILauncher extends Application {
         parsedCommand = commandLine.getCommand();
 
         try {
-            MeetingNotification notification = buildNotification();
             registerShutdownHook();
+            if (parsedCommand.getEventsFile() != null) {
+                pollCalendar(parsedCommand.getEventsFile());
+                return;
+            }
+            MeetingNotification notification = buildNotification();
             if (parsedCommand.isNow()) {
                 showOverlay(notification);
             } else {
@@ -118,6 +127,20 @@ public class CLILauncher extends Application {
         System.out.println("Press Ctrl+C to cancel");
     }
 
+    /**
+     * Simulates a calendar: polls the CSV file and schedules what it finds. The process runs until
+     * it is stopped, since meetings may appear in the file at any time.
+     */
+    private void pollCalendar(Path eventsFile) {
+        calendarMode = true;
+        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        poller = new CalendarPoller(new CsvCalendarSource(eventsFile), scheduler);
+        poller.start();
+        System.out.println("Polling " + eventsFile + " every " + CalendarPoller.DEFAULT_POLL_INTERVAL.toMinutes()
+            + " min for meetings starting in the next " + CalendarPoller.DEFAULT_WINDOW.toMinutes() + " min");
+        System.out.println("Press Ctrl+C to stop");
+    }
+
     /** What to tell the user right after scheduling, so a scheduled run is not mistaken for a hang. */
     static String scheduleMessage(String title, LocalDateTime triggerTime, LocalDateTime now) {
         long seconds = Duration.between(now, triggerTime).getSeconds();
@@ -131,6 +154,9 @@ public class CLILauncher extends Application {
 
     private void registerShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (poller != null) {
+                poller.close();
+            }
             if (scheduler != null) {
                 scheduler.close();
             }
@@ -148,7 +174,9 @@ public class CLILauncher extends Application {
 
     /** Called when a scheduled notification fires (initial or snooze). */
     private void onNotificationTriggered(MeetingNotification notification) {
-        pendingNotifications.decrementAndGet();
+        if (!calendarMode) {
+            pendingNotifications.decrementAndGet();
+        }
         showOverlay(notification);
     }
 
@@ -171,6 +199,10 @@ public class CLILauncher extends Application {
             System.out.println("Join URL: " + notification.joinUrl());
         }
         System.out.println("Press ESC on overlay to dismiss, or Ctrl+C here to exit");
+
+        if (calendarMode) {
+            return; // keeps running: the next meeting may come from the calendar
+        }
 
         // Wait for all overlays to be dismissed AND no pending notifications
         new Thread(() -> {
