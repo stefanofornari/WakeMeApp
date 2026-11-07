@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CLILauncher extends Application {
 
@@ -19,6 +20,7 @@ public class CLILauncher extends Application {
     private static NotificationCommand parsedCommand;
     private OverlayManager overlayManager;
     private NotificationScheduler scheduler;
+    private final AtomicInteger pendingNotifications = new AtomicInteger(0);
 
     @Override
     public void init() {
@@ -105,7 +107,8 @@ public class CLILauncher extends Application {
      * (the JavaFX runtime keeps running) and shows the overlay, then exits once it is dismissed.
      */
     private void schedule(MeetingNotification notification) {
-        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::showOverlay));
+        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        pendingNotifications.incrementAndGet();
         ScheduledNotification scheduled = scheduler.schedule(notification);
 
         System.out.println(scheduleMessage(notification.title(), scheduled.triggerTime(), LocalDateTime.now()));
@@ -140,8 +143,16 @@ public class CLILauncher extends Application {
         }));
     }
 
+    /** Called when a scheduled notification fires (initial or snooze). */
+    private void onNotificationTriggered(MeetingNotification notification) {
+        pendingNotifications.decrementAndGet();
+        showOverlay(notification);
+    }
+
     private void showOverlay(MeetingNotification notification) {
-        overlayManager = new OverlayManager();
+        overlayManager = new OverlayManager(scheduler);
+        // Track snoozes scheduled from this overlay
+        overlayManager.setOnSnoozeScheduled(() -> pendingNotifications.incrementAndGet());
         overlayManager.showNotification(notification);
 
         System.out.println("Showing overlay for: " + notification.title());
@@ -154,10 +165,11 @@ public class CLILauncher extends Application {
         }
         System.out.println("Press ESC on overlay to dismiss, or Ctrl+C here to exit");
 
-        // Wait for all overlays to be dismissed
+        // Wait for all overlays to be dismissed AND no pending notifications
         new Thread(() -> {
             try {
-                while (overlayManager != null && overlayManager.getOverlayCount() > 0) {
+                while (overlayManager != null && 
+                       (overlayManager.getOverlayCount() > 0 || pendingNotifications.get() > 0)) {
                     Thread.sleep(500);
                 }
             } catch (InterruptedException e) {

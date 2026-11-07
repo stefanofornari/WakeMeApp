@@ -99,15 +99,16 @@ class OverlayWindowTest {
 
     @Test
     void should_notify_listener_and_close_when_snoozed(FxRobot robot) {
-        java.util.concurrent.atomic.AtomicBoolean snoozed = new java.util.concurrent.atomic.AtomicBoolean();
-        overlay.setOnSnooze(() -> snoozed.set(true));
+        java.util.concurrent.atomic.AtomicInteger snoozedMinutes = new java.util.concurrent.atomic.AtomicInteger(-1);
+        overlay.setOnSnooze(minutes -> snoozedMinutes.set(minutes));
         robot.interact(() -> overlay.show());
         Stage stage = overlay.getStage();
 
-        robot.interact(() -> overlay.getController().getSnoozeButton().fire());
+        // Call snooze directly with 5 minutes
+        robot.interact(() -> overlay.snooze(5));
         robot.sleep(500);
 
-        then(snoozed.get()).isTrue();
+        then(snoozedMinutes.get()).isEqualTo(5);
         then(stage.isShowing()).isFalse();
     }
 
@@ -152,6 +153,80 @@ class OverlayWindowTest {
         robot.sleep(3000);
 
         then(stage.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_show_snooze_status_when_snoozed() {
+        MeetingNotification notification = new MeetingNotification(
+            "Team Standup",
+            java.time.LocalDateTime.now().plusMinutes(5),
+            "https://teams.example.com/join"
+        );
+
+        // First notification (no snooze)
+        overlay.setNotification(notification);
+        OverlayController controller = overlay.getController();
+
+        then(controller.getSnoozeStatusLabel().isVisible()).isFalse();
+
+        // Snoozed once
+        MeetingNotification snoozed = notification.withSnooze(5, java.time.LocalDateTime.now().plusMinutes(5));
+        overlay.setNotification(snoozed);
+
+        then(controller.getSnoozeStatusLabel().isVisible()).isTrue();
+        then(controller.getSnoozeStatusLabel().getText()).isEqualTo("Snoozed 1/3 times");
+    }
+
+    @Test
+    void should_disable_snooze_button_when_max_reached() {
+        MeetingNotification notification = new MeetingNotification(
+            "Team Standup",
+            java.time.LocalDateTime.now().plusMinutes(5),
+            "https://teams.example.com/join"
+        );
+
+        overlay.setNotification(notification);
+        OverlayController controller = overlay.getController();
+
+        then(controller.getSnoozeButton().isDisable()).isFalse();
+        then(controller.getSnoozeButton().isVisible()).isTrue();
+
+        // Max snoozes reached (3)
+        MeetingNotification maxSnoozed = notification.withSnooze(5, java.time.LocalDateTime.now().plusMinutes(5))
+            .withSnooze(5, java.time.LocalDateTime.now().plusMinutes(10))
+            .withSnooze(5, java.time.LocalDateTime.now().plusMinutes(15));
+
+        overlay.setNotification(maxSnoozed);
+
+        then(controller.getSnoozeButton().isDisable()).isTrue();
+        then(controller.getSnoozeButton().isVisible()).isFalse();
+    }
+
+    @Test
+    void should_show_snooze_context_menu_on_button_click(FxRobot robot) {
+        MeetingNotification notification = new MeetingNotification(
+            "Team Standup",
+            java.time.LocalDateTime.now().plusMinutes(5),
+            "https://teams.example.com/join"
+        );
+
+        overlay.setNotification(notification);
+        robot.interact(() -> overlay.show());
+
+        OverlayController controller = overlay.getController();
+        
+        // Click snooze button
+        robot.interact(() -> controller.getSnoozeButton().fire());
+        
+        // Context menu should be showing
+        then(controller.getSnoozeMenu().isShowing()).isTrue();
+        
+        // Menu should have 4 items
+        then(controller.getSnoozeMenu().getItems()).hasSize(4);
+        then(controller.getSnoozeMenu().getItems().get(0).getText()).isEqualTo("Snooze 1 min");
+        then(controller.getSnoozeMenu().getItems().get(1).getText()).isEqualTo("Snooze 5 min");
+        then(controller.getSnoozeMenu().getItems().get(2).getText()).isEqualTo("Snooze 10 min");
+        then(controller.getSnoozeMenu().getItems().get(3).getText()).isEqualTo("Until meeting starts");
     }
 
     @Test

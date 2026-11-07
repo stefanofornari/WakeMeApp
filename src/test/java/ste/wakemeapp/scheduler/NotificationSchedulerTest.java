@@ -138,4 +138,35 @@ class NotificationSchedulerTest {
         then(latch.await(2, TimeUnit.SECONDS)).isTrue();
         then(fired).containsExactly("Fine");
     }
+
+    @Test
+    void should_schedule_at_exact_time_without_lead_time() {
+        scheduler = new NotificationScheduler(n -> { }, Duration.ofMinutes(5), Clock.systemDefaultZone());
+        LocalDateTime exactTime = LocalDateTime.now().plusMinutes(10);
+        MeetingNotification meeting = new MeetingNotification("Exact", exactTime, "https://example.com/join");
+
+        ScheduledNotification scheduled = scheduler.scheduleAtExactTime(meeting);
+
+        then(scheduled.triggerTime()).isEqualTo(exactTime);
+        then(scheduled.notification()).isSameAs(meeting);
+    }
+
+    @Test
+    void should_fire_at_exact_time_for_snooze() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        scheduler = new NotificationScheduler(n -> {
+            fired.add(n.title());
+            latch.countDown();
+        }, Duration.ofMinutes(5), Clock.systemDefaultZone());
+
+        // Schedule for 500ms from now (exact time, no lead time)
+        LocalDateTime exactTime = LocalDateTime.now().plusNanos(500_000_000);
+        MeetingNotification meeting = new MeetingNotification("Snooze", exactTime, "https://example.com/join");
+
+        scheduler.scheduleAtExactTime(meeting);
+
+        then(fired).isEmpty();
+        then(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        then(fired).containsExactly("Snooze");
+    }
 }

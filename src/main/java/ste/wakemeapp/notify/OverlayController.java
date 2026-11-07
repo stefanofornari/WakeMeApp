@@ -7,7 +7,9 @@ import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -16,6 +18,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
@@ -24,6 +27,7 @@ public class OverlayController implements Initializable {
 
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter HOUR_MINUTE_SECOND = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final DateTimeFormatter MINUTE_SECOND = DateTimeFormatter.ofPattern("mm:ss");
 
     /** Shown in place of the end time when the calendar did not provide one. */
     static final String END_TIME_PLACEHOLDER = "--:--";
@@ -73,9 +77,17 @@ public class OverlayController implements Initializable {
     @FXML
     private Label clockLabel;
 
+    @FXML
+    private Label snoozeStatusLabel;
+
+    @FXML
+    private Label meetingCountdownLabel;
+
     private OverlayWindow overlayWindow;
     private FadeTransition pulse;
     private Timeline clock;
+    private ContextMenu snoozeMenu;
+    private java.util.function.IntConsumer onSnoozeSelected;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -92,6 +104,40 @@ public class OverlayController implements Initializable {
         clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> refreshClock()));
         clock.setCycleCount(Animation.INDEFINITE);
         clock.play();
+
+        // Create snooze context menu
+        createSnoozeMenu();
+    }
+
+    private void createSnoozeMenu() {
+        snoozeMenu = new ContextMenu();
+
+        MenuItem item1Min = new MenuItem("Snooze 1 min");
+        item1Min.setOnAction(e -> handleSnoozeSelection(1));
+
+        MenuItem item5Min = new MenuItem("Snooze 5 min");
+        item5Min.setOnAction(e -> handleSnoozeSelection(5));
+
+        MenuItem item10Min = new MenuItem("Snooze 10 min");
+        item10Min.setOnAction(e -> handleSnoozeSelection(10));
+
+        MenuItem itemUntilMeeting = new MenuItem("Until meeting starts");
+        itemUntilMeeting.setOnAction(e -> handleSnoozeSelection(-1)); // -1 means "until meeting starts"
+
+        snoozeMenu.getItems().addAll(item1Min, item5Min, item10Min, itemUntilMeeting);
+
+        // Show menu when snooze button is clicked
+        snoozeButton.setOnAction(e -> {
+            if (snoozeMenu != null) {
+                snoozeMenu.show(snoozeButton, javafx.geometry.Side.BOTTOM, 0, 0);
+            }
+        });
+    }
+
+    private void handleSnoozeSelection(int minutes) {
+        if (overlayWindow != null) {
+            overlayWindow.snooze(minutes);
+        }
     }
 
     private void refreshClock() {
@@ -106,6 +152,10 @@ public class OverlayController implements Initializable {
 
     public void setOverlayWindow(OverlayWindow overlayWindow) {
         this.overlayWindow = overlayWindow;
+    }
+
+    public void setOnSnoozeSelected(java.util.function.IntConsumer onSnoozeSelected) {
+        this.onSnoozeSelected = onSnoozeSelected;
     }
 
     public void setNotification(MeetingNotification notification) {
@@ -126,6 +176,62 @@ public class OverlayController implements Initializable {
         organizerLabel.setText(hasOrganizer ? notification.organizer() : "");
         organizerBox.setVisible(hasOrganizer);
         organizerBox.setManaged(hasOrganizer);
+
+        // Update snooze status
+        updateSnoozeStatus(notification);
+
+        // Update meeting countdown
+        updateMeetingCountdown(notification);
+    }
+
+    private void updateSnoozeStatus(MeetingNotification notification) {
+        if (notification.snoozeCount() > 0) {
+            snoozeStatusLabel.setText(notification.snoozeStatusText());
+            snoozeStatusLabel.setVisible(true);
+            snoozeStatusLabel.setManaged(true);
+        } else {
+            snoozeStatusLabel.setVisible(false);
+            snoozeStatusLabel.setManaged(false);
+        }
+
+        // Disable snooze button if max snoozes reached
+        boolean canSnooze = notification.canSnooze();
+        snoozeButton.setDisable(!canSnooze);
+        snoozeButton.setVisible(canSnooze);
+        snoozeButton.setManaged(canSnooze);
+    }
+
+    private void updateMeetingCountdown(MeetingNotification notification) {
+        LocalDateTime meetingStart = notification.originalStartTime();
+        if (meetingStart != null) {
+            java.time.Duration remaining = java.time.Duration.between(LocalDateTime.now(), meetingStart);
+            if (!remaining.isNegative() && !remaining.isZero()) {
+                meetingCountdownLabel.setText("Meeting in " + formatCountdown(remaining));
+                meetingCountdownLabel.setVisible(true);
+                meetingCountdownLabel.setManaged(true);
+            } else {
+                meetingCountdownLabel.setVisible(false);
+                meetingCountdownLabel.setManaged(false);
+            }
+        } else {
+            meetingCountdownLabel.setVisible(false);
+            meetingCountdownLabel.setManaged(false);
+        }
+    }
+
+    private String formatCountdown(java.time.Duration duration) {
+        long totalSeconds = duration.getSeconds();
+        if (totalSeconds <= 0) {
+            return "00:00";
+        }
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        if (minutes >= 60) {
+            long hours = minutes / 60;
+            long mins = minutes % 60;
+            return String.format("%dh %02dm", hours, mins);
+        }
+        return String.format("%02d:%02d", minutes, seconds);
     }
 
     /**
@@ -140,6 +246,11 @@ public class OverlayController implements Initializable {
         autoCloseBar.setProgress(
             total.isZero() ? 0.0 : Math.max(0.0, Math.min(1.0, (double) remaining.toMillis() / total.toMillis()))
         );
+
+        // Also update meeting countdown
+        if (overlayWindow != null && overlayWindow.getNotification() != null) {
+            updateMeetingCountdown(overlayWindow.getNotification());
+        }
     }
 
     private static String formatDuration(java.time.Duration duration) {
@@ -172,9 +283,7 @@ public class OverlayController implements Initializable {
 
     @FXML
     private void handleSnooze() {
-        if (overlayWindow != null) {
-            overlayWindow.snooze();
-        }
+        // Handled by context menu now
     }
 
     @FXML
@@ -234,5 +343,17 @@ public class OverlayController implements Initializable {
 
     public Label getClockLabel() {
         return clockLabel;
+    }
+
+    public Label getSnoozeStatusLabel() {
+        return snoozeStatusLabel;
+    }
+
+    public Label getMeetingCountdownLabel() {
+        return meetingCountdownLabel;
+    }
+
+    public ContextMenu getSnoozeMenu() {
+        return snoozeMenu;
     }
 }

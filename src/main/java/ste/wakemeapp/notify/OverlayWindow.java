@@ -13,6 +13,7 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.function.IntConsumer;
 
 public final class OverlayWindow {
 
@@ -24,7 +25,7 @@ public final class OverlayWindow {
     private javafx.animation.Timeline countdownTimeline;
     private java.time.Duration autoClose = java.time.Duration.ofSeconds(90);
     private java.time.Instant startedAt;
-    private Runnable onSnooze;
+    private IntConsumer onSnooze;
 
     public OverlayWindow() {
         this.stage = createStage();
@@ -108,6 +109,10 @@ public final class OverlayWindow {
         startCountdown();
     }
 
+    public MeetingNotification getNotification() {
+        return notification;
+    }
+
     /**
      * Sets how long the overlay stays up before closing by itself.
      * Takes effect for the next {@link #setNotification(MeetingNotification)}.
@@ -144,16 +149,20 @@ public final class OverlayWindow {
 
     /**
      * Registers a listener called when the user snoozes the notification.
+     * The int parameter is the snooze duration in minutes, or -1 for "until meeting starts".
      * Scheduling the re-notification is up to the listener.
      */
-    public void setOnSnooze(Runnable onSnooze) {
+    public void setOnSnooze(IntConsumer onSnooze) {
         this.onSnooze = onSnooze;
+        if (controller != null) {
+            controller.setOnSnoozeSelected(onSnooze);
+        }
     }
 
     /** Closes the overlay on behalf of the user and tells the snooze listener, if any. */
-    public void snooze() {
+    public void snooze(int minutes) {
         if (onSnooze != null) {
-            onSnooze.run();
+            onSnooze.accept(minutes);
         }
         hide();
     }
