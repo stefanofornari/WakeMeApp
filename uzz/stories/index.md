@@ -14,6 +14,7 @@
 | calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | WIP |
 | calendar/US-000029 | Notify Only for Relevant Meetings | TODO |
 | calendar/US-000031 | Configure Poll Interval and Window from the Command Line | TODO |
+| calendar/US-000032 | Simulate the Calendar from a CSV File | WIP |
 
 ## notify
 | ID | Title | Status |
@@ -65,4 +66,4 @@
 
 ---
 
-**Total Stories:** 31
+**Total Stories:** 32

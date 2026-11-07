@@ -1,5 +1,8 @@
 package ste.wakemeapp.cli;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.BDDAssertions.then;
@@ -111,5 +114,32 @@ class NotificationCommandTest {
         NotificationCommand cmd = commandLine.getCommand();
         then(cmd.getTitle()).isEqualTo("Team Standup");
         then(cmd.getStartDate()).isEqualTo(java.time.LocalDateTime.parse("2026-11-03T10:00:00"));
+    }
+
+    @TempDir
+    Path dir;
+
+    @Test
+    void should_accept_an_events_file_without_title_and_start_date() throws Exception {
+        Path file = Files.writeString(dir.resolve("meetings.csv"), "id,title,start\n");
+
+        int exitCode = commandLine.execute("--events-file", file.toString());
+
+        then(exitCode).isEqualTo(0);
+        then(((NotificationCommand) commandLine.getCommand()).getEventsFile()).isEqualTo(file);
+    }
+
+    @Test
+    void should_reject_an_events_file_that_cannot_be_read() {
+        int exitCode = commandLine.execute("--events-file", dir.resolve("missing.csv").toString());
+
+        then(exitCode).isNotEqualTo(0);
+    }
+
+    @Test
+    void should_have_no_events_file_by_default() {
+        commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00");
+
+        then(((NotificationCommand) commandLine.getCommand()).getEventsFile()).isNull();
     }
 }
