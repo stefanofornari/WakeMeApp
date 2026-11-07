@@ -63,6 +63,21 @@ public final class NotificationScheduler implements AutoCloseable {
         );
     }
 
+    /**
+     * Registers a notification that fires exactly at its {@code startTime}, with no lead time
+     * (used for snoozes). If that time has already passed it fires immediately.
+     */
+    public ScheduledNotification scheduleAtExactTime(MeetingNotification notification) {
+        LocalDateTime triggerTime = notification.startTime();
+        long delayMillis = Math.max(0, Duration.between(LocalDateTime.now(clock), triggerTime).toMillis());
+
+        return new ScheduledNotification(
+            notification,
+            triggerTime,
+            executor.schedule(() -> fire(notification), delayMillis, TimeUnit.MILLISECONDS)
+        );
+    }
+
     /** Drops everything that has not fired yet. */
     @Override
     public void close() {

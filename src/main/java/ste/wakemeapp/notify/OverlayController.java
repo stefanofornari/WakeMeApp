@@ -111,6 +111,7 @@ public class OverlayController implements Initializable {
 
     private void createSnoozeMenu() {
         snoozeMenu = new ContextMenu();
+        snoozeMenu.getStyleClass().add("overlay-snooze-menu");
 
         MenuItem item1Min = new MenuItem("Snooze 1 min");
         item1Min.setOnAction(e -> handleSnoozeSelection(1));
@@ -161,12 +162,15 @@ public class OverlayController implements Initializable {
     public void setNotification(MeetingNotification notification) {
         titleLabel.setText(notification.title());
         java.time.LocalDateTime end = notification.endTime();
+        // After a snooze startTime is the re-notification time: always show the real meeting time
+        LocalDateTime meetingStart = notification.originalStartTime() != null
+            ? notification.originalStartTime() : notification.startTime();
         timeLabel.setText(
-            HOUR_MINUTE.format(notification.startTime()) + " – "
+            HOUR_MINUTE.format(meetingStart) + " – "
             + (end != null ? HOUR_MINUTE.format(end) : END_TIME_PLACEHOLDER)
         );
         String duration = end != null
-            ? formatDuration(java.time.Duration.between(notification.startTime(), end))
+            ? formatDuration(java.time.Duration.between(meetingStart, end))
             : "";
         durationLabel.setText(duration);
         durationLabel.setVisible(!duration.isEmpty());
@@ -279,11 +283,6 @@ public class OverlayController implements Initializable {
             // TODO: Open join URL
             overlayWindow.hide();
         }
-    }
-
-    @FXML
-    private void handleSnooze() {
-        // Handled by context menu now
     }
 
     @FXML

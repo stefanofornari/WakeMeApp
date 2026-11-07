@@ -199,3 +199,38 @@
     -fx-background-insets: 0;
     -fx-padding: 2;
 }
+
+/* Snooze menu: flat dark popup matching the card (popups inherit the scene stylesheet) */
+.overlay-snooze-menu {
+    -fx-background-color: #0B0F1A;
+    -fx-background-radius: 0;
+    -fx-border-color: #3A4360;
+    -fx-border-width: 2;
+    -fx-border-radius: 0;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 30, 0, 0, 12);
+    -fx-font-family: 'Inter', 'Segoe UI', 'System';
+}
+
+.overlay-snooze-menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 14 28 14 22;
+    -fx-cursor: hand;
+}
+
+.overlay-snooze-menu .menu-item .label {
+    -fx-text-fill: #F4F6FB;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.overlay-snooze-menu .menu-item:focused,
+.overlay-snooze-menu .menu-item:hover {
+    -fx-background-color: #1A2138;
+}
+
+.overlay-snooze-menu .menu-item:focused .label,
+.overlay-snooze-menu .menu-item:hover .label {
+    -fx-text-fill: #C6FF3D;
+}

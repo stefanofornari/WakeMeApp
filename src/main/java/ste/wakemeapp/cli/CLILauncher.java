@@ -150,6 +150,10 @@ public class CLILauncher extends Application {
     }
 
     private void showOverlay(MeetingNotification notification) {
+        if (scheduler == null) {
+            // --now: still needs a scheduler so that a snooze can bring the overlay back
+            scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        }
         overlayManager = new OverlayManager(scheduler);
         // Track snoozes scheduled from this overlay
         overlayManager.setOnSnoozeScheduled(() -> pendingNotifications.incrementAndGet());

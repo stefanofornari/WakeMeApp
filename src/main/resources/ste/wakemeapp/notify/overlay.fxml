@@ -46,6 +46,7 @@
                     <Label fx:id="timeLabel" text="00:00 – --:--" styleClass="overlay-time" />
                     <Label fx:id="durationLabel" styleClass="overlay-duration" />
                 </HBox>
+                <Label fx:id="snoozeStatusLabel" styleClass="overlay-snooze-status" visible="false" managed="false" />
                 <HBox fx:id="organizerBox" alignment="CENTER_LEFT" spacing="12">
                     <StackPane styleClass="overlay-icon-box">
                         <SVGPath styleClass="overlay-icon" content="M12 12a4 4 0 1 0 0-8a4 4 0 1 0 0 8 M4 21c0-4 3.5-6 8-6s8 2 8 6" />
@@ -55,6 +56,8 @@
             </VBox>
         </VBox>
 
+        <Label fx:id="meetingCountdownLabel" styleClass="overlay-meeting-countdown" visible="false" managed="false" />
+
         <!-- Actions -->
         <HBox fx:id="buttonBox" alignment="CENTER" spacing="14">
             <Button fx:id="joinButton" text="Join meeting" styleClass="overlay-button-primary"
@@ -63,7 +66,7 @@
                     <SVGPath styleClass="overlay-join-icon" content="M3 6h13v12H3z M16 10.5l5-3v9l-5-3" />
                 </graphic>
             </Button>
-            <Button fx:id="snoozeButton" text="Snooze" styleClass="overlay-button-secondary" onAction="#handleSnooze" />
+            <Button fx:id="snoozeButton" text="Snooze" styleClass="overlay-button-secondary" />
             <Button fx:id="dismissButton" text="Dismiss" styleClass="overlay-button-secondary" onAction="#handleDismiss" />
         </HBox>
 
