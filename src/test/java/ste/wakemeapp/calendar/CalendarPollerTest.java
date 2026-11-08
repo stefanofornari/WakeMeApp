@@ -190,4 +190,158 @@ class CalendarPollerTest {
             event("normal", ResponseStatus.ACCEPTED, false)
         )).containsExactly("normal");
     }
+
+    // --- keeping the scheduler in sync with the calendar (scheduler/US-000030)
+
+    private static CalendarEvent event(String id, LocalDateTime start, ResponseStatus status) {
+        return new CalendarEvent(id, id, start, null, null, null, null, status, false);
+    }
+
+    private CalendarPoller pollerOn(CalendarSource source, Clock clock) {
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, clock);
+        return poller;
+    }
+
+    @Test
+    void should_reschedule_a_moved_meeting_for_its_new_start() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(10);
+        source.add(event("standup", start, ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        ScheduledNotification before = poller.scheduled().get(0);
+
+        source.add(event("standup", start.plusMinutes(3), ResponseStatus.ACCEPTED));
+        poller.pollOnce();
+
+        then(before.isCancelled()).isTrue();
+        then(poller.scheduled()).hasSize(1);
+        then(poller.scheduled().get(0).triggerTime())
+            .isEqualTo(start.plusMinutes(3).minus(NotificationScheduler.DEFAULT_LEAD_TIME));
+    }
+
+    @Test
+    void should_cancel_a_meeting_that_disappears_from_the_calendar() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(10), ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        ScheduledNotification before = poller.scheduled().get(0);
+
+        source.remove("standup");
+        poller.pollOnce();
+
+        then(before.isCancelled()).isTrue();
+        then(poller.scheduled()).isEmpty();
+    }
+
+    @Test
+    void should_cancel_a_meeting_that_is_declined_after_being_scheduled() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(10);
+        source.add(event("standup", start, ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        ScheduledNotification before = poller.scheduled().get(0);
+
+        source.add(event("standup", start, ResponseStatus.DECLINED));
+        poller.pollOnce();
+
+        then(before.isCancelled()).isTrue();
+        then(poller.scheduled()).isEmpty();
+    }
+
+    @Test
+    void should_cancel_a_meeting_moved_out_of_the_window() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(10), ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        ScheduledNotification before = poller.scheduled().get(0);
+
+        source.add(event("standup", LocalDateTime.now().plusMinutes(60), ResponseStatus.ACCEPTED));
+        poller.pollOnce();
+
+        then(before.isCancelled()).isTrue();
+        then(poller.scheduled()).isEmpty();
+    }
+
+    @Test
+    void should_leave_an_unchanged_meeting_alone() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(10), ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        ScheduledNotification before = poller.scheduled().get(0);
+
+        poller.pollOnce();
+        poller.pollOnce();
+
+        then(poller.scheduled()).containsExactly(before);
+        then(before.isCancelled()).isFalse();
+    }
+
+    @Test
+    void should_keep_the_pending_snooze_of_an_unchanged_meeting() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(10);
+        source.add(event("standup", start, ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        MeetingNotification shown = poller.scheduled().get(0).notification();
+        ScheduledNotification snooze = scheduler.scheduleAtExactTime(
+            shown.withSnooze(5, LocalDateTime.now().plusMinutes(5)));
+
+        poller.pollOnce();
+
+        then(snooze.isCancelled()).isFalse();
+    }
+
+    @Test
+    void should_replace_the_pending_snooze_of_a_moved_meeting_and_reset_the_snooze_count() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(10);
+        source.add(event("standup", start, ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+        MeetingNotification shown = poller.scheduled().get(0).notification();
+        ScheduledNotification snooze = scheduler.scheduleAtExactTime(
+            shown.withSnooze(5, LocalDateTime.now().plusMinutes(5)).withSnooze(5, LocalDateTime.now().plusMinutes(5)));
+
+        source.add(event("standup", start.plusMinutes(2), ResponseStatus.ACCEPTED));
+        poller.pollOnce();
+
+        then(snooze.isCancelled()).isTrue();
+        then(poller.scheduled().get(0).notification().snoozeCount()).isZero();
+        then(poller.scheduled().get(0).notification().originalStartTime()).isEqualTo(start.plusMinutes(2));
+    }
+
+    @Test
+    void should_not_cancel_the_snooze_of_a_meeting_that_has_started() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(10), ResponseStatus.ACCEPTED));
+        MutableClock clock = new MutableClock();
+        pollerOn(source, clock).pollOnce();
+        MeetingNotification shown = poller.scheduled().get(0).notification();
+        ScheduledNotification snooze = scheduler.scheduleAtExactTime(
+            shown.withSnooze(10, LocalDateTime.now().plusMinutes(20)));
+
+        clock.advance(Duration.ofMinutes(11)); // the meeting started: it is no longer in the window
+        poller.pollOnce();
+
+        then(snooze.isCancelled()).isFalse();
+    }
+
+    @Test
+    void should_notify_once_for_an_unchanged_meeting_and_never_for_a_cancelled_one() throws Exception {
+        List<String> fired = new CopyOnWriteArrayList<>();
+        try (NotificationScheduler quick = new NotificationScheduler(
+                n -> fired.add(n.title()), Duration.ofMillis(100), Clock.systemDefaultZone())) {
+            InMemoryCalendarSource source = new InMemoryCalendarSource();
+            source.add(event("kept", LocalDateTime.now().plusMillis(500), ResponseStatus.ACCEPTED));
+            source.add(event("cancelled", LocalDateTime.now().plusMillis(500), ResponseStatus.ACCEPTED));
+            poller = new CalendarPoller(source, quick, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone());
+            poller.pollOnce();
+            poller.pollOnce();
+
+            source.remove("cancelled");
+            poller.pollOnce();
+            Thread.sleep(900);
+
+            then(fired).containsExactly("kept");
+        }
+    }
 }

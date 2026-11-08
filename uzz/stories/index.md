@@ -38,7 +38,7 @@
 | scheduler/US-000025 | Background Process Lifecycle | TODO |
 | scheduler/US-000026 | Persist Pending Notifications Across Restart | TODO |
 | scheduler/US-000027 | Catch Up on Missed Notifications After Sleep or Wake | TODO |
-| scheduler/US-000030 | Keep Scheduled Notifications in Sync with Calendar Changes | TODO |
+| scheduler/US-000030 | Keep Scheduled Notifications in Sync with Calendar Changes | WIP |
 
 ## settings
 | ID | Title | Status |

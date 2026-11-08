@@ -169,4 +169,37 @@ class NotificationSchedulerTest {
         then(latch.await(2, TimeUnit.SECONDS)).isTrue();
         then(fired).containsExactly("Snooze");
     }
+
+    private MeetingNotification calendarMeeting(String eventId, Duration startsIn) {
+        LocalDateTime start = LocalDateTime.now().plus(startsIn);
+        return new MeetingNotification(eventId, start, null, null, null, null, 0, 3, start, eventId);
+    }
+
+    @Test
+    void should_cancel_everything_pending_for_an_event_and_nothing_else() {
+        scheduler = new NotificationScheduler(n -> { });
+        ScheduledNotification regular = scheduler.schedule(calendarMeeting("e1", Duration.ofMinutes(30)));
+        ScheduledNotification snooze = scheduler.scheduleAtExactTime(calendarMeeting("e1", Duration.ofMinutes(20)));
+        ScheduledNotification other = scheduler.schedule(calendarMeeting("e2", Duration.ofMinutes(30)));
+        ScheduledNotification single = scheduler.schedule(meeting("No event id", Duration.ofMinutes(30)));
+
+        scheduler.cancelAll("e1");
+
+        then(regular.isCancelled()).isTrue();
+        then(snooze.isCancelled()).isTrue();
+        then(other.isCancelled()).isFalse();
+        then(single.isCancelled()).isFalse();
+    }
+
+    @Test
+    void should_not_fire_what_was_cancelled_by_event_id() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        scheduler = schedulerWith(Duration.ofMillis(100), latch);
+        scheduler.schedule(calendarMeeting("e1", Duration.ofMillis(400)));
+
+        scheduler.cancelAll("e1");
+
+        then(latch.await(800, TimeUnit.MILLISECONDS)).isFalse();
+        then(fired).isEmpty();
+    }
 }

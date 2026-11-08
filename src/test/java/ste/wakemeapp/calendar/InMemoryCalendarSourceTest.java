@@ -47,6 +47,7 @@ class InMemoryCalendarSourceTest {
 
         MeetingNotification notification = event.toNotification();
 
+        then(notification.eventId()).isEqualTo("id1");
         then(notification.title()).isEqualTo("Standup");
         then(notification.startTime()).isEqualTo(NOW);
         then(notification.endTime()).isEqualTo(NOW.plusMinutes(30));
