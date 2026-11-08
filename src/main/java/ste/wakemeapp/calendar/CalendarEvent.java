@@ -22,6 +22,17 @@ public record CalendarEvent(
     boolean allDay
 ) {
 
+    /**
+     * Whether the user wants to be notified: accepted, tentative and organised meetings, but not
+     * declined or unanswered ones, nor all-day events.
+     */
+    public boolean isEligible() {
+        return !allDay && switch (responseStatus) {
+            case ACCEPTED, TENTATIVE, ORGANIZER -> true;
+            case DECLINED, NOT_RESPONDED -> false;
+        };
+    }
+
     /** The data the overlay shows for this meeting. */
     public MeetingNotification toNotification() {
         return new MeetingNotification(title, start, joinUrl, organizer, description, endTime);

@@ -16,7 +16,7 @@ import ste.wakemeapp.scheduler.ScheduledNotification;
 
 /**
  * Keeps the scheduler fed from a calendar: every poll interval it asks the source for the meetings
- * starting in the next window and schedules those it does not know yet.
+ * starting in the next window and schedules the eligible ones it does not know yet.
  * <p>
  * The window should be at least poll interval + lead time, so that a meeting is known to the
  * scheduler before its notification is due. Polling runs on its own background thread.
@@ -82,6 +82,9 @@ public final class CalendarPoller implements AutoCloseable {
         try {
             LocalDateTime now = LocalDateTime.now(clock);
             for (CalendarEvent event : source.meetingsStartingBetween(now, now.plus(window))) {
+                if (!event.isEligible()) {
+                    continue;
+                }
                 // the window is larger than the poll interval: the same meeting comes back on later polls
                 scheduled.computeIfAbsent(event.id(), id -> scheduler.schedule(event.toNotification()));
             }
