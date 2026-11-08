@@ -48,8 +48,9 @@ public class NotificationCommand implements Callable<Integer> {
     public Integer call() {
         try {
             if (eventsFile != null) {
-                if (!Files.isReadable(eventsFile)) {
-                    throw new IllegalArgumentException("Cannot read the events file: " + eventsFile);
+                // the file may be created later: only a directory can never work
+                if (Files.isDirectory(eventsFile)) {
+                    throw new IllegalArgumentException("The events file is a directory: " + eventsFile);
                 }
                 return 0;
             }

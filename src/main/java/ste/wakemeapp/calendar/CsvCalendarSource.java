@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * A calendar read from a CSV file, to simulate a remote calendar: the file is read again on every
@@ -22,12 +23,17 @@ import java.util.Map;
  * ({@code accepted|tentative|declined|none|organizer}, empty = accepted) and {@code allday}.
  * Date-times are ISO local ({@code 2026-11-07T16:30}). Fields with commas are wrapped in double
  * quotes ({@code ""} for a quote); lines starting with {@code #} are ignored.
+ * A file that does not exist (yet) is an empty calendar, with one warning.
  */
 public final class CsvCalendarSource implements CalendarSource {
 
     private static final List<String> REQUIRED = List.of("id", "title", "start");
 
+    private static final Logger LOG = Logger.getLogger(CsvCalendarSource.class.getName());
+
     private final Path file;
+    /** Whether the warning about the missing file was already logged, so it is not repeated at every poll. */
+    private volatile boolean missingReported;
 
     public CsvCalendarSource(Path file) {
         this.file = file;
@@ -41,6 +47,14 @@ public final class CsvCalendarSource implements CalendarSource {
     }
 
     private List<CalendarEvent> read() throws IOException {
+        if (!Files.exists(file)) {
+            if (!missingReported) {
+                missingReported = true;
+                LOG.warning("Events file " + file + " not found, waiting for it to appear");
+            }
+            return List.of();
+        }
+        missingReported = false;
         List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
         Map<String, Integer> columns = null;
         List<CalendarEvent> events = new ArrayList<>();
