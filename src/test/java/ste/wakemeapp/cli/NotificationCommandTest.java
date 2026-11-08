@@ -184,7 +184,7 @@ class NotificationCommandTest {
         java.io.StringWriter err = new java.io.StringWriter();
         commandLine.setErr(new java.io.PrintWriter(err, true));
 
-        int exitCode = executeWithCalendar("--poll-interval", "10", "--window", "12");
+        int exitCode = executeWithCalendarFile("--poll-interval", "10", "--window", "12");
 
         then(exitCode).isNotEqualTo(0);
         then(err.toString()).contains("at least 15 minutes");
