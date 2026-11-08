@@ -99,8 +99,7 @@ class LogSetupTest {
     @Test
     void should_also_write_to_the_console() throws IOException {
         PrintStream original = System.err;
-        ByteArrayOutputStream console = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(console, true));
+        ByteArrayOutputStream console = captureConsole();
         try {
             LogSetup.configure(dir, false);
             LOG.info("Polling meetings.csv");
@@ -116,8 +115,7 @@ class LogSetupTest {
     void should_start_anyway_when_the_log_folder_cannot_be_used() throws IOException {
         Path file = Files.writeString(dir.resolve("blocked"), "not a folder");
         PrintStream original = System.err;
-        ByteArrayOutputStream console = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(console, true));
+        ByteArrayOutputStream console = captureConsole();
         boolean fileLogging;
         try {
             fileLogging = LogSetup.configure(file.resolve("logs"), false);
@@ -130,55 +128,50 @@ class LogSetupTest {
         then(console.toString()).contains("Cannot use the log folder").contains("still logging");
     }
 
-    @Test
-    void should_roll_three_files_of_one_megabyte_in_the_given_folder() {
-        Properties configuration = LogSetup.configuration(dir, false);
 
-        then(configuration.getProperty("java.util.logging.FileHandler.limit")).isEqualTo("1000000");
-        then(configuration.getProperty("java.util.logging.FileHandler.count")).isEqualTo("3");
-        then(configuration.getProperty("java.util.logging.FileHandler.pattern"))
-            .isEqualTo(dir.toString().replace('\\', '/').replace("%", "%%") + "/wakemeapp.%g.log");
+    /** The console handler binds to System.err when the JUL configuration is read: read it again after redirecting it. */
+    private ByteArrayOutputStream captureConsole() throws IOException {
+        ByteArrayOutputStream console = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(console, true));
+        LogManager.getLogManager().readConfiguration();
+        return console;
+    }
+
+    @Test
+    void should_rely_on_the_logging_properties_given_to_the_jvm() {
+        LogManager manager = LogManager.getLogManager();
+
+        // -Djava.util.logging.config.file=.../logging.properties (see the surefire argLine in the pom)
+        then(manager.getProperty("java.util.logging.FileHandler.limit")).isEqualTo("1000000");
+        then(manager.getProperty("java.util.logging.FileHandler.count")).isEqualTo("3");
+        then(manager.getProperty("java.util.logging.FileHandler.formatter")).isEqualTo(LineFormatter.class.getName());
+        // the file handler is added at startup, when the folder is known: JUL must not create its own
+        then(manager.getProperty("handlers")).contains("ConsoleHandler").doesNotContain("FileHandler");
+    }
+
+    @Test
+    void should_keep_the_cap_and_the_line_format_without_the_configuration_file() throws IOException {
+        LogManager.getLogManager().readConfiguration(
+            new java.io.ByteArrayInputStream("handlers = java.util.logging.ConsoleHandler\n".getBytes()));
+        LogSetup.configure(dir, false);
+        String line = "x".repeat(3000);
+
+        for (int i = 0; i < 1500; i++) { // 4.5 MB
+            LOG.info(line);
+        }
+
+        try (Stream<Path> files = Files.list(dir)) {
+            List<Path> logs = files.filter(p -> p.getFileName().toString().matches("wakemeapp\\.\\d+\\.log")).toList();
+            then(logs).hasSizeLessThanOrEqualTo(3);
+            for (Path log : logs) {
+                then(Files.size(log)).isLessThanOrEqualTo(1_100_000L);
+            }
+        }
+        then(logFile(dir)).startsWith("20").contains(" INFO  xxx");
     }
 
     @Test
     void should_escape_percent_signs_of_the_folder_for_the_file_pattern() {
-        Properties configuration = LogSetup.configuration(Path.of("/tmp/100%/logs"), false);
-
-        then(configuration.getProperty("java.util.logging.FileHandler.pattern")).isEqualTo("/tmp/100%%/logs/wakemeapp.%g.log");
-    }
-
-    @Test
-    void should_take_the_static_settings_from_the_logging_properties_resource() throws IOException {
-        Properties resource = new Properties();
-        try (java.io.InputStream in = LogSetup.class.getResourceAsStream("logging.properties")) {
-            then(in).as("the logging.properties resource").isNotNull();
-            resource.load(in);
-        }
-
-        then(resource.getProperty("handlers")).contains("FileHandler").contains("ConsoleHandler");
-        then(resource.getProperty("java.util.logging.FileHandler.limit")).isEqualTo("1000000");
-        then(resource.getProperty("java.util.logging.FileHandler.count")).isEqualTo("3");
-        then(resource.getProperty("java.util.logging.FileHandler.formatter")).isEqualTo(LineFormatter.class.getName());
-        then(resource.getProperty("java.util.logging.ConsoleHandler.formatter")).isEqualTo(LineFormatter.class.getName());
-        then(resource.getProperty("ste.wakemeapp.level")).isEqualTo("INFO");
-        // the folder is only known at startup, so the pattern is not in the file
-        then(resource.getProperty("java.util.logging.FileHandler.pattern")).isNull();
-    }
-
-    @Test
-    void should_only_add_the_folder_and_the_debug_level_to_the_resource() {
-        Properties configuration = LogSetup.configuration(dir, true);
-
-        then(configuration.getProperty("ste.wakemeapp.level")).isEqualTo("FINE");
-        then(configuration.getProperty("java.util.logging.FileHandler.pattern")).startsWith(dir.toString().replace('\\', '/'));
-        then(configuration.getProperty("java.util.logging.FileHandler.count")).isEqualTo("3");
-    }
-
-    @Test
-    void should_leave_the_file_handler_out_when_there_is_no_usable_folder() {
-        Properties configuration = LogSetup.configuration(null, false);
-
-        then(configuration.getProperty("handlers")).isEqualTo("java.util.logging.ConsoleHandler");
-        then(configuration.getProperty("java.util.logging.FileHandler.pattern")).isNull();
+        then(LogSetup.filePattern(Path.of("/tmp/100%/logs"))).isEqualTo("/tmp/100%%/logs/wakemeapp.%g.log");
     }
 }
