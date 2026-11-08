@@ -146,4 +146,39 @@ class LogSetupTest {
 
         then(configuration.getProperty("java.util.logging.FileHandler.pattern")).isEqualTo("/tmp/100%%/logs/wakemeapp.%g.log");
     }
+
+    @Test
+    void should_take_the_static_settings_from_the_logging_properties_resource() throws IOException {
+        Properties resource = new Properties();
+        try (java.io.InputStream in = LogSetup.class.getResourceAsStream("logging.properties")) {
+            then(in).as("the logging.properties resource").isNotNull();
+            resource.load(in);
+        }
+
+        then(resource.getProperty("handlers")).contains("FileHandler").contains("ConsoleHandler");
+        then(resource.getProperty("java.util.logging.FileHandler.limit")).isEqualTo("1000000");
+        then(resource.getProperty("java.util.logging.FileHandler.count")).isEqualTo("3");
+        then(resource.getProperty("java.util.logging.FileHandler.formatter")).isEqualTo(LineFormatter.class.getName());
+        then(resource.getProperty("java.util.logging.ConsoleHandler.formatter")).isEqualTo(LineFormatter.class.getName());
+        then(resource.getProperty("ste.wakemeapp.level")).isEqualTo("INFO");
+        // the folder is only known at startup, so the pattern is not in the file
+        then(resource.getProperty("java.util.logging.FileHandler.pattern")).isNull();
+    }
+
+    @Test
+    void should_only_add_the_folder_and_the_debug_level_to_the_resource() {
+        Properties configuration = LogSetup.configuration(dir, true);
+
+        then(configuration.getProperty("ste.wakemeapp.level")).isEqualTo("FINE");
+        then(configuration.getProperty("java.util.logging.FileHandler.pattern")).startsWith(dir.toString().replace('\\', '/'));
+        then(configuration.getProperty("java.util.logging.FileHandler.count")).isEqualTo("3");
+    }
+
+    @Test
+    void should_leave_the_file_handler_out_when_there_is_no_usable_folder() {
+        Properties configuration = LogSetup.configuration(null, false);
+
+        then(configuration.getProperty("handlers")).isEqualTo("java.util.logging.ConsoleHandler");
+        then(configuration.getProperty("java.util.logging.FileHandler.pattern")).isNull();
+    }
 }
