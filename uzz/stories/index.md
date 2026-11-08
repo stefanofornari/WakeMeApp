@@ -26,7 +26,7 @@
 | notify/US-000009 | Snooze Options | DONE |
 | notify/US-000010 | Dismiss Action | TODO |
 | notify/US-000022 | Command-Line Trigger for Meeting Notification | DONE |
-| notify/US-000033 | Show the Full Help on Invalid Command-Line Arguments | TODO |
+| notify/US-000033 | Show the Full Help on Invalid Command-Line Arguments | WIP |
 
 ## scheduler
 | ID | Title | Status |
