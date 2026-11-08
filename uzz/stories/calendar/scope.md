@@ -22,7 +22,7 @@ real Microsoft Graph source is delivered separately (auth and calendar domains).
   - [ ] A calendar-source interface that returns the meetings starting within a given time window (event id, title, start, end, join URL, organizer, response status, all-day flag)
   - [ ] An in-memory implementation of the interface, usable to drive the poller in tests
   - [ ] A CSV-file implementation of the interface, re-read at every poll, so that the integration with a calendar (including changes over time) can be simulated by editing a file
-  - [ ] A command-line option `--events-file` that starts the poller on such a file instead of notifying for a single meeting
+  - [ ] A command-line option `--calendar` that starts the poller on such a file instead of notifying for a single meeting
 * **Poller**:
   - [ ] Polls the calendar source every poll interval (default 5 min) on a background thread, never on the JavaFX Application Thread
   - [ ] Asks for the meetings starting in the next window (default 15 min)

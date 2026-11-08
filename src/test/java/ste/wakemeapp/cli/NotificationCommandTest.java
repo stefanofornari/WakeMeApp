@@ -120,39 +120,39 @@ class NotificationCommandTest {
     Path dir;
 
     @Test
-    void should_accept_an_events_file_without_title_and_start_date() throws Exception {
+    void should_accept_an_calendar_file_without_title_and_start_date() throws Exception {
         Path file = Files.writeString(dir.resolve("meetings.csv"), "id,title,start\n");
 
-        int exitCode = commandLine.execute("--events-file", file.toString());
+        int exitCode = commandLine.execute("--calendar", file.toString());
 
         then(exitCode).isEqualTo(0);
-        then(((NotificationCommand) commandLine.getCommand()).getEventsFile()).isEqualTo(file);
+        then(((NotificationCommand) commandLine.getCommand()).getCalendarFile()).isEqualTo(file);
     }
 
     @Test
-    void should_accept_an_events_file_that_does_not_exist_yet() {
-        int exitCode = commandLine.execute("--events-file", dir.resolve("missing.csv").toString());
+    void should_accept_an_calendar_file_that_does_not_exist_yet() {
+        int exitCode = commandLine.execute("--calendar", dir.resolve("missing.csv").toString());
 
         then(exitCode).isEqualTo(0);
     }
 
     @Test
-    void should_reject_an_events_file_that_is_a_directory() {
-        int exitCode = commandLine.execute("--events-file", dir.toString());
+    void should_reject_an_calendar_file_that_is_a_directory() {
+        int exitCode = commandLine.execute("--calendar", dir.toString());
 
         then(exitCode).isNotEqualTo(0);
     }
 
     @Test
-    void should_have_no_events_file_by_default() {
+    void should_have_no_calendar_file_by_default() {
         commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00");
 
-        then(((NotificationCommand) commandLine.getCommand()).getEventsFile()).isNull();
+        then(((NotificationCommand) commandLine.getCommand()).getCalendarFile()).isNull();
     }
 
-    private int executeWithEventsFile(String... options) {
+    private int executeWithCalendarFile(String... options) {
         String[] args = new String[options.length + 2];
-        args[0] = "--events-file";
+        args[0] = "--calendar";
         args[1] = dir.resolve("meetings.csv").toString();
         System.arraycopy(options, 0, args, 2, options.length);
         return commandLine.execute(args);
@@ -164,7 +164,7 @@ class NotificationCommandTest {
 
     @Test
     void should_poll_every_5_minutes_for_the_next_15_by_default() {
-        executeWithEventsFile();
+        executeWithCalendarFile();
 
         then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(5));
         then(command().getWindow()).isEqualTo(java.time.Duration.ofMinutes(15));
@@ -172,7 +172,7 @@ class NotificationCommandTest {
 
     @Test
     void should_use_the_given_poll_interval_and_window() {
-        int exitCode = executeWithEventsFile("--poll-interval", "2", "--window", "12");
+        int exitCode = executeWithCalendarFile("--poll-interval", "2", "--window", "12");
 
         then(exitCode).isEqualTo(0);
         then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(2));
@@ -186,7 +186,7 @@ class NotificationCommandTest {
         System.setErr(new java.io.PrintStream(err));
         int exitCode;
         try {
-            exitCode = executeWithEventsFile("--poll-interval", "10", "--window", "12");
+            exitCode = executeWithCalendarFile("--poll-interval", "10", "--window", "12");
         } finally {
             System.setErr(original);
         }
@@ -197,17 +197,17 @@ class NotificationCommandTest {
 
     @Test
     void should_reject_a_window_too_short_for_the_default_poll_interval() {
-        then(executeWithEventsFile("--window", "9")).isNotEqualTo(0);
+        then(executeWithCalendarFile("--window", "9")).isNotEqualTo(0);
     }
 
     @Test
     void should_reject_a_poll_interval_that_leaves_no_room_in_the_default_window() {
-        then(executeWithEventsFile("--poll-interval", "11")).isNotEqualTo(0);
+        then(executeWithCalendarFile("--poll-interval", "11")).isNotEqualTo(0);
     }
 
     @Test
     void should_reject_non_positive_values() {
-        then(executeWithEventsFile("--poll-interval", "0")).isNotEqualTo(0);
-        then(executeWithEventsFile("--window", "-3")).isNotEqualTo(0);
+        then(executeWithCalendarFile("--poll-interval", "0")).isNotEqualTo(0);
+        then(executeWithCalendarFile("--window", "-3")).isNotEqualTo(0);
     }
 }

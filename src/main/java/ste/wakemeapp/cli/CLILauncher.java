@@ -65,8 +65,8 @@ public class CLILauncher extends Application {
 
         try {
             registerShutdownHook();
-            if (parsedCommand.getEventsFile() != null) {
-                pollCalendar(parsedCommand.getEventsFile());
+            if (parsedCommand.getCalendarFile() != null) {
+                pollCalendar(parsedCommand.getCalendarFile());
                 return;
             }
             MeetingNotification notification = buildNotification();
@@ -132,13 +132,13 @@ public class CLILauncher extends Application {
      * Simulates a calendar: polls the CSV file and schedules what it finds. The process runs until
      * it is stopped, since meetings may appear in the file at any time.
      */
-    private void pollCalendar(Path eventsFile) {
+    private void pollCalendar(Path calendarFile) {
         calendarMode = true;
         scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
-        poller = new CalendarPoller(new CsvCalendarSource(eventsFile), scheduler,
+        poller = new CalendarPoller(new CsvCalendarSource(calendarFile), scheduler,
             parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
         poller.start();
-        System.out.println("Polling " + eventsFile + " every " + parsedCommand.getPollInterval().toMinutes()
+        System.out.println("Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
         System.out.println("Press Ctrl+C to stop");
     }

@@ -18,10 +18,10 @@ import java.util.concurrent.Callable;
          mixinStandardHelpOptions = true, version = "1.0.0")
 public class NotificationCommand implements Callable<Integer> {
 
-    @Option(names = {"-t", "--title"}, description = "Meeting title (required unless --events-file is given)")
+    @Option(names = {"-t", "--title"}, description = "Meeting title (required unless --calendar is given)")
     private String title;
 
-    @Option(names = {"-s", "--start-date"}, description = "Meeting start date/time (ISO-8601) (required unless --events-file is given)")
+    @Option(names = {"-s", "--start-date"}, description = "Meeting start date/time (ISO-8601) (required unless --calendar is given)")
     private String startDateStr;
 
     @Option(names = {"-e", "--end-date"}, description = "Meeting end date/time (ISO-8601)")
@@ -40,12 +40,12 @@ public class NotificationCommand implements Callable<Integer> {
             description = "Show the notification immediately instead of scheduling it before the start date")
     private boolean now;
 
-    @Option(names = "--events-file",
+    @Option(names = "--calendar",
             description = "CSV file of meetings to poll like a calendar, instead of a single meeting")
-    private Path eventsFile;
+    private Path calendarFile;
 
     @Option(names = "--poll-interval", paramLabel = "<minutes>",
-            description = "How often the events file is polled (default: 5)")
+            description = "How often the calendar file is polled (default: 5)")
     private int pollIntervalMinutes = (int) CalendarPoller.DEFAULT_POLL_INTERVAL.toMinutes();
 
     @Option(names = "--window", paramLabel = "<minutes>",
@@ -59,15 +59,15 @@ public class NotificationCommand implements Callable<Integer> {
     public Integer call() {
         try {
             validatePolling();
-            if (eventsFile != null) {
+            if (calendarFile != null) {
                 // the file may be created later: only a directory can never work
-                if (Files.isDirectory(eventsFile)) {
-                    throw new IllegalArgumentException("The events file is a directory: " + eventsFile);
+                if (Files.isDirectory(calendarFile)) {
+                    throw new IllegalArgumentException("The calendar file is a directory: " + calendarFile);
                 }
                 return 0;
             }
             if (title == null || startDateStr == null) {
-                throw new IllegalArgumentException("--title and --start-date are required (or use --events-file)");
+                throw new IllegalArgumentException("--title and --start-date are required (or use --calendar)");
             }
             validateAndParseDates();
             return 0;
@@ -137,8 +137,8 @@ public class NotificationCommand implements Callable<Integer> {
         return Duration.ofMinutes(windowMinutes);
     }
 
-    public Path getEventsFile() {
-        return eventsFile;
+    public Path getCalendarFile() {
+        return calendarFile;
     }
 
     public boolean isNow() {

@@ -50,7 +50,7 @@ public final class CsvCalendarSource implements CalendarSource {
         if (!Files.exists(file)) {
             if (!missingReported) {
                 missingReported = true;
-                LOG.warning("Events file " + file + " not found, waiting for it to appear");
+                LOG.warning("Calendar file " + file + " not found, waiting for it to appear");
             }
             return List.of();
         }
