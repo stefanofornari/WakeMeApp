@@ -5,6 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.BDDAssertions.then;
@@ -111,9 +116,37 @@ class CsvCalendarSourceTest {
     }
 
     @Test
-    void should_fail_when_the_file_does_not_exist() {
-        CsvCalendarSource source = new CsvCalendarSource(dir.resolve("missing.csv"));
+    void should_return_no_meetings_and_warn_once_while_the_file_is_missing() throws IOException {
+        Path file = dir.resolve("missing.csv");
+        CsvCalendarSource source = new CsvCalendarSource(file);
+        Logger logger = Logger.getLogger(CsvCalendarSource.class.getName());
+        List<LogRecord> logged = new CopyOnWriteArrayList<>();
+        Handler handler = new Handler() {
+            @Override public void publish(LogRecord record) { logged.add(record); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        };
+        logger.addHandler(handler);
+        try {
+            then(window(source)).isEmpty();
+            then(window(source)).isEmpty();
+        } finally {
+            logger.removeHandler(handler);
+        }
 
-        thenThrownBy(() -> window(source)).isInstanceOf(IOException.class);
+        then(logged).hasSize(1);
+        then(logged.get(0).getLevel()).isEqualTo(Level.WARNING);
+        then(logged.get(0).getMessage()).contains("missing.csv");
+    }
+
+    @Test
+    void should_pick_up_the_file_as_soon_as_it_appears() throws IOException {
+        Path file = dir.resolve("late.csv");
+        CsvCalendarSource source = new CsvCalendarSource(file);
+        then(window(source)).isEmpty();
+
+        Files.writeString(file, HEADER + "e1,Standup,2026-11-07T09:12,,,,,,\n");
+
+        then(window(source)).extracting(CalendarEvent::id).containsExactly("e1");
     }
 }

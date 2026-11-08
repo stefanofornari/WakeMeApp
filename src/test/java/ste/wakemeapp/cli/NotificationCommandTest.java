@@ -130,8 +130,15 @@ class NotificationCommandTest {
     }
 
     @Test
-    void should_reject_an_events_file_that_cannot_be_read() {
+    void should_accept_an_events_file_that_does_not_exist_yet() {
         int exitCode = commandLine.execute("--events-file", dir.resolve("missing.csv").toString());
+
+        then(exitCode).isEqualTo(0);
+    }
+
+    @Test
+    void should_reject_an_events_file_that_is_a_directory() {
+        int exitCode = commandLine.execute("--events-file", dir.toString());
 
         then(exitCode).isNotEqualTo(0);
     }
