@@ -282,4 +282,67 @@ class OverlayWindowTest {
 
         then(overlay.getController().getCountdownLabel().getText()).matches("Meeting starting in 00:1[45]:\\d\\d");
     }
+
+    private void showMeetingStartingIn(java.time.Duration remaining) {
+        overlay.setNotification(new MeetingNotification(
+            "Team Standup", java.time.LocalDateTime.now().plus(remaining), "https://teams.example.com/join"));
+    }
+
+    private void thenCountdownAndDotHaveStyle(String styleClass) {
+        then(overlay.getController().getCountdownLabel().getStyleClass()).contains(styleClass);
+        then(overlay.getController().getStatusDot().getStyleClass()).contains(styleClass);
+    }
+
+    @Test
+    void should_show_the_countdown_in_green_with_more_than_five_minutes_left() {
+        showMeetingStartingIn(java.time.Duration.ofMinutes(6));
+
+        thenCountdownAndDotHaveStyle("overlay-state-green");
+    }
+
+    @Test
+    void should_show_the_countdown_in_yellow_between_five_and_one_minutes() {
+        showMeetingStartingIn(java.time.Duration.ofMinutes(4));
+
+        thenCountdownAndDotHaveStyle("overlay-state-yellow");
+        then(overlay.getController().getCountdownLabel().getStyleClass()).doesNotContain("overlay-state-green");
+    }
+
+    @Test
+    void should_show_the_countdown_in_red_in_the_last_minute() {
+        showMeetingStartingIn(java.time.Duration.ofSeconds(30));
+
+        thenCountdownAndDotHaveStyle("overlay-state-red");
+    }
+
+    @Test
+    void should_tell_to_join_when_the_meeting_has_started() {
+        showMeetingStartingIn(java.time.Duration.ofSeconds(-10));
+
+        then(overlay.getController().getCountdownLabel().getText()).isEqualTo("Meeting started - Join now");
+        thenCountdownAndDotHaveStyle("overlay-state-started");
+    }
+
+    @Test
+    void should_flash_the_countdown_once_the_meeting_has_started(FxRobot robot) {
+        showMeetingStartingIn(java.time.Duration.ofSeconds(-10));
+        java.util.Set<Boolean> seen = new java.util.HashSet<>();
+
+        for (int i = 0; i < 20; i++) {
+            seen.add(overlay.getController().getCountdownLabel().getStyleClass().contains("overlay-flash"));
+            robot.sleep(100);
+        }
+
+        then(seen).containsExactlyInAnyOrder(true, false);
+    }
+
+    @Test
+    void should_change_colour_when_a_threshold_is_crossed_while_open(FxRobot robot) {
+        showMeetingStartingIn(java.time.Duration.ofSeconds(301));
+        thenCountdownAndDotHaveStyle("overlay-state-green");
+
+        robot.sleep(2500);
+
+        thenCountdownAndDotHaveStyle("overlay-state-yellow");
+    }
 }
