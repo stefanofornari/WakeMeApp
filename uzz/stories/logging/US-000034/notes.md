@@ -2,7 +2,7 @@
 
 ## Decisions
 
-- `ste.wakemeapp.log.LogSetup.configure(folder, debug)` builds the JUL configuration in memory (the folder is only known at startup) and hands it to `LogManager.readConfiguration`. Handlers: `FileHandler` (pattern `<folder>/wakemeapp.%g.log`, 1 000 000 bytes, 3 files, append, UTF-8) and `ConsoleHandler` (stderr), both with `LineFormatter` and level ALL; the level is decided by the loggers: root INFO, `ste.wakemeapp` INFO or FINE with `--debug`.
+- The configuration is the resource `src/main/resources/ste/wakemeapp/log/logging.properties` (handlers, formatter, limit 1 000 000 bytes, count 3, append, UTF-8, levels: root and `ste.wakemeapp` INFO). `ste.wakemeapp.log.LogSetup.configure(folder, debug)` reads it and adds only what is known at startup, then hands it to `LogManager.readConfiguration`: the file pattern `<folder>/wakemeapp.%g.log` (JUL does not expand variables or the platform's application directory in the pattern), FINE for `ste.wakemeapp` with `--debug`, and only the console handler when the folder cannot be used. Handlers let everything through; the loggers decide the level.
 - The level of the `ste.wakemeapp` logger is also set in code and a strong reference to it is kept: `LogManager` holds loggers weakly, and a configuration read after a logger was created would otherwise not reach it reliably.
 - `LineFormatter`: `2026-11-08 09:12:03 INFO  message`, level names ERROR/WARN/INFO/DEBUG, stack trace on the following lines.
 - The folder is `ProjectDirectories.from("", "", "WakeMeApp").dataLocalDir` + `logs` (directories-jvm has no log directory). Qualifier and organisation are empty, so the folder is named after the application on every platform.

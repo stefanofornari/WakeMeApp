@@ -4,24 +4,24 @@ import dev.dirs.ProjectDirectories;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 import java.util.logging.LogManager;
 
 /**
- * Sets up logging, once at startup, through the JUL configuration: a rolled file in the
- * application data directory plus the console, one line per message. The size of the log is
- * bounded: {@value #COUNT} files of at most {@value #LIMIT} bytes.
+ * Sets up logging, once at startup, through the JUL configuration in the {@code logging.properties}
+ * resource: a rolled file in the application data directory plus the console, one line per
+ * message. The size of the log is bounded (see the resource).
  */
 public final class LogSetup {
 
-    static final int LIMIT = 1_000_000;
-    static final int COUNT = 3;
-
     private static final String FILE_HANDLER = "java.util.logging.FileHandler";
     private static final String CONSOLE_HANDLER = "java.util.logging.ConsoleHandler";
-    private static final String FORMATTER = LineFormatter.class.getName();
+    private static final String RESOURCE = "logging.properties";
+    private static final String APPLICATION_LOGGER = "ste.wakemeapp";
 
     /**
      * The parent of all the application's loggers. A strong reference is kept (the LogManager only
@@ -29,7 +29,7 @@ public final class LogSetup {
      * to loggers that exist when it is read or that are created afterwards, and loggers of classes
      * loaded before the setup would otherwise miss a level set by it.
      */
-    private static final java.util.logging.Logger APPLICATION = java.util.logging.Logger.getLogger("ste.wakemeapp");
+    private static final java.util.logging.Logger APPLICATION = java.util.logging.Logger.getLogger(APPLICATION_LOGGER);
 
     private LogSetup() {
     }
@@ -69,29 +69,30 @@ public final class LogSetup {
     }
 
     /**
-     * The JUL configuration, as properties.
+     * The JUL configuration: the {@code logging.properties} resource plus what is only known at
+     * startup (the folder of the files and, with {@code --debug}, the application's level).
      *
      * @param logDirectory where the files go; {@code null} for the console only
      */
     static Properties configuration(Path logDirectory, boolean debug) {
         Properties configuration = new Properties();
-        configuration.setProperty("handlers", logDirectory == null ? CONSOLE_HANDLER : FILE_HANDLER + "," + CONSOLE_HANDLER);
-
-        if (logDirectory != null) {
-            configuration.setProperty(FILE_HANDLER + ".pattern", filePattern(logDirectory));
-            configuration.setProperty(FILE_HANDLER + ".limit", String.valueOf(LIMIT));
-            configuration.setProperty(FILE_HANDLER + ".count", String.valueOf(COUNT));
-            configuration.setProperty(FILE_HANDLER + ".append", "true");
-            configuration.setProperty(FILE_HANDLER + ".encoding", "UTF-8");
-            configuration.setProperty(FILE_HANDLER + ".formatter", FORMATTER);
-            configuration.setProperty(FILE_HANDLER + ".level", "ALL");
+        try (InputStream in = LogSetup.class.getResourceAsStream(RESOURCE)) {
+            if (in == null) {
+                throw new IllegalStateException("Missing resource " + RESOURCE);
+            }
+            configuration.load(in);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        configuration.setProperty(CONSOLE_HANDLER + ".formatter", FORMATTER);
-        configuration.setProperty(CONSOLE_HANDLER + ".level", "ALL");
 
-        // The level is decided by the loggers: libraries keep the default, the application's own may go to DEBUG
-        configuration.setProperty(".level", "INFO");
-        configuration.setProperty("ste.wakemeapp.level", debug ? "FINE" : "INFO");
+        if (logDirectory == null) {
+            configuration.setProperty("handlers", CONSOLE_HANDLER);
+        } else {
+            configuration.setProperty(FILE_HANDLER + ".pattern", filePattern(logDirectory));
+        }
+        if (debug) {
+            configuration.setProperty(APPLICATION_LOGGER + ".level", "FINE");
+        }
         return configuration;
     }
 
