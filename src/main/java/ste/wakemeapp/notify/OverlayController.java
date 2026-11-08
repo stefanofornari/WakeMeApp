@@ -82,12 +82,27 @@ public class OverlayController implements Initializable {
     @FXML
     private Label countdownLabel;
 
+    /** How urgent the meeting is; drives the colour of the countdown and of the status dot. */
+    enum CountdownState {
+        PLENTY("overlay-state-green"), SOON("overlay-state-yellow"),
+        IMMINENT("overlay-state-red"), STARTED("overlay-state-started");
+
+        private final String styleClass;
+
+        CountdownState(String styleClass) {
+            this.styleClass = styleClass;
+        }
+    }
+
+    private static final String FLASH_STYLE_CLASS = "overlay-flash";
+
     /** The real meeting start (not the snooze end); the countdown runs towards it. */
     private LocalDateTime meetingStart;
 
     private OverlayWindow overlayWindow;
     private FadeTransition pulse;
     private Timeline clock;
+    private Timeline flash;
     private ContextMenu snoozeMenu;
     private java.util.function.IntConsumer onSnoozeSelected;
 
@@ -106,6 +121,10 @@ public class OverlayController implements Initializable {
         clock = new Timeline(new KeyFrame(Duration.seconds(1), e -> refreshClock()));
         clock.setCycleCount(Animation.INDEFINITE);
         clock.play();
+
+        // Once the meeting has started the countdown flashes (red/white) until the overlay goes
+        flash = new Timeline(new KeyFrame(Duration.millis(500), e -> toggleFlash()));
+        flash.setCycleCount(Animation.INDEFINITE);
 
         // Create snooze context menu
         createSnoozeMenu();
@@ -151,14 +170,56 @@ public class OverlayController implements Initializable {
     /** Based on the system clock rather than accumulated ticks, so it does not drift. */
     private void refreshCountdown() {
         if (meetingStart != null) {
-            countdownLabel.setText(countdownText(java.time.Duration.between(LocalDateTime.now(), meetingStart)));
+            java.time.Duration remaining = java.time.Duration.between(LocalDateTime.now(), meetingStart);
+            countdownLabel.setText(countdownText(remaining));
+            applyState(countdownState(remaining));
         }
+    }
+
+    private void applyState(CountdownState state) {
+        for (CountdownState other : CountdownState.values()) {
+            countdownLabel.getStyleClass().remove(other.styleClass);
+            statusDot.getStyleClass().remove(other.styleClass);
+        }
+        countdownLabel.getStyleClass().add(state.styleClass);
+        statusDot.getStyleClass().add(state.styleClass);
+
+        if (state == CountdownState.STARTED) {
+            if (flash.getStatus() != Animation.Status.RUNNING) {
+                flash.play();
+            }
+        } else {
+            flash.stop();
+            countdownLabel.getStyleClass().remove(FLASH_STYLE_CLASS);
+            statusDot.getStyleClass().remove(FLASH_STYLE_CLASS);
+        }
+    }
+
+    private void toggleFlash() {
+        if (countdownLabel.getStyleClass().remove(FLASH_STYLE_CLASS)) {
+            statusDot.getStyleClass().remove(FLASH_STYLE_CLASS);
+        } else {
+            countdownLabel.getStyleClass().add(FLASH_STYLE_CLASS);
+            statusDot.getStyleClass().add(FLASH_STYLE_CLASS);
+        }
+    }
+
+    /** Thresholds are on the seconds shown by {@link #countdownText}: 5:00 and over, 1:00 and over, then red. */
+    static CountdownState countdownState(java.time.Duration remaining) {
+        long seconds = (remaining.toMillis() + 999) / 1000;
+        if (seconds <= 0) {
+            return CountdownState.STARTED;
+        }
+        if (seconds >= 300) {
+            return CountdownState.PLENTY;
+        }
+        return seconds >= 60 ? CountdownState.SOON : CountdownState.IMMINENT;
     }
 
     static String countdownText(java.time.Duration remaining) {
         long seconds = (remaining.toMillis() + 999) / 1000;
         if (seconds <= 0) {
-            return "Meeting started";
+            return "Meeting started - Join now";
         }
         return String.format("Meeting starting in %02d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
     }
@@ -167,6 +228,7 @@ public class OverlayController implements Initializable {
     void stopAnimations() {
         pulse.stop();
         clock.stop();
+        flash.stop();
     }
 
     public void setOverlayWindow(OverlayWindow overlayWindow) {
@@ -325,6 +387,10 @@ public class OverlayController implements Initializable {
 
     public Label getSnoozeStatusLabel() {
         return snoozeStatusLabel;
+    }
+
+    public Rectangle getStatusDot() {
+        return statusDot;
     }
 
     public Label getCountdownLabel() {

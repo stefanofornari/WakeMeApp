@@ -33,6 +33,21 @@
     -fx-fill: #C6FF3D;
 }
 
+/* Countdown urgency: text of the pill and status dot change together */
+.label.overlay-state-green { -fx-text-fill: #C6FF3D; }
+.label.overlay-state-yellow { -fx-text-fill: #FFC53D; }
+.label.overlay-state-red { -fx-text-fill: #FF5C5C; }
+.label.overlay-state-started { -fx-text-fill: #FF5C5C; }
+
+.overlay-dot.overlay-state-green { -fx-fill: #C6FF3D; }
+.overlay-dot.overlay-state-yellow { -fx-fill: #FFC53D; }
+.overlay-dot.overlay-state-red { -fx-fill: #FF5C5C; }
+.overlay-dot.overlay-state-started { -fx-fill: #FF5C5C; }
+
+/* After the start the countdown alternates red and white */
+.label.overlay-state-started.overlay-flash { -fx-text-fill: white; }
+.overlay-dot.overlay-state-started.overlay-flash { -fx-fill: white; }
+
 /* Meeting data */
 .overlay-title {
     -fx-font-family: 'Bricolage Grotesque', 'Inter', 'System';
