@@ -138,4 +138,17 @@ class CalendarPollerTest {
         then(polls.await(3, TimeUnit.SECONDS)).as("polled again after the failure").isTrue();
         then(poller.scheduled()).hasSize(1);
     }
+
+    @Test
+    void should_accept_a_window_of_at_least_poll_interval_plus_lead_time() {
+        CalendarPoller.requireValidWindow(Duration.ofMinutes(10), Duration.ofMinutes(15), Duration.ofMinutes(5));
+    }
+
+    @Test
+    void should_reject_a_window_shorter_than_poll_interval_plus_lead_time() {
+        org.assertj.core.api.BDDAssertions.thenThrownBy(() ->
+                CalendarPoller.requireValidWindow(Duration.ofMinutes(10), Duration.ofMinutes(12), Duration.ofMinutes(5)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("at least 15 minutes");
+    }
 }

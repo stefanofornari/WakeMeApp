@@ -149,4 +149,65 @@ class NotificationCommandTest {
 
         then(((NotificationCommand) commandLine.getCommand()).getEventsFile()).isNull();
     }
+
+    private int executeWithEventsFile(String... options) {
+        String[] args = new String[options.length + 2];
+        args[0] = "--events-file";
+        args[1] = dir.resolve("meetings.csv").toString();
+        System.arraycopy(options, 0, args, 2, options.length);
+        return commandLine.execute(args);
+    }
+
+    private NotificationCommand command() {
+        return commandLine.getCommand();
+    }
+
+    @Test
+    void should_poll_every_5_minutes_for_the_next_15_by_default() {
+        executeWithEventsFile();
+
+        then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(5));
+        then(command().getWindow()).isEqualTo(java.time.Duration.ofMinutes(15));
+    }
+
+    @Test
+    void should_use_the_given_poll_interval_and_window() {
+        int exitCode = executeWithEventsFile("--poll-interval", "2", "--window", "12");
+
+        then(exitCode).isEqualTo(0);
+        then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(2));
+        then(command().getWindow()).isEqualTo(java.time.Duration.ofMinutes(12));
+    }
+
+    @Test
+    void should_reject_a_window_shorter_than_poll_interval_plus_lead_time() {
+        java.io.ByteArrayOutputStream err = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream original = System.err;
+        System.setErr(new java.io.PrintStream(err));
+        int exitCode;
+        try {
+            exitCode = executeWithEventsFile("--poll-interval", "10", "--window", "12");
+        } finally {
+            System.setErr(original);
+        }
+
+        then(exitCode).isNotEqualTo(0);
+        then(err.toString()).contains("at least 15 minutes");
+    }
+
+    @Test
+    void should_reject_a_window_too_short_for_the_default_poll_interval() {
+        then(executeWithEventsFile("--window", "9")).isNotEqualTo(0);
+    }
+
+    @Test
+    void should_reject_a_poll_interval_that_leaves_no_room_in_the_default_window() {
+        then(executeWithEventsFile("--poll-interval", "11")).isNotEqualTo(0);
+    }
+
+    @Test
+    void should_reject_non_positive_values() {
+        then(executeWithEventsFile("--poll-interval", "0")).isNotEqualTo(0);
+        then(executeWithEventsFile("--window", "-3")).isNotEqualTo(0);
+    }
 }
