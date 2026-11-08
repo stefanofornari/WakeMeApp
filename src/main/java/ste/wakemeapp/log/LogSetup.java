@@ -1,35 +1,36 @@
 package ste.wakemeapp.log;
 
 import dev.dirs.ProjectDirectories;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 /**
- * Sets up logging, once at startup, through the JUL configuration in the {@code logging.properties}
- * resource: a rolled file in the application data directory plus the console, one line per
- * message. The size of the log is bounded (see the resource).
+ * Adjusts at startup what the JUL configuration cannot know. JUL reads the configuration itself
+ * ({@code -Djava.util.logging.config.file=.../logging.properties}: console handler, formatter,
+ * levels, and the settings of the file handler); this class adds the file handler, whose
+ * location is the application data directory of the platform, and applies {@code --debug}.
+ * <p>
+ * The file is rolled and capped by the {@code java.util.logging.FileHandler} settings of the
+ * configuration. Should they be missing, the same limits apply (see {@link #DEFAULT_LIMIT}), so
+ * the log can never grow indefinitely.
  */
 public final class LogSetup {
 
+    static final int DEFAULT_LIMIT = 1_000_000;
+    static final int DEFAULT_COUNT = 3;
+
     private static final String FILE_HANDLER = "java.util.logging.FileHandler";
-    private static final String CONSOLE_HANDLER = "java.util.logging.ConsoleHandler";
-    private static final String RESOURCE = "logging.properties";
-    private static final String APPLICATION_LOGGER = "ste.wakemeapp";
 
     /**
-     * The parent of all the application's loggers. A strong reference is kept (the LogManager only
-     * holds loggers weakly) and its level is set in code too: the JUL configuration is applied only
-     * to loggers that exist when it is read or that are created afterwards, and loggers of classes
-     * loaded before the setup would otherwise miss a level set by it.
+     * The parent of all the application's loggers. A strong reference is kept: the LogManager only
+     * holds loggers weakly, and a level set on a logger that is garbage collected is lost.
      */
-    private static final java.util.logging.Logger APPLICATION = java.util.logging.Logger.getLogger(APPLICATION_LOGGER);
+    private static final Logger APPLICATION = Logger.getLogger("ste.wakemeapp");
 
     private LogSetup() {
     }
@@ -40,70 +41,55 @@ public final class LogSetup {
     }
 
     /**
-     * Applies the logging configuration.
-     *
      * @param debug whether the application's DEBUG messages are logged too (default: INFO and above)
      * @return whether the log file can be used; when it cannot, the reason is told on the console
      *         and logging goes to the console only
      */
     public static boolean configure(Path logDirectory, boolean debug) {
-        boolean fileLogging = true;
+        boolean fileLogging = addFileHandler(logDirectory);
+        APPLICATION.setLevel(debug ? Level.FINE : Level.INFO);
+        return fileLogging;
+    }
+
+    private static boolean addFileHandler(Path logDirectory) {
         try {
             Files.createDirectories(logDirectory);
             if (!Files.isWritable(logDirectory)) {
                 throw new IOException("the folder is not writable");
             }
+            FileHandler handler = new FileHandler(filePattern(logDirectory),
+                intProperty("limit", DEFAULT_LIMIT), intProperty("count", DEFAULT_COUNT), true);
+            // the 4-argument constructor takes level, formatter and encoding from the configuration too: defaults if absent
+            if (property("formatter") == null) {
+                handler.setFormatter(new LineFormatter());
+            }
+            if (property("encoding") == null) {
+                handler.setEncoding("UTF-8");
+            }
+            Logger.getLogger("").addHandler(handler);
+            return true;
         } catch (IOException | RuntimeException e) {
-            fileLogging = false;
             System.err.println("Cannot use the log folder " + logDirectory + " (" + e.getMessage()
                 + "), logging to the console only");
-        }
-        try {
-            apply(configuration(fileLogging ? logDirectory : null, debug));
-            APPLICATION.setLevel(debug ? java.util.logging.Level.FINE : java.util.logging.Level.INFO);
-        } catch (IOException e) {
-            System.err.println("Cannot configure logging: " + e.getMessage());
             return false;
         }
-        return fileLogging;
-    }
-
-    /**
-     * The JUL configuration: the {@code logging.properties} resource plus what is only known at
-     * startup (the folder of the files and, with {@code --debug}, the application's level).
-     *
-     * @param logDirectory where the files go; {@code null} for the console only
-     */
-    static Properties configuration(Path logDirectory, boolean debug) {
-        Properties configuration = new Properties();
-        try (InputStream in = LogSetup.class.getResourceAsStream(RESOURCE)) {
-            if (in == null) {
-                throw new IllegalStateException("Missing resource " + RESOURCE);
-            }
-            configuration.load(in);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        if (logDirectory == null) {
-            configuration.setProperty("handlers", CONSOLE_HANDLER);
-        } else {
-            configuration.setProperty(FILE_HANDLER + ".pattern", filePattern(logDirectory));
-        }
-        if (debug) {
-            configuration.setProperty(APPLICATION_LOGGER + ".level", "FINE");
-        }
-        return configuration;
     }
 
     /** JUL file patterns use '/' on every platform and '%' as the escape character. */
-    private static String filePattern(Path logDirectory) {
+    static String filePattern(Path logDirectory) {
         return logDirectory.toString().replace('\\', '/').replace("%", "%%") + "/wakemeapp.%g.log";
     }
 
-    private static void apply(Properties configuration) throws IOException {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        configuration.store(bytes, null);
-        LogManager.getLogManager().readConfiguration(new ByteArrayInputStream(bytes.toByteArray()));
+    private static String property(String name) {
+        return LogManager.getLogManager().getProperty(FILE_HANDLER + "." + name);
+    }
+
+    private static int intProperty(String name, int defaultValue) {
+        String value = property(name);
+        try {
+            return value == null ? defaultValue : Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 }
