@@ -33,7 +33,7 @@ public class CLILauncher extends Application {
         // The primary stage is never shown: without this JavaFX would shut down as soon as the
         // overlay closes, and a snoozed notification could no longer be shown.
         Platform.setImplicitExit(false);
-        commandLine = new CommandLine(new NotificationCommand());
+        commandLine = NotificationCommand.newCommandLine();
     }
 
     @Override

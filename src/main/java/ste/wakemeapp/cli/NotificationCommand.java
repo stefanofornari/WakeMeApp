@@ -5,8 +5,11 @@ import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.Spec;
 
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -52,6 +55,9 @@ public class NotificationCommand implements Callable<Integer> {
             description = "How far ahead each poll looks for meetings; at least poll interval + lead time (default: 15)")
     private int windowMinutes = (int) CalendarPoller.DEFAULT_WINDOW.toMinutes();
 
+    @Spec
+    private CommandSpec spec;
+
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
@@ -71,10 +77,27 @@ public class NotificationCommand implements Callable<Integer> {
             }
             validateAndParseDates();
             return 0;
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-            return 1;
+        } catch (IllegalArgumentException e) {
+            // handled like a parsing error: the message and the full help (see newCommandLine)
+            throw new ParameterException(spec.commandLine(), e.getMessage());
         }
+    }
+
+    /**
+     * A command line that answers invalid arguments with the error followed by the full help on
+     * stderr, and one exit code, instead of picocli's short usage hint.
+     */
+    public static CommandLine newCommandLine() {
+        CommandLine commandLine = new CommandLine(new NotificationCommand());
+        commandLine.setParameterExceptionHandler((exception, args) -> {
+            CommandLine failed = exception.getCommandLine();
+            PrintWriter err = failed.getErr();
+            err.println(exception.getMessage());
+            failed.usage(err);
+            err.flush();
+            return failed.getCommandSpec().exitCodeOnInvalidInput();
+        });
+        return commandLine;
     }
 
     private void validatePolling() {
