@@ -14,7 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.scheduler.NotificationScheduler;
+import ste.wakemeapp.scheduler.ScheduledNotification;
 import static org.assertj.core.api.BDDAssertions.then;
 
 class CalendarPollerTest {
