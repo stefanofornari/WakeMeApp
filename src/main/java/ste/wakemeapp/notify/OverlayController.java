@@ -25,6 +25,8 @@ import java.util.ResourceBundle;
 
 public class OverlayController implements Initializable {
 
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(OverlayController.class.getName());
+
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter HOUR_MINUTE_SECOND = DateTimeFormatter.ofPattern("HH:mm:ss");
 
@@ -329,6 +331,8 @@ public class OverlayController implements Initializable {
     @FXML
     private void handleDismiss() {
         if (overlayWindow != null) {
+            MeetingNotification dismissed = overlayWindow.getNotification();
+            LOG.info(() -> "Notification \"" + (dismissed != null ? dismissed.title() : "") + "\" dismissed");
             overlayWindow.hide();
         }
     }

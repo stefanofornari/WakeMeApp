@@ -55,6 +55,9 @@ public class NotificationCommand implements Callable<Integer> {
             description = "How far ahead each poll looks for meetings; at least poll interval + lead time (default: 15)")
     private int windowMinutes = (int) CalendarPoller.DEFAULT_WINDOW.toMinutes();
 
+    @Option(names = "--debug", description = "Log the detail needed to investigate a problem (default: INFO and above)")
+    private boolean debug;
+
     @Spec
     private CommandSpec spec;
 
@@ -150,6 +153,10 @@ public class NotificationCommand implements Callable<Integer> {
 
     public String getDescription() {
         return description;
+    }
+
+    public boolean isDebug() {
+        return debug;
     }
 
     public Duration getPollInterval() {

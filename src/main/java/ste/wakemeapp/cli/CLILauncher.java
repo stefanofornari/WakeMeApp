@@ -6,6 +6,7 @@ import javafx.stage.Stage;
 import picocli.CommandLine;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.calendar.CsvCalendarSource;
+import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.scheduler.NotificationScheduler;
@@ -17,8 +18,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CLILauncher extends Application {
+
+    private static final Logger LOG = Logger.getLogger(CLILauncher.class.getName());
 
     private static CommandLine commandLine;
     private static NotificationCommand parsedCommand;
@@ -43,9 +48,7 @@ public class CLILauncher extends Application {
         primaryStage.hide();
 
         List<String> rawArgs = getParameters().getRaw();
-        System.out.println("Raw args: " + rawArgs);
         String[] args = normalizeArgs(rawArgs);
-        System.out.println("Processed args: " + java.util.Arrays.toString(args));
         int exitCode = commandLine.execute(args);
 
         if (exitCode != 0) {
@@ -62,6 +65,9 @@ public class CLILauncher extends Application {
         }
 
         parsedCommand = commandLine.getCommand();
+        configureLogging();
+        LOG.fine(() -> "Raw args: " + rawArgs);
+        LOG.fine(() -> "Processed args: " + java.util.Arrays.toString(args));
 
         try {
             registerShutdownHook();
@@ -76,9 +82,20 @@ public class CLILauncher extends Application {
                 schedule(notification);
             }
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            LOG.log(Level.SEVERE, "WakeMeApp cannot start: " + e.getMessage(), e);
             Platform.exit();
             System.exit(1);
+        }
+    }
+
+    private void configureLogging() {
+        try {
+            LogSetup.configure(LogSetup.defaultLogDirectory(), parsedCommand.isDebug());
+        } catch (RuntimeException e) {
+            System.err.println("Cannot set up logging: " + e);
+        }
+        if (parsedCommand.isDebug()) {
+            LOG.info("Debug logging is on");
         }
     }
 
@@ -124,8 +141,8 @@ public class CLILauncher extends Application {
         pendingNotifications.incrementAndGet();
         ScheduledNotification scheduled = scheduler.schedule(notification);
 
-        System.out.println(scheduleMessage(notification.title(), scheduled.triggerTime(), LocalDateTime.now()));
-        System.out.println("Press Ctrl+C to cancel");
+        LOG.info(scheduleMessage(notification.title(), scheduled.triggerTime(), LocalDateTime.now()));
+        LOG.info("Press Ctrl+C to cancel");
     }
 
     /**
@@ -138,9 +155,9 @@ public class CLILauncher extends Application {
         poller = new CalendarPoller(new CsvCalendarSource(calendarFile), scheduler,
             parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
         poller.start();
-        System.out.println("Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
+        LOG.info(() -> "Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
-        System.out.println("Press Ctrl+C to stop");
+        LOG.info("Press Ctrl+C to stop");
     }
 
     /** What to tell the user right after scheduling, so a scheduled run is not mistaken for a hang. */
@@ -192,15 +209,11 @@ public class CLILauncher extends Application {
         overlayManager.setOnSnoozeScheduled(() -> pendingNotifications.incrementAndGet());
         overlayManager.showNotification(notification);
 
-        System.out.println("Showing overlay for: " + notification.title());
-        System.out.println("Starting at: " + notification.startTime());
-        if (notification.endTime() != null) {
-            System.out.println("Ending at: " + notification.endTime());
-        }
-        if (notification.joinUrl() != null) {
-            System.out.println("Join URL: " + notification.joinUrl());
-        }
-        System.out.println("Press ESC on overlay to dismiss, or Ctrl+C here to exit");
+        LOG.info(() -> "Showing notification \"" + notification.title() + "\"");
+        LOG.fine(() -> "Meeting starts at " + notification.originalStartTime()
+            + (notification.endTime() != null ? ", ends at " + notification.endTime() : "")
+            + (notification.joinUrl() != null ? ", join URL " + notification.joinUrl() : ""));
+        LOG.fine("Press ESC on the overlay to dismiss it, or Ctrl+C in the terminal to exit");
 
         if (calendarMode) {
             return; // keeps running: the next meeting may come from the calendar

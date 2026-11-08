@@ -26,6 +26,7 @@ import ste.wakemeapp.scheduler.ScheduledNotification;
 public final class CalendarPoller implements AutoCloseable {
 
     private static final Logger LOG = Logger.getLogger(CalendarPoller.class.getName());
+    private static final java.time.format.DateTimeFormatter TIME = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
 
     public static final Duration DEFAULT_POLL_INTERVAL = Duration.ofMinutes(5);
     public static final Duration DEFAULT_WINDOW = Duration.ofMinutes(15);
@@ -90,7 +91,9 @@ public final class CalendarPoller implements AutoCloseable {
         try {
             LocalDateTime now = LocalDateTime.now(clock);
             Set<String> returned = new HashSet<>();
-            for (CalendarEvent event : source.meetingsStartingBetween(now, now.plus(window))) {
+            List<CalendarEvent> events = source.meetingsStartingBetween(now, now.plus(window));
+            LOG.fine(() -> "Poll found " + events.size() + " meeting(s) starting between " + now + " and " + now.plus(window));
+            for (CalendarEvent event : events) {
                 returned.add(event.id());
                 if (!event.isEligible()) {
                     cancel(event.id());
@@ -98,11 +101,11 @@ public final class CalendarPoller implements AutoCloseable {
                 }
                 Known current = known.get(event.id());
                 if (current == null) {
-                    schedule(event);
+                    schedule(event, false);
                 } else if (!current.start().equals(event.start())) {
                     // also drops a pending snooze of the old time
-                    cancel(event.id());
-                    schedule(event);
+                    forget(event.id());
+                    schedule(event, true);
                 }
             }
             for (Map.Entry<String, Known> entry : known.entrySet()) {
@@ -120,14 +123,29 @@ public final class CalendarPoller implements AutoCloseable {
         }
     }
 
-    private void schedule(CalendarEvent event) {
-        known.put(event.id(), new Known(event.start(), scheduler.schedule(event.toNotification())));
+    private void schedule(CalendarEvent event, boolean rescheduled) {
+        ScheduledNotification scheduled = scheduler.schedule(event.toNotification());
+        known.put(event.id(), new Known(event.start(), scheduled));
+        LOG.info(() -> "Meeting \"" + event.title() + "\" "
+            + (rescheduled ? "moved to " : "starting at ") + TIME.format(event.start())
+            + ", notification " + (rescheduled ? "rescheduled" : "scheduled") + " for " + TIME.format(scheduled.triggerTime()));
     }
 
+    /** Cancels what is pending for the meeting and says so. */
     private void cancel(String eventId) {
-        if (known.remove(eventId) != null) {
+        Known removed = forget(eventId);
+        if (removed != null) {
+            LOG.info(() -> "Meeting \"" + removed.scheduled().notification().title()
+                + "\" no longer applies, its notification was cancelled");
+        }
+    }
+
+    private Known forget(String eventId) {
+        Known removed = known.remove(eventId);
+        if (removed != null) {
             scheduler.cancelAll(eventId);
         }
+        return removed;
     }
 
     /** The notifications currently scheduled for the calendar's meetings. */

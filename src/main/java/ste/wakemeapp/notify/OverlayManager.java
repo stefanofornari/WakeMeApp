@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class OverlayManager {
 
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(OverlayManager.class.getName());
+
     private final List<OverlayWindow> overlays = new CopyOnWriteArrayList<>();
     private NotificationScheduler scheduler;
     private final AtomicInteger pendingSnoozes = new AtomicInteger(0);
@@ -85,6 +87,11 @@ public final class OverlayManager {
         // Schedule the re-notification at exact time (no lead time for snoozes)
         ScheduledNotification scheduled = scheduler.scheduleAtExactTime(snoozedNotification);
         
+        LocalDateTime dueAt = snoozeUntil;
+        LOG.info(() -> "Meeting \"" + notification.title() + "\" snoozed ("
+            + snoozedNotification.snoozeStatusText().toLowerCase() + "), notification due at "
+            + java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss").format(dueAt));
+
         // Track pending snooze
         pendingSnoozes.incrementAndGet();
         if (onSnoozeScheduled != null) {

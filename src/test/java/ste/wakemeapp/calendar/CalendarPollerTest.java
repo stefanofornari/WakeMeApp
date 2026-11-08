@@ -357,17 +357,20 @@ class CalendarPollerTest {
             @Override public void flush() { }
             @Override public void close() { }
         };
+        java.util.logging.Level previous = logger.getLevel();
+        logger.setLevel(java.util.logging.Level.FINE);
         logger.addHandler(handler);
         try {
             action.run();
         } finally {
             logger.removeHandler(handler);
+            logger.setLevel(previous);
         }
         return records;
     }
 
     private static String text(java.util.logging.LogRecord record) {
-        return java.text.MessageFormat.format(record.getMessage(), record.getParameters() == null ? new Object[0] : record.getParameters());
+        return record.getMessage();
     }
 
     @Test

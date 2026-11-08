@@ -17,6 +17,8 @@ import java.util.function.IntConsumer;
 
 public final class OverlayWindow {
 
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(OverlayWindow.class.getName());
+
     private final Stage stage;
     private final FadeTransition fadeIn;
     private final FadeTransition fadeOut;
@@ -143,6 +145,7 @@ public final class OverlayWindow {
         java.time.Duration remaining = autoClose.minus(java.time.Duration.between(startedAt, java.time.Instant.now()));
         controller.updateTimers(remaining, autoClose);
         if (remaining.isZero() || remaining.isNegative()) {
+            LOG.info(() -> "Notification \"" + notification.title() + "\" closed automatically");
             hide();
         }
     }
