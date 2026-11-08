@@ -346,4 +346,77 @@ class CalendarPollerTest {
             then(fired).containsExactly("kept");
         }
     }
+
+    // --- what the poller tells in the log (logging/US-000037)
+
+    private List<java.util.logging.LogRecord> logged(Runnable action) {
+        java.util.logging.Logger logger = java.util.logging.Logger.getLogger(CalendarPoller.class.getName());
+        List<java.util.logging.LogRecord> records = new CopyOnWriteArrayList<>();
+        java.util.logging.Handler handler = new java.util.logging.Handler() {
+            @Override public void publish(java.util.logging.LogRecord record) { records.add(record); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        };
+        logger.addHandler(handler);
+        try {
+            action.run();
+        } finally {
+            logger.removeHandler(handler);
+        }
+        return records;
+    }
+
+    private static String text(java.util.logging.LogRecord record) {
+        return java.text.MessageFormat.format(record.getMessage(), record.getParameters() == null ? new Object[0] : record.getParameters());
+    }
+
+    @Test
+    void should_log_at_info_when_a_meeting_is_scheduled() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(12), ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone());
+
+        List<java.util.logging.LogRecord> records = logged(poller::pollOnce);
+
+        then(records).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.INFO);
+            then(text(r)).contains("standup").contains("scheduled");
+        });
+    }
+
+    @Test
+    void should_log_at_info_when_a_meeting_is_rescheduled_and_when_it_is_cancelled() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(10);
+        source.add(event("standup", start, ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone()).pollOnce();
+
+        source.add(event("standup", start.plusMinutes(3), ResponseStatus.ACCEPTED));
+        List<java.util.logging.LogRecord> moved = logged(poller::pollOnce);
+        source.remove("standup");
+        List<java.util.logging.LogRecord> removed = logged(poller::pollOnce);
+
+        then(moved).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.INFO);
+            then(text(r)).contains("standup").contains("rescheduled");
+        });
+        then(removed).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.INFO);
+            then(text(r)).contains("standup").contains("cancelled");
+        });
+    }
+
+    @Test
+    void should_log_what_each_poll_found_only_at_debug() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(12), ResponseStatus.ACCEPTED));
+        pollerOn(source, Clock.systemDefaultZone());
+
+        List<java.util.logging.LogRecord> records = logged(poller::pollOnce);
+
+        then(records).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.FINE);
+            then(text(r)).contains("1 meeting");
+        });
+    }
 }

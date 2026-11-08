@@ -54,10 +54,10 @@
 ## logging
 | ID | Title | Status |
 |----|-------|--------|
-| logging/US-000034 | Log to a Rolled File in the Application Data Directory | TODO |
-| logging/US-000035 | Also Log to the Console | TODO |
-| logging/US-000036 | Choose the Log Level with --debug | TODO |
-| logging/US-000037 | Log the Main Flows at the Right Level | TODO |
+| logging/US-000034 | Log to a Rolled File in the Application Data Directory | WIP |
+| logging/US-000035 | Also Log to the Console | WIP |
+| logging/US-000036 | Choose the Log Level with --debug | WIP |
+| logging/US-000037 | Log the Main Flows at the Right Level | WIP |
 
 ## packaging.macos
 | ID | Title | Status |

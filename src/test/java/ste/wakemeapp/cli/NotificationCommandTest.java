@@ -205,4 +205,23 @@ class NotificationCommandTest {
         then(executeWithCalendarFile("--poll-interval", "0")).isNotEqualTo(0);
         then(executeWithCalendarFile("--window", "-3")).isNotEqualTo(0);
     }
+
+    @Test
+    void should_not_log_debug_detail_by_default() {
+        executeWithCalendarFile();
+
+        then(command().isDebug()).isFalse();
+    }
+
+    @Test
+    void should_log_debug_detail_with_the_debug_option() {
+        executeWithCalendarFile("--debug");
+
+        then(command().isDebug()).isTrue();
+    }
+
+    @Test
+    void should_list_the_debug_option_in_the_help() {
+        then(commandLine.getUsageMessage()).contains("--debug");
+    }
 }
