@@ -42,6 +42,7 @@ global lead-time configuration.
 
 ## Detailed Scopes
 * Calendar synchronisation (polling policy, eligibility, scheduler reconciliation): `calendar/scope.md`
+* Logging (levels, rolled log file in the platform directory, `--debug`): `logging/scope.md`
 
 ## Out-of-Scope / Future Enhancements
 * Rule-based filtering (organizer, keywords, categories, calendar selection)
