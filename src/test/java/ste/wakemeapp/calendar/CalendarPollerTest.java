@@ -151,4 +151,43 @@ class CalendarPollerTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("at least 15 minutes");
     }
+
+    private static CalendarEvent event(String id, ResponseStatus status, boolean allDay) {
+        return new CalendarEvent(id, id, LocalDateTime.now().plusMinutes(12), null, null, null, null, status, allDay);
+    }
+
+    private List<String> scheduledIds(CalendarEvent... events) {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        for (CalendarEvent event : events) {
+            source.add(event);
+        }
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone());
+        poller.pollOnce();
+        return poller.scheduled().stream().map(s -> s.notification().title()).sorted().toList();
+    }
+
+    @Test
+    void should_schedule_accepted_tentative_and_organized_meetings() {
+        then(scheduledIds(
+            event("accepted", ResponseStatus.ACCEPTED, false),
+            event("tentative", ResponseStatus.TENTATIVE, false),
+            event("organized", ResponseStatus.ORGANIZER, false)
+        )).containsExactly("accepted", "organized", "tentative");
+    }
+
+    @Test
+    void should_ignore_declined_and_unanswered_meetings() {
+        then(scheduledIds(
+            event("declined", ResponseStatus.DECLINED, false),
+            event("unanswered", ResponseStatus.NOT_RESPONDED, false)
+        )).isEmpty();
+    }
+
+    @Test
+    void should_ignore_all_day_events() {
+        then(scheduledIds(
+            event("all-day", ResponseStatus.ACCEPTED, true),
+            event("normal", ResponseStatus.ACCEPTED, false)
+        )).containsExactly("normal");
+    }
 }
