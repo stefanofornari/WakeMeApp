@@ -29,6 +29,8 @@ real Microsoft Graph source is delivered separately (auth and calendar domains).
   - [ ] Poll interval and window can be changed from the command line (defaults apply when omitted)
   - [ ] A command line where the window is shorter than poll interval + lead time is rejected with an error
   - [ ] A failed poll is logged and the next poll runs at the normal interval; already scheduled notifications keep firing
+* **Calendar file robustness**:
+  - [ ] A malformed line of the calendar file is skipped with a warning naming the file and the line, and the other meetings are still read
 * **Eligibility filter**:
   - [ ] Include accepted (committed) and tentative meetings, and meetings the user organises
   - [ ] Exclude all-day events

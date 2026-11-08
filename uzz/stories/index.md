@@ -15,6 +15,7 @@
 | calendar/US-000029 | Notify Only for Relevant Meetings | DONE |
 | calendar/US-000031 | Configure Poll Interval and Window from the Command Line | DONE |
 | calendar/US-000032 | Simulate the Calendar from a CSV File | DONE |
+| calendar/US-000038 | Skip Malformed Calendar Lines with a Warning | TODO |
 
 ## notify
 | ID | Title | Status |
@@ -50,6 +51,14 @@
 | settings/US-000017 | Enable/Disable Notifications | TODO |
 | settings/US-000018 | Test Notification Button | TODO |
 
+## logging
+| ID | Title | Status |
+|----|-------|--------|
+| logging/US-000034 | Log to a Rolled File in the Application Data Directory | TODO |
+| logging/US-000035 | Also Log to the Console | TODO |
+| logging/US-000036 | Choose the Log Level with --debug | TODO |
+| logging/US-000037 | Log the Main Flows at the Right Level | TODO |
+
 ## packaging.macos
 | ID | Title | Status |
 |----|-------|--------|
@@ -67,4 +76,4 @@
 
 ---
 
-**Total Stories:** 33
+**Total Stories:** 38

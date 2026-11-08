@@ -23,13 +23,14 @@ Levels (JUL name in brackets) mean the same everywhere:
   - [ ] Logging is set up through the JUL configuration (handler, pattern, limit, count, formatter, levels), applied once at startup
   - [ ] The file is rolled with a cap: a maximum size per file and a maximum number of files, so the total size is bounded
   - [ ] One line per message, with timestamp, level and message; a stack trace follows when an exception is logged
+* **Console**:
+  - [ ] The same messages, with the same format and level, are also written to the console
 * **Level selection**:
   - [ ] No argument: level INFO
   - [ ] `--debug`: level DEBUG (`FINE`); it is the only logging option
 
 ## Out-of-Scope / Future Enhancements
 * Alert dialog for ERROR messages (to be scoped later; ERROR is already reserved for what the user must know)
-* Writing the log to the console as well (to be decided)
 * Settings UI, per-class levels, or configuration file for logging
 * Log viewer, log upload or any remote logging
 * Parsing of the log by other tools (no structured/JSON format)
