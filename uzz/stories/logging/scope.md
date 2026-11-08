@@ -18,7 +18,7 @@ Levels (JUL name in brackets) mean the same everywhere:
   - [ ] The levels above are documented in the development framework, with the rule that messages are written for the user, not for the developer, at INFO and above
   - [ ] Existing output of the application is reviewed and moved to the right level (e.g. "Polling ..." at INFO, "Showing overlay for ..." at DEBUG); existing log calls are reviewed against the same rules
 * **Log file**:
-  - [ ] The file lives in the user's log/application directory of the operating system (macOS, Windows, Linux), found with an existing open source library, not hand-written paths
+  - [ ] The file lives in a `logs` folder inside the application data directory of the operating system (macOS, Windows, Linux), found with the directories library, not hand-written paths
   - [ ] The directory is created when missing; if it cannot be used the application still starts and logs to the console instead
   - [ ] Logging is set up through the JUL configuration (handler, pattern, limit, count, formatter, levels), applied once at startup
   - [ ] The file is rolled with a cap: a maximum size per file and a maximum number of files, so the total size is bounded
@@ -39,7 +39,7 @@ Levels (JUL name in brackets) mean the same everywhere:
 * **Development Toolchain**: Maven + JavaFX 25 + Java 25
 * **Target Systems/Platforms**: macOS (primary), Windows/Linux (future)
 * **Logging**: `java.util.logging` only (see the development framework)
-* **Platform directories**: [AppDirs](https://github.com/harawata/appdirs) `net.harawata:appdirs` (Apache-2.0; depends on JNA); its `getUserLogDir` gives the log directory of each platform
+* **Platform directories**: [directories-jvm](https://codeberg.org/dirs/directories-jvm) `dev.dirs:directories` 26 (MPL-2.0, no dependencies listed), also the library to use for any other system folder. It has no log directory: the log folder is `logs` under `ProjectDirectories.dataLocalDir` (machine-local, not roaming on Windows)
 * **Project Reference Docs**:
   - Coding Standard: `../../project/coding_standard.md`
   - Development Framework: `../../project/development_framework.md`
