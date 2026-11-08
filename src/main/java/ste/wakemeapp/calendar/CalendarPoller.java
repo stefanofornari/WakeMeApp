@@ -55,6 +55,20 @@ public final class CalendarPoller implements AutoCloseable {
         });
     }
 
+    /**
+     * A window shorter than poll interval + lead time could let a meeting slip between two polls
+     * and be notified late.
+     *
+     * @throws IllegalArgumentException when the window is too short
+     */
+    public static void requireValidWindow(Duration pollInterval, Duration window, Duration leadTime) {
+        Duration minimum = pollInterval.plus(leadTime);
+        if (window.compareTo(minimum) < 0) {
+            throw new IllegalArgumentException("The window must be at least " + minimum.toMinutes()
+                + " minutes (poll interval " + pollInterval.toMinutes() + " + lead time " + leadTime.toMinutes() + ")");
+        }
+    }
+
     /** Polls now and then every poll interval. */
     public void start() {
         executor.scheduleAtFixedRate(this::pollOnce, 0, pollInterval.toMillis(), TimeUnit.MILLISECONDS);

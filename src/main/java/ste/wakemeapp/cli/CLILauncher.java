@@ -11,6 +11,7 @@ import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -134,10 +135,11 @@ public class CLILauncher extends Application {
     private void pollCalendar(Path eventsFile) {
         calendarMode = true;
         scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
-        poller = new CalendarPoller(new CsvCalendarSource(eventsFile), scheduler);
+        poller = new CalendarPoller(new CsvCalendarSource(eventsFile), scheduler,
+            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
         poller.start();
-        System.out.println("Polling " + eventsFile + " every " + CalendarPoller.DEFAULT_POLL_INTERVAL.toMinutes()
-            + " min for meetings starting in the next " + CalendarPoller.DEFAULT_WINDOW.toMinutes() + " min");
+        System.out.println("Polling " + eventsFile + " every " + parsedCommand.getPollInterval().toMinutes()
+            + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
         System.out.println("Press Ctrl+C to stop");
     }
 
