@@ -181,15 +181,10 @@ class NotificationCommandTest {
 
     @Test
     void should_reject_a_window_shorter_than_poll_interval_plus_lead_time() {
-        java.io.ByteArrayOutputStream err = new java.io.ByteArrayOutputStream();
-        java.io.PrintStream original = System.err;
-        System.setErr(new java.io.PrintStream(err));
-        int exitCode;
-        try {
-            exitCode = executeWithCalendarFile("--poll-interval", "10", "--window", "12");
-        } finally {
-            System.setErr(original);
-        }
+        java.io.StringWriter err = new java.io.StringWriter();
+        commandLine.setErr(new java.io.PrintWriter(err, true));
+
+        int exitCode = executeWithCalendar("--poll-interval", "10", "--window", "12");
 
         then(exitCode).isNotEqualTo(0);
         then(err.toString()).contains("at least 15 minutes");

@@ -341,7 +341,8 @@ class OverlayWindowTest {
         showMeetingStartingIn(java.time.Duration.ofSeconds(301));
         thenCountdownAndDotHaveStyle("overlay-state-green");
 
-        robot.sleep(2500);
+        // the clock ticks once a second at its own phase: after 3.5 s the last tick is at least 2.5 s in
+        robot.sleep(3500);
 
         thenCountdownAndDotHaveStyle("overlay-state-yellow");
     }

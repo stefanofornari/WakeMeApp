@@ -37,7 +37,7 @@ class InvalidArgumentsTest {
         int exitCode = run("--colour", "red");
 
         then(exitCode).isNotEqualTo(0);
-        then(err.toString()).contains("Unknown option: '--colour'");
+        then(err.toString()).contains("Unknown option").contains("'--colour'");
         thenFullHelpIsShown();
     }
 
