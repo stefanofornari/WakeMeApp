@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
  * @param snoozeCount how many times this meeting has been snoozed
  * @param maxSnoozes maximum snoozes allowed per meeting (default 3)
  * @param originalStartTime the original meeting start time (preserved across snoozes)
+ * @param eventId the id of the meeting in the calendar; {@code null} for a meeting not coming from a calendar
  */
 public record MeetingNotification(
     String title,
@@ -19,7 +20,8 @@ public record MeetingNotification(
     LocalDateTime endTime,
     int snoozeCount,
     int maxSnoozes,
-    LocalDateTime originalStartTime
+    LocalDateTime originalStartTime,
+    String eventId
 ) {
     // Full constructor with all fields (canonical)
     public MeetingNotification {
@@ -29,16 +31,16 @@ public record MeetingNotification(
     // Backward compatible constructors
     public MeetingNotification(String title, LocalDateTime startTime, String joinUrl,
                                String organizer, String description, LocalDateTime endTime) {
-        this(title, startTime, joinUrl, organizer, description, endTime, 0, 3, startTime);
+        this(title, startTime, joinUrl, organizer, description, endTime, 0, 3, startTime, null);
     }
 
     public MeetingNotification(String title, LocalDateTime startTime, String joinUrl,
                                String organizer, String description) {
-        this(title, startTime, joinUrl, organizer, description, null, 0, 3, startTime);
+        this(title, startTime, joinUrl, organizer, description, null, 0, 3, startTime, null);
     }
 
     public MeetingNotification(String title, LocalDateTime startTime, String joinUrl) {
-        this(title, startTime, joinUrl, null, null, null, 0, 3, startTime);
+        this(title, startTime, joinUrl, null, null, null, 0, 3, startTime, null);
     }
 
     /**
@@ -55,7 +57,8 @@ public record MeetingNotification(
             endTime,
             snoozeCount + 1,
             maxSnoozes,
-            originalStartTime
+            originalStartTime,
+            eventId
         );
     }
 

@@ -26,6 +26,15 @@ public final class ScheduledNotification {
         return triggerTime;
     }
 
+    public boolean isCancelled() {
+        return future.isCancelled();
+    }
+
+    /** Whether it has fired or been cancelled. */
+    boolean isDone() {
+        return future.isDone();
+    }
+
     /** Prevents the notification from firing if it has not fired yet. */
     public void cancel() {
         future.cancel(false);

@@ -3,8 +3,10 @@ package ste.wakemeapp.calendar;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,7 +18,7 @@ import ste.wakemeapp.scheduler.ScheduledNotification;
 
 /**
  * Keeps the scheduler fed from a calendar: every poll interval it asks the source for the meetings
- * starting in the next window and schedules the eligible ones it does not know yet.
+ * starting in the next window and keeps the scheduler in line with them.
  * <p>
  * The window should be at least poll interval + lead time, so that a meeting is known to the
  * scheduler before its notification is due. Polling runs on its own background thread.
@@ -34,8 +36,10 @@ public final class CalendarPoller implements AutoCloseable {
     private final Duration window;
     private final Clock clock;
     private final ScheduledExecutorService executor;
-    /** What has been handed to the scheduler, by event id. */
-    private final Map<String, ScheduledNotification> scheduled = new ConcurrentHashMap<>();
+    /** What has been handed to the scheduler for each event id: its start and the notification. */
+    private final Map<String, Known> known = new ConcurrentHashMap<>();
+
+    private record Known(LocalDateTime start, ScheduledNotification scheduled) { }
 
     public CalendarPoller(CalendarSource source, NotificationScheduler scheduler) {
         this(source, scheduler, DEFAULT_POLL_INTERVAL, DEFAULT_WINDOW, Clock.systemDefaultZone());
@@ -75,27 +79,60 @@ public final class CalendarPoller implements AutoCloseable {
     }
 
     /**
-     * One poll. A failure is logged and never thrown: it must not stop the periodic polling, and
-     * what is already scheduled keeps its time.
+     * One poll: brings the scheduler in line with the calendar. A new meeting is scheduled; one
+     * whose start changed is rescheduled (its snooze count starts again from zero); one that is
+     * declined, deleted or moved out of the window is cancelled; an unchanged one is left alone.
+     * <p>
+     * A failure is logged and never thrown: it must not stop the periodic polling, and what is
+     * already scheduled keeps its time.
      */
     public void pollOnce() {
         try {
             LocalDateTime now = LocalDateTime.now(clock);
+            Set<String> returned = new HashSet<>();
             for (CalendarEvent event : source.meetingsStartingBetween(now, now.plus(window))) {
+                returned.add(event.id());
                 if (!event.isEligible()) {
+                    cancel(event.id());
                     continue;
                 }
-                // the window is larger than the poll interval: the same meeting comes back on later polls
-                scheduled.computeIfAbsent(event.id(), id -> scheduler.schedule(event.toNotification()));
+                Known current = known.get(event.id());
+                if (current == null) {
+                    schedule(event);
+                } else if (!current.start().equals(event.start())) {
+                    // also drops a pending snooze of the old time
+                    cancel(event.id());
+                    schedule(event);
+                }
+            }
+            for (Map.Entry<String, Known> entry : known.entrySet()) {
+                if (!returned.contains(entry.getKey())) {
+                    if (entry.getValue().start().isBefore(now)) {
+                        // it started, so it left the window: what is pending (a snooze) must still ring
+                        known.remove(entry.getKey());
+                    } else {
+                        cancel(entry.getKey());
+                    }
+                }
             }
         } catch (Exception e) {
             LOG.log(Level.WARNING, e, () -> "Calendar poll failed, will retry in " + pollInterval);
         }
     }
 
-    /** The notifications handed to the scheduler so far. */
+    private void schedule(CalendarEvent event) {
+        known.put(event.id(), new Known(event.start(), scheduler.schedule(event.toNotification())));
+    }
+
+    private void cancel(String eventId) {
+        if (known.remove(eventId) != null) {
+            scheduler.cancelAll(eventId);
+        }
+    }
+
+    /** The notifications currently scheduled for the calendar's meetings. */
     public List<ScheduledNotification> scheduled() {
-        return List.copyOf(scheduled.values());
+        return known.values().stream().map(Known::scheduled).toList();
     }
 
     /** Stops polling; notifications already scheduled stay with the scheduler. */

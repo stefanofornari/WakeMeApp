@@ -3,6 +3,10 @@ package ste.wakemeapp.scheduler;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +32,8 @@ public final class NotificationScheduler implements AutoCloseable {
     private final Duration leadTime;
     private final Clock clock;
     private final ScheduledExecutorService executor;
+    /** What is still pending for each calendar event, so that it can be cancelled by event id. */
+    private final Map<String, List<ScheduledNotification>> pendingByEvent = new ConcurrentHashMap<>();
 
     public NotificationScheduler(Consumer<MeetingNotification> onTrigger) {
         this(onTrigger, DEFAULT_LEAD_TIME, Clock.systemDefaultZone());
@@ -56,11 +62,11 @@ public final class NotificationScheduler implements AutoCloseable {
         LocalDateTime triggerTime = notification.startTime().minus(leadTime);
         long delayMillis = Math.max(0, Duration.between(LocalDateTime.now(clock), triggerTime).toMillis());
 
-        return new ScheduledNotification(
+        return register(new ScheduledNotification(
             notification,
             triggerTime,
             executor.schedule(() -> fire(notification), delayMillis, TimeUnit.MILLISECONDS)
-        );
+        ));
     }
 
     /**
@@ -71,11 +77,35 @@ public final class NotificationScheduler implements AutoCloseable {
         LocalDateTime triggerTime = notification.startTime();
         long delayMillis = Math.max(0, Duration.between(LocalDateTime.now(clock), triggerTime).toMillis());
 
-        return new ScheduledNotification(
+        return register(new ScheduledNotification(
             notification,
             triggerTime,
             executor.schedule(() -> fire(notification), delayMillis, TimeUnit.MILLISECONDS)
-        );
+        ));
+    }
+
+    /**
+     * Cancels everything not yet fired for a calendar event: the notification and any snooze of it.
+     * Notifications of other events, or without an event id, are left alone.
+     */
+    public void cancelAll(String eventId) {
+        List<ScheduledNotification> pending = pendingByEvent.remove(eventId);
+        if (pending != null) {
+            pending.forEach(ScheduledNotification::cancel);
+        }
+    }
+
+    private ScheduledNotification register(ScheduledNotification scheduled) {
+        String eventId = scheduled.notification().eventId();
+        if (eventId != null) {
+            pendingByEvent.compute(eventId, (id, pending) -> {
+                List<ScheduledNotification> list = pending == null ? new ArrayList<>() : pending;
+                list.removeIf(ScheduledNotification::isDone); // drop what already fired
+                list.add(scheduled);
+                return list;
+            });
+        }
+        return scheduled;
     }
 
     /** Drops everything that has not fired yet. */

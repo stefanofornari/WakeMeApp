@@ -35,6 +35,6 @@ public record CalendarEvent(
 
     /** The data the overlay shows for this meeting. */
     public MeetingNotification toNotification() {
-        return new MeetingNotification(title, start, joinUrl, organizer, description, endTime);
+        return new MeetingNotification(title, start, joinUrl, organizer, description, endTime, 0, 3, start, id);
     }
 }

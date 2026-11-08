@@ -331,8 +331,8 @@ class CalendarPollerTest {
         try (NotificationScheduler quick = new NotificationScheduler(
                 n -> fired.add(n.title()), Duration.ofMillis(100), Clock.systemDefaultZone())) {
             InMemoryCalendarSource source = new InMemoryCalendarSource();
-            source.add(event("kept", LocalDateTime.now().plusMillis(500), ResponseStatus.ACCEPTED));
-            source.add(event("cancelled", LocalDateTime.now().plusMillis(500), ResponseStatus.ACCEPTED));
+            source.add(event("kept", LocalDateTime.now().plusNanos(500_000_000), ResponseStatus.ACCEPTED));
+            source.add(event("cancelled", LocalDateTime.now().plusNanos(500_000_000), ResponseStatus.ACCEPTED));
             poller = new CalendarPoller(source, quick, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone());
             poller.pollOnce();
             poller.pollOnce();
