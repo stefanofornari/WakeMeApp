@@ -121,6 +121,7 @@
                     <useModulePath>false</useModulePath>
                     <argLine>
                         -Djava.util.logging.config.file=${logging.config}
+                        -Dapp.data.dir=${project.build.directory}/app-data
                         --enable-native-access=javafx.graphics
                         --add-exports javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
                         --add-exports javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED

@@ -90,7 +90,7 @@ public class CLILauncher extends Application {
 
     private void configureLogging() {
         try {
-            LogSetup.configure(LogSetup.defaultLogDirectory(), parsedCommand.isDebug());
+            LogSetup.configure(parsedCommand.isDebug());
         } catch (RuntimeException e) {
             System.err.println("Cannot set up logging: " + e);
         }
