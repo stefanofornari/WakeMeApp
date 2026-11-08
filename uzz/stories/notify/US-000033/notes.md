@@ -9,4 +9,4 @@
 
 ## Verification status
 
-`InvalidArgumentsTest` could not be compiled or run here (picocli not available). The behaviour relies on picocli routing a `ParameterException` thrown by the business logic to the parameter-exception handler, as its documentation describes; if a test shows it printing a stack trace instead, that is the first thing to check. Status stays `WIP` until `mvn test` has run.
+Tests run with Maven and passing; behaviour confirmed by a manual run (2026-11-08).

@@ -14,4 +14,4 @@
 
 ## Verification status
 
-`CsvCalendarSource` was checked with a plain Java program running the scenarios of `CsvCalendarSourceTest`: all passed. `NotificationCommandTest` (new `--calendar` cases) and the `CLILauncher` wiring could not be compiled or run here (no picocli or JavaFX available). The end-to-end flow (start on a file, wait, overlay, keep running, Ctrl+C) needs a JavaFX environment. Status stays `WIP` until `mvn test` and a manual run have passed.
+Tests run with Maven and passing; behaviour confirmed by a manual run (2026-11-08).

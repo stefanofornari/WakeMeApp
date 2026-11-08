@@ -9,4 +9,4 @@
 
 ## Verification status
 
-`requireValidWindow` was checked with a plain Java program (accepted: 10/15, 2/12, 5/15; rejected: 10/12, 5/9, 11/15). The picocli options, `NotificationCommandTest` and the use of the values in `CLILauncher.pollCalendar` could not be compiled or run here (no picocli or JavaFX). Status stays `WIP` until `mvn test` has run.
+Tests run with Maven and passing; behaviour confirmed by a manual run (2026-11-08).

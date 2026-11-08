@@ -9,4 +9,4 @@
 
 ## Verification status
 
-Tests added to `CalendarPollerTest`; run with the rest of the suite. Status stays `WIP` until `mvn test` has run (not possible in the authoring environment).
+Tests run with Maven and passing; behaviour confirmed by a manual run (2026-11-08).

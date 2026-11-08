@@ -11,10 +11,10 @@
 |----|-------|--------|
 | calendar/US-000003 | Microsoft Graph Calendar Source | TODO |
 | calendar/US-000004 | Extract Meeting Details for Notifications | TODO |
-| calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | WIP |
-| calendar/US-000029 | Notify Only for Relevant Meetings | WIP |
-| calendar/US-000031 | Configure Poll Interval and Window from the Command Line | WIP |
-| calendar/US-000032 | Simulate the Calendar from a CSV File | WIP |
+| calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | DONE |
+| calendar/US-000029 | Notify Only for Relevant Meetings | DONE |
+| calendar/US-000031 | Configure Poll Interval and Window from the Command Line | DONE |
+| calendar/US-000032 | Simulate the Calendar from a CSV File | DONE |
 
 ## notify
 | ID | Title | Status |
@@ -26,7 +26,7 @@
 | notify/US-000009 | Snooze Options | DONE |
 | notify/US-000010 | Dismiss Action | TODO |
 | notify/US-000022 | Command-Line Trigger for Meeting Notification | DONE |
-| notify/US-000033 | Show the Full Help on Invalid Command-Line Arguments | WIP |
+| notify/US-000033 | Show the Full Help on Invalid Command-Line Arguments | DONE |
 
 ## scheduler
 | ID | Title | Status |
@@ -39,7 +39,7 @@
 | scheduler/US-000025 | Background Process Lifecycle | TODO |
 | scheduler/US-000026 | Persist Pending Notifications Across Restart | TODO |
 | scheduler/US-000027 | Catch Up on Missed Notifications After Sleep or Wake | TODO |
-| scheduler/US-000030 | Keep Scheduled Notifications in Sync with Calendar Changes | WIP |
+| scheduler/US-000030 | Keep Scheduled Notifications in Sync with Calendar Changes | DONE |
 
 ## settings
 | ID | Title | Status |

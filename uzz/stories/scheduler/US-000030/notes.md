@@ -11,4 +11,4 @@
 
 ## Verification status
 
-The scenarios of the new tests (`CalendarPollerTest`, `NotificationSchedulerTest`, `MeetingNotificationTest`) were checked with a plain Java program against a stub of `javafx.application.Platform`: all passed. The tests themselves have not been run with Maven, and the manual check (edit the CSV while the app runs) has not been done. Status stays `WIP` until both.
+Tests run with Maven and passing; behaviour confirmed by a manual run (2026-11-08).

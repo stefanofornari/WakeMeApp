@@ -21,4 +21,4 @@
 
 ## Verification status
 
-The tests (`CalendarPollerTest`, `InMemoryCalendarSourceTest`) could not be run with Maven in the authoring environment (no access to Maven Central). The same scenarios were checked with a plain Java program against a stub of `javafx.application.Platform`, and all passed. Status stays `WIP` until `mvn test` has run.
+Tests run with Maven and passing; behaviour confirmed by a manual run (2026-11-08).
