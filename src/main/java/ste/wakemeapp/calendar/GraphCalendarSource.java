@@ -1,9 +1,5 @@
 package ste.wakemeapp.calendar;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
@@ -21,6 +17,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Reads the meetings from the calendar of the signed-in user with Microsoft Graph.
@@ -74,9 +73,13 @@ public class GraphCalendarSource implements CalendarSource {
             + "?startDateTime=" + utc(from) + "&endDateTime=" + utc(to)
             + "&$select=" + FIELDS + "&$orderby=start/dateTime&$top=50");
         while (page != null) {
-            JsonObject answer = get(page, token);
-            for (JsonElement item : array(answer, "value")) {
-                CalendarEvent event = toEvent(item);
+            JSONObject answer = get(page, token);
+            JSONArray items = answer.optJSONArray("value");
+            if (items == null) {
+                throw new IOException("Microsoft Graph answered without 'value'");
+            }
+            for (int i = 0; i < items.length(); i++) {
+                CalendarEvent event = toEvent(items.opt(i));
                 if (event != null && !event.start().isBefore(from) && event.start().isBefore(to)) {
                     events.add(event);
                 }
@@ -90,7 +93,7 @@ public class GraphCalendarSource implements CalendarSource {
 
     // ------------------------------------------------------------------ HTTP
 
-    private JsonObject get(URI uri, String token) throws IOException {
+    private JSONObject get(URI uri, String token) throws IOException {
         HttpRequest request = HttpRequest.newBuilder(uri)
             .GET()
             .timeout(REQUEST_TIMEOUT)
@@ -151,33 +154,28 @@ public class GraphCalendarSource implements CalendarSource {
 
     private static String errorCode(String body) {
         try {
-            String code = string(object(JsonParser.parseString(body).getAsJsonObject(), "error"), "code");
+            String code = string(object(new JSONObject(body), "error"), "code");
             return (code == null) ? "" : " (" + code + ")";
-        } catch (RuntimeException x) {
+        } catch (JSONException x) {
             return "";
         }
     }
 
-    private static JsonObject parse(String body) throws IOException {
+    private static JSONObject parse(String body) throws IOException {
         try {
-            JsonElement root = JsonParser.parseString(body);
-            if (!root.isJsonObject()) {
-                throw new IOException("Microsoft Graph answered something that is not a JSON object");
-            }
-            return root.getAsJsonObject();
-        } catch (RuntimeException x) {
-            throw new IOException("Microsoft Graph answered something that is not JSON", x);
+            return new JSONObject(body);
+        } catch (JSONException x) {
+            throw new IOException("Microsoft Graph answered something that is not a JSON object", x);
         }
     }
 
     // --------------------------------------------------------------- mapping
 
     /** @return the event, or null for a cancelled meeting */
-    private CalendarEvent toEvent(JsonElement item) throws IOException {
-        if (!item.isJsonObject()) {
+    private CalendarEvent toEvent(Object item) throws IOException {
+        if (!(item instanceof JSONObject event)) {
             throw new IOException("Microsoft Graph returned an event that is not an object");
         }
-        JsonObject event = item.getAsJsonObject();
         if (bool(event, "isCancelled")) {
             return null;
         }
@@ -199,13 +197,13 @@ public class GraphCalendarSource implements CalendarSource {
         );
     }
 
-    private static String joinUrl(JsonObject event) {
+    private static String joinUrl(JSONObject event) {
         String url = string(object(event, "onlineMeeting"), "joinUrl");
         return (url != null) ? url : string(event, "onlineMeetingUrl");
     }
 
-    private static String organizer(JsonObject event) {
-        JsonObject address = object(object(event, "organizer"), "emailAddress");
+    private static String organizer(JSONObject event) {
+        JSONObject address = object(object(event, "organizer"), "emailAddress");
         String name = string(address, "name");
         return (name != null && !name.isBlank()) ? name : string(address, "address");
     }
@@ -224,7 +222,7 @@ public class GraphCalendarSource implements CalendarSource {
     }
 
     /** @return the Graph date-time in local time, or null when it is missing or unreadable */
-    private LocalDateTime time(JsonObject dateTime) {
+    private LocalDateTime time(JSONObject dateTime) {
         String value = string(dateTime, "dateTime");
         if (value == null) {
             return null;
@@ -251,32 +249,17 @@ public class GraphCalendarSource implements CalendarSource {
 
     // ------------------------------------------------------------------ JSON
 
-    private static JsonObject object(JsonObject parent, String name) {
-        if (parent == null) {
-            return null;
-        }
-        JsonElement element = parent.get(name);
-        return (element != null && element.isJsonObject()) ? element.getAsJsonObject() : null;
+    private static JSONObject object(JSONObject parent, String name) {
+        return (parent == null) ? null : parent.optJSONObject(name);
     }
 
-    private static JsonArray array(JsonObject parent, String name) throws IOException {
-        JsonElement element = parent.get(name);
-        if (element == null || !element.isJsonArray()) {
-            throw new IOException("Microsoft Graph answered without '" + name + "'");
-        }
-        return element.getAsJsonArray();
+    /** @return the text value, or null when it is missing, null or not a text */
+    private static String string(JSONObject parent, String name) {
+        Object value = (parent == null) ? null : parent.opt(name);
+        return (value instanceof String text) ? text : null;
     }
 
-    private static String string(JsonObject parent, String name) {
-        if (parent == null) {
-            return null;
-        }
-        JsonElement element = parent.get(name);
-        return (element == null || element.isJsonNull() || !element.isJsonPrimitive()) ? null : element.getAsString();
-    }
-
-    private static boolean bool(JsonObject parent, String name) {
-        String value = string(parent, name);
-        return Boolean.parseBoolean(value);
+    private static boolean bool(JSONObject parent, String name) {
+        return parent != null && parent.optBoolean(name);
     }
 }

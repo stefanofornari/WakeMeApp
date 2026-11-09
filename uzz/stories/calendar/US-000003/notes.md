@@ -6,7 +6,7 @@
 4. Cancelled meetings (`isCancelled`) are skipped: for the user they are gone, so the poller cancels their notification. Nothing else is filtered; eligibility stays in `CalendarEvent.isEligible()`.
 5. Response mapping: organizer, accepted, tentativelyAccepted, declined; `none`, `notResponded` and anything else is NOT_RESPONDED. Join URL from `onlineMeeting.joinUrl`, else `onlineMeetingUrl`; organizer is the name, else the address; description is `bodyPreview`.
 6. 429: wait `Retry-After` (1 s if missing), doubling at every further 429, at most 5 attempts; a wait above one minute is not taken: the call throws and the poller tries again at its next poll. Other non-2xx answers, a network error, an unreadable answer or an event without id or start throw `IOException`, with no partial result (a malformed single event fails the whole poll, as for the CSV before US-000038).
-7. JSON is read with Gson (new dependency, `com.google.code.gson:gson`); xtest 3.14.0 is a new test dependency.
+7. JSON is read with JSON-java from json.org (new dependency, `org.json:json` 20250107); xtest 3.14.0 is a new test dependency.
 8. Not wired to the command line yet: that needs the configuration (settings/US-000014) and the authentication.
 
 Verified with a plain Java program using minimal stand-ins for xtest's HTTP stubs and for Gson (Maven Central is not reachable from the authoring environment): the 23 tests of `GraphCalendarSourceTest` pass. To be run with `mvn test`; the story stays WIP until then.

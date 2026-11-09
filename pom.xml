@@ -54,11 +54,11 @@
             <version>${lazyjava.version}</version>
         </dependency>
 
-        <!-- JSON of the Microsoft Graph answers -->
+        <!-- JSON of the Microsoft Graph answers (JSON-java, json.org) -->
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20250107</version>
         </dependency>
 
         <dependency>
