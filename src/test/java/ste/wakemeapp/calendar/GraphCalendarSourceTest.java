@@ -347,4 +347,80 @@ class GraphCalendarSourceTest {
 
         thenThrownBy(() -> source().meetingsStartingBetween(FROM, TO)).isInstanceOf(IOException.class);
     }
+
+    // --- which failures are temporary (logging/US-000039) ---
+
+    private void thenFailureIs(int status, boolean temporary) {
+        stub(FIRST_PAGE, status, "{}");
+
+        thenThrownBy(() -> source().meetingsStartingBetween(FROM, TO))
+            .isInstanceOfSatisfying(CalendarAccessException.class, x -> then(x.isTemporary()).isEqualTo(temporary));
+    }
+
+    @Test
+    void should_report_the_statuses_that_may_pass_as_temporary() {
+        thenFailureIs(408, true);
+    }
+
+    @Test
+    void should_report_a_server_error_as_temporary() {
+        thenFailureIs(503, true);
+    }
+
+    @Test
+    void should_report_a_500_as_temporary() {
+        thenFailureIs(500, true);
+    }
+
+    @Test
+    void should_report_a_refused_token_as_not_temporary() {
+        thenFailureIs(401, false);
+    }
+
+    @Test
+    void should_report_a_missing_permission_as_not_temporary() {
+        thenFailureIs(403, false);
+    }
+
+    @Test
+    void should_report_a_bad_request_as_not_temporary() {
+        thenFailureIs(400, false);
+    }
+
+    @Test
+    void should_report_a_not_found_as_not_temporary() {
+        thenFailureIs(404, false);
+    }
+
+    @Test
+    void should_report_a_network_error_as_temporary() {
+        http.withStub(new URIMatcher(FIRST_PAGE), new NetworkError());
+
+        thenThrownBy(() -> source().meetingsStartingBetween(FROM, TO))
+            .isInstanceOfSatisfying(CalendarAccessException.class, x -> then(x.isTemporary()).isEqualTo(true));
+    }
+
+    @Test
+    void should_report_a_giving_up_after_throttling_as_temporary() {
+        throttled(FIRST_PAGE, 100, "1", page(null));
+
+        thenThrownBy(() -> source().meetingsStartingBetween(FROM, TO))
+            .isInstanceOfSatisfying(CalendarAccessException.class, x -> then(x.isTemporary()).isEqualTo(true));
+    }
+
+    @Test
+    void should_report_an_unreadable_answer_as_not_temporary() {
+        http.withStub(new URIMatcher(FIRST_PAGE), new StubHttpResponse<String>().text("<html>oops</html>"));
+
+        thenThrownBy(() -> source().meetingsStartingBetween(FROM, TO))
+            .isInstanceOfSatisfying(CalendarAccessException.class, x -> then(x.isTemporary()).isEqualTo(false));
+    }
+
+    @Test
+    void should_report_an_event_without_id_or_start_as_not_temporary() {
+        stub(FIRST_PAGE, 200, page(null, "{\"subject\":\"No id\"}"));
+
+        thenThrownBy(() -> source().meetingsStartingBetween(FROM, TO))
+            .isInstanceOfSatisfying(CalendarAccessException.class, x -> then(x.isTemporary()).isEqualTo(false));
+    }
 }

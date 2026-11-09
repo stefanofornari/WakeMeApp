@@ -422,4 +422,54 @@ class CalendarPollerTest {
             then(text(r)).contains("1 meeting");
         });
     }
+
+    // --- failures reading the calendar (logging/US-000039)
+
+    private List<java.util.logging.LogRecord> pollFailing(IOException failure) {
+        pollerOn((from, to) -> { throw failure; }, Clock.systemDefaultZone());
+        return logged(poller::pollOnce);
+    }
+
+    @Test
+    void should_log_a_temporary_calendar_failure_at_warning() {
+        List<java.util.logging.LogRecord> records = pollFailing(
+            new CalendarAccessException("Microsoft Graph answered 503", true)
+        );
+
+        then(records).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.WARNING);
+            then(text(r)).contains("Microsoft Graph answered 503");
+        });
+        then(records).noneMatch(r -> r.getLevel().equals(java.util.logging.Level.SEVERE));
+    }
+
+    @Test
+    void should_log_a_permanent_calendar_failure_at_severe() {
+        List<java.util.logging.LogRecord> records = pollFailing(
+            new CalendarAccessException("Microsoft Graph answered 401 (InvalidAuthenticationToken)", false)
+        );
+
+        then(records).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.SEVERE);
+            then(text(r)).contains("Microsoft Graph answered 401 (InvalidAuthenticationToken)");
+        });
+        then(records).noneMatch(r -> r.getLevel().equals(java.util.logging.Level.WARNING));
+    }
+
+    @Test
+    void should_log_any_other_io_failure_at_warning() {
+        List<java.util.logging.LogRecord> records = pollFailing(new IOException("calendar unreachable"));
+
+        then(records).anySatisfy(r -> {
+            then(r.getLevel()).isEqualTo(java.util.logging.Level.WARNING);
+            then(text(r)).contains("calendar unreachable");
+        });
+    }
+
+    @Test
+    void should_tell_when_the_next_poll_is_in_the_failure_messages() {
+        List<java.util.logging.LogRecord> records = pollFailing(new CalendarAccessException("down", true));
+
+        then(records).anySatisfy(r -> then(text(r)).contains("5 min").contains("down"));
+    }
 }
