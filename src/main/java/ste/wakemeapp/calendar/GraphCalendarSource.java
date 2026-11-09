@@ -76,7 +76,7 @@ public class GraphCalendarSource implements CalendarSource {
             JSONObject answer = get(page, token);
             JSONArray items = answer.optJSONArray("value");
             if (items == null) {
-                throw new IOException("Microsoft Graph answered without 'value'");
+                throw new CalendarAccessException("Microsoft Graph answered without 'value'", false);
             }
             for (int i = 0; i < items.length(); i++) {
                 CalendarEvent event = toEvent(items.opt(i));
@@ -109,9 +109,9 @@ public class GraphCalendarSource implements CalendarSource {
             if (status == 429) {
                 Duration wait = retryAfter(response).multipliedBy(1L << (attempt - 1));
                 if (attempt >= MAX_ATTEMPTS || wait.compareTo(MAX_WAIT) > 0) {
-                    throw new IOException(
+                    throw new CalendarAccessException(
                         "Microsoft Graph is throttling the requests (429, retry after "
-                        + retryAfter(response).toSeconds() + " s)"
+                        + retryAfter(response).toSeconds() + " s)", true
                     );
                 }
                 LOG.log(Level.WARNING, "Microsoft Graph asked to slow down; waiting {0} s", wait.toSeconds());
@@ -119,7 +119,9 @@ public class GraphCalendarSource implements CalendarSource {
                 continue;
             }
             if (status < 200 || status > 299) {
-                throw new IOException("Microsoft Graph answered " + status + errorCode(response.body()));
+                throw new CalendarAccessException(
+                    "Microsoft Graph answered " + status + errorCode(response.body()), isTemporary(status)
+                );
             }
             return parse(response.body());
         }
@@ -128,10 +130,19 @@ public class GraphCalendarSource implements CalendarSource {
     private HttpResponse<String> send(HttpRequest request) throws IOException {
         try {
             return client.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (InterruptedIOException x) {
+            throw x;
+        } catch (IOException x) {
+            throw new CalendarAccessException("Cannot reach Microsoft Graph: " + x.getMessage(), x, true);
         } catch (InterruptedException x) {
             Thread.currentThread().interrupt();
             throw new InterruptedIOException("Interrupted while reading the calendar");
         }
+    }
+
+    /** Timeouts and server errors pass; a refused token, a missing permission or a bad request do not. */
+    private static boolean isTemporary(int status) {
+        return status == 408 || status >= 500;
     }
 
     private static Duration retryAfter(HttpResponse<?> response) {
@@ -165,7 +176,7 @@ public class GraphCalendarSource implements CalendarSource {
         try {
             return new JSONObject(body);
         } catch (JSONException x) {
-            throw new IOException("Microsoft Graph answered something that is not a JSON object", x);
+            throw new CalendarAccessException("Microsoft Graph answered something that is not a JSON object", x, false);
         }
     }
 
@@ -174,7 +185,7 @@ public class GraphCalendarSource implements CalendarSource {
     /** @return the event, or null for a cancelled meeting */
     private CalendarEvent toEvent(Object item) throws IOException {
         if (!(item instanceof JSONObject event)) {
-            throw new IOException("Microsoft Graph returned an event that is not an object");
+            throw new CalendarAccessException("Microsoft Graph returned an event that is not an object", false);
         }
         if (bool(event, "isCancelled")) {
             return null;
@@ -182,7 +193,7 @@ public class GraphCalendarSource implements CalendarSource {
         String id = string(event, "id");
         LocalDateTime start = time(object(event, "start"));
         if (id == null || start == null) {
-            throw new IOException("Microsoft Graph returned an event without id or start time");
+            throw new CalendarAccessException("Microsoft Graph returned an event without id or start time", false);
         }
         return new CalendarEvent(
             id,

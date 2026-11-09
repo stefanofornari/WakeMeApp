@@ -118,9 +118,24 @@ public final class CalendarPoller implements AutoCloseable {
                     }
                 }
             }
+        } catch (CalendarAccessException e) {
+            if (e.isTemporary()) {
+                LOG.warning(() -> "Cannot read the calendar, will try again in " + phrase(pollInterval) + ": " + e.getMessage());
+            } else {
+                LOG.severe(() -> "Cannot read the calendar, and trying again will not help: " + e.getMessage()
+                    + " (next poll in " + phrase(pollInterval) + ")");
+            }
+            LOG.log(Level.FINE, "Details of the calendar failure", e);
         } catch (Exception e) {
-            LOG.log(Level.WARNING, e, () -> "Calendar poll failed, will retry in " + pollInterval);
+            LOG.log(Level.WARNING, e, () -> "Calendar poll failed, will retry in " + phrase(pollInterval) + ": " + e.getMessage());
         }
+    }
+
+    private static String phrase(Duration duration) {
+        if (duration.toMinutes() >= 1) {
+            return duration.toMinutes() + " min";
+        }
+        return duration.toSeconds() >= 1 ? duration.toSeconds() + " s" : duration.toMillis() + " ms";
     }
 
     private void schedule(CalendarEvent event, boolean rescheduled) {
