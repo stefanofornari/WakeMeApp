@@ -9,7 +9,7 @@
 ## calendar
 | ID | Title | Status |
 |----|-------|--------|
-| calendar/US-000003 | Microsoft Graph Calendar Source | TODO |
+| calendar/US-000003 | Microsoft Graph Calendar Source | WIP |
 | calendar/US-000004 | Extract Meeting Details for Notifications | TODO |
 | calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | DONE |
 | calendar/US-000029 | Notify Only for Relevant Meetings | DONE |
