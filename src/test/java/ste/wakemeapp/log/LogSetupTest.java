@@ -61,7 +61,9 @@ class LogSetupTest {
         Properties config = new Properties();
         config.load(new ByteArrayInputStream(production().getBytes(StandardCharsets.ISO_8859_1)));
 
-        then(config.getProperty("handlers")).contains("java.util.logging.ConsoleHandler").contains(FILE_HANDLER);
+        then(config.getProperty("handlers")).contains(StdoutHandler.class.getName()).contains(FILE_HANDLER)
+            .doesNotContain("java.util.logging.ConsoleHandler");
+        then(config.getProperty(StdoutHandler.class.getName() + ".formatter")).isEqualTo(LineFormatter.class.getName());
         then(config.getProperty(FILE_HANDLER + ".application")).isEqualTo("WakeMeApp");
         then(config.getProperty(FILE_HANDLER + ".pattern")).isEqualTo("${dataDir}/logs/wakemeapp.%g.log");
         then(config.getProperty(FILE_HANDLER + ".limit")).isEqualTo("1000000");
