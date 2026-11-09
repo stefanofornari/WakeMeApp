@@ -40,6 +40,7 @@ Levels (JUL name in brackets) mean the same everywhere:
 * **Development Toolchain**: Maven + JavaFX 25 + Java 25
 * **Target Systems/Platforms**: macOS (primary), Windows/Linux (future)
 * **Logging**: `java.util.logging` only (see the development framework)
+* **File handler**: `ste.lazyjava.logging.FileLogHandler` from `lazyjava-core` ([lazy-java](https://github.com/stefanofornari/lazy-java)), configured only in `logging.properties`
 * **Platform directories**: [directories-jvm](https://codeberg.org/dirs/directories-jvm) `dev.dirs:directories` 26 (MPL-2.0, no dependencies listed), also the library to use for any other system folder. It has no log directory: the log folder is `logs` under `ProjectDirectories.dataLocalDir` (machine-local, not roaming on Windows)
 * **Project Reference Docs**:
   - Coding Standard: `../../project/coding_standard.md`

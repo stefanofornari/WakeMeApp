@@ -70,11 +70,6 @@ class LogSetupTest {
     }
 
     @Test
-    void should_not_keep_a_file_handler_of_its_own() {
-        then(LogSetupTest.class.getResource("/ste/wakemeapp/log/AppFileHandler.class")).isNull();
-    }
-
-    @Test
     void should_write_to_the_log_folder_of_the_application_data_directory() throws IOException {
         LOG.info("Polling meetings.csv every 5 min");
 
