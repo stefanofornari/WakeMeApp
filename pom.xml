@@ -17,8 +17,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>23</javafx.version>
-        <!-- TODO: set the first lazyjava-core release that contains ste.lazyjava.logging.FileLogHandler -->
-        <lazyjava.version>SET-ME</lazyjava.version>
+        <lazyjava.version>0.0.2-SNAPSHOT</lazyjava.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
         <javafx.mainClass>ste.wakemeapp.WakeMeApp</javafx.mainClass>
         <logging.config>${project.basedir}/src/main/resources/ste/wakemeapp/log/logging.properties</logging.config>
