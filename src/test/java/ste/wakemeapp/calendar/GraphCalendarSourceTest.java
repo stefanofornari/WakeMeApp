@@ -206,7 +206,7 @@ class GraphCalendarSourceTest {
 
         then(source.meetingsStartingBetween(FROM, TO)).singleElement().satisfies(e -> {
             then(e.start()).isEqualTo(LocalDateTime.of(2026, 11, 9, 11, 57));
-            then(e.endTime()).isEqualTo(LocalDateTime.of(2026, 11, 9, 5 + 8, 0).minusHours(0).withHour(5));
+            then(e.endTime()).isEqualTo(LocalDateTime.of(2026, 11, 9, 5, 0)); // 13:00 UTC
         });
     }
 
