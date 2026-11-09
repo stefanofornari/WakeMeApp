@@ -31,7 +31,6 @@ Levels (JUL name in brackets) mean the same everywhere:
 
 ## Out-of-Scope / Future Enhancements
 * Alert dialog for ERROR messages (to be scoped later; ERROR is already reserved for what the user must know)
-* Reporting a failure that repeats at every poll only once (and a message when the calendar is readable again); see logging/US-000039, note 4
 * Settings UI, per-class levels, or configuration file for logging
 * Log viewer, log upload or any remote logging
 * Parsing of the log by other tools (no structured/JSON format)
