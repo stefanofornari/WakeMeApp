@@ -9,4 +9,4 @@
 7. JSON is read with JSON-java from json.org (new dependency, `org.json:json` 20250107); xtest 3.14.0 is a new test dependency.
 8. Not wired to the command line yet: that needs the configuration (settings/US-000014) and the authentication.
 
-Verified with a plain Java program using minimal stand-ins for xtest's HTTP stubs and for Gson (Maven Central is not reachable from the authoring environment): the 23 tests of `GraphCalendarSourceTest` pass. To be run with `mvn test`; the story stays WIP until then.
+Verified with a plain Java program using minimal stand-ins for xtest's HTTP stubs and for org.json (Maven Central is not reachable from the authoring environment): the 23 tests of `GraphCalendarSourceTest` pass. To be run with `mvn test`; the story stays WIP until then.
