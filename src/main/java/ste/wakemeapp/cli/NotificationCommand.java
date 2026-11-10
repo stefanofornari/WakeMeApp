@@ -3,6 +3,7 @@ package ste.wakemeapp.cli;
 import picocli.CommandLine;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.scheduler.NotificationScheduler;
+import ste.wakemeapp.settings.ConnectionSettings;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Model.CommandSpec;
@@ -55,6 +56,14 @@ public class NotificationCommand implements Callable<Integer> {
             description = "How far ahead each poll looks for meetings; at least poll interval + lead time (default: 15)")
     private int windowMinutes = (int) CalendarPoller.DEFAULT_WINDOW.toMinutes();
 
+    @Option(names = "--client-id", paramLabel = "<uuid>",
+            description = "Microsoft application (client) id for this run; overrules the stored one, is not saved")
+    private String clientId;
+
+    @Option(names = "--tenant", paramLabel = "<id>",
+            description = "Microsoft tenant id or \"organizations\" for this run; overrules the stored one, is not saved")
+    private String tenant;
+
     @Option(names = "--debug", description = "Log the detail needed to investigate a problem (default: INFO and above)")
     private boolean debug;
 
@@ -68,6 +77,7 @@ public class NotificationCommand implements Callable<Integer> {
     public Integer call() {
         try {
             validatePolling();
+            ConnectionSettings.validate(clientId, tenant);
             if (calendarFile != null) {
                 // the file may be created later: only a directory can never work
                 if (Files.isDirectory(calendarFile)) {
@@ -169,6 +179,16 @@ public class NotificationCommand implements Callable<Integer> {
 
     public Path getCalendarFile() {
         return calendarFile;
+    }
+
+    /** The value of --client-id, or null if not given (the stored one, if any, applies). */
+    public String getClientId() {
+        return clientId;
+    }
+
+    /** The value of --tenant, or null if not given (the stored one, if any, applies). */
+    public String getTenant() {
+        return tenant;
     }
 
     public boolean isNow() {
