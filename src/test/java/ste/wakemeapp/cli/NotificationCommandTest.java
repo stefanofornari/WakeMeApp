@@ -4,6 +4,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import ste.wakemeapp.settings.MemoryPreferences;
+import ste.wakemeapp.settings.Settings;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.BDDAssertions.then;
 
@@ -243,5 +245,30 @@ class NotificationCommandTest {
         NotificationCommand cmd = commandLine.getCommand();
         then(cmd.getClientId()).isNull();
         then(cmd.getTenant()).isNull();
+    }
+
+    @Test
+    void should_print_the_configuration_and_nothing_else_with_print_config() {
+        MemoryPreferences node = new MemoryPreferences();
+        node.put("graph.tenant", "99999999-8888-7777-6666-555555555555");
+        NotificationCommand command = new NotificationCommand();
+        command.setSettings(new Settings(node));
+        CommandLine line = new CommandLine(command);
+        java.io.StringWriter out = new java.io.StringWriter();
+        line.setOut(new java.io.PrintWriter(out, true));
+
+        int exitCode = line.execute("--print-config", "--client-id", "11111111-2222-3333-4444-555555555555");
+
+        then(exitCode).isZero();
+        then(command.isPrintConfig()).isTrue();
+        then(out.toString()).contains("graph.clientId").contains("(command line)")
+            .contains("99999999-8888-7777-6666-555555555555").contains("(stored)");
+    }
+
+    @Test
+    void should_not_print_the_configuration_by_default() {
+        commandLine.execute("--calendar", "meetings.csv");
+
+        then(commandLine.<NotificationCommand>getCommand().isPrintConfig()).isFalse();
     }
 }

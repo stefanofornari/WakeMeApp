@@ -6,13 +6,13 @@ import java.util.prefs.AbstractPreferences;
 import java.util.prefs.BackingStoreException;
 
 /** A Preferences node that lives in memory, so that tests never touch the real user settings. */
-class MemoryPreferences extends AbstractPreferences {
+public class MemoryPreferences extends AbstractPreferences {
 
     private final Map<String, String> values = new HashMap<>();
     int flushes;
     boolean failFlush;
 
-    MemoryPreferences() {
+    public MemoryPreferences() {
         super(null, "");
     }
 

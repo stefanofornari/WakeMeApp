@@ -114,4 +114,12 @@ class SettingsTest {
         then(warnings.get(0).getMessage()).contains("notify.leadMinutes").contains("not saved");
         then(settings.getInt("notify.leadMinutes", 5)).isEqualTo(10);   // still known in this run
     }
+
+    @Test
+    void the_stored_keys_are_listed() {
+        settings.putInt("notify.leadMinutes", 10);
+        settings.putString("graph.tenant", "organizations");
+
+        then(settings.keys()).contains("notify.leadMinutes").contains("graph.tenant").hasSize(2);
+    }
 }
