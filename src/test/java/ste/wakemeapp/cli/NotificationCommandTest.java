@@ -224,4 +224,24 @@ class NotificationCommandTest {
     void should_list_the_debug_option_in_the_help() {
         then(commandLine.getUsageMessage()).contains("--debug");
     }
+
+    @Test
+    void should_keep_the_client_id_and_the_tenant_given_on_the_command_line() {
+        int exitCode = commandLine.execute("--calendar", "meetings.csv",
+            "--client-id", "11111111-2222-3333-4444-555555555555", "--tenant", "organizations");
+
+        then(exitCode).isZero();
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getClientId()).isEqualTo("11111111-2222-3333-4444-555555555555");
+        then(cmd.getTenant()).isEqualTo("organizations");
+    }
+
+    @Test
+    void should_leave_the_client_id_and_the_tenant_null_when_not_given() {
+        commandLine.execute("--calendar", "meetings.csv");
+
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getClientId()).isNull();
+        then(cmd.getTenant()).isNull();
+    }
 }

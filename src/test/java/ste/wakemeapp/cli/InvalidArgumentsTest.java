@@ -96,4 +96,21 @@ class InvalidArgumentsTest {
         then(err.toString()).isEmpty();
         then(out.toString()).contains("Usage: notify").contains("Meeting title");
     }
+
+    @Test
+    void should_stop_and_name_the_option_for_an_invalid_client_id() {
+        int exitCode = run("--calendar", dir.resolve("meetings.csv").toString(), "--client-id", "not-a-uuid");
+
+        then(exitCode).isNotEqualTo(0);
+        then(err.toString()).contains("--client-id must be a UUID");
+        thenFullHelpIsShown();
+    }
+
+    @Test
+    void should_stop_and_name_the_option_for_an_invalid_tenant() {
+        int exitCode = run("--calendar", dir.resolve("meetings.csv").toString(), "--tenant", "common");
+
+        then(exitCode).isNotEqualTo(0);
+        then(err.toString()).contains("--tenant must be a UUID or \"organizations\"");
+    }
 }

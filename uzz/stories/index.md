@@ -55,8 +55,8 @@
 | settings/US-000017 | Enable/Disable Notifications | TODO |
 | settings/US-000018 | Test Notification Button | TODO |
 | settings/US-000044 | Document How to Inspect the Stored Settings | TODO |
-| settings/US-000045 | Store Settings in Java Preferences | WIP |
-| settings/US-000046 | Overrule Settings from the Command Line | TODO |
+| settings/US-000045 | Store Settings in Java Preferences | DONE |
+| settings/US-000046 | Overrule Settings from the Command Line | WIP |
 | settings/US-000047 | Print the Effective Configuration | TODO |
 
 ## logging
