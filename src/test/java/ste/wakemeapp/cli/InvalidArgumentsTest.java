@@ -113,4 +113,13 @@ class InvalidArgumentsTest {
         then(exitCode).isNotEqualTo(0);
         then(err.toString()).contains("--tenant must be a UUID or \"organizations\"");
     }
+
+    @Test
+    void should_refuse_a_calendar_address_on_another_host() {
+        int exitCode = run("--calendar", "https://example.com/v1.0/me/calendarView");
+
+        then(exitCode).isNotEqualTo(0);
+        then(err.toString()).contains("--calendar address must be on graph.microsoft.com over https");
+        thenFullHelpIsShown();
+    }
 }

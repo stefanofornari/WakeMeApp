@@ -118,4 +118,13 @@ class ConnectionSettingsTest {
         then(logged.get(0).getMessage()).contains("graph.clientId").contains("not-a-uuid");
         then(logged.get(1).getMessage()).contains("graph.tenant").contains("common");
     }
+
+    @Test
+    void a_client_id_is_required_to_sign_in() {
+        thenThrownBy(() -> ConnectionSettings.resolve(null, null, stored).requireClientId())
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("A client id is needed")
+            .hasMessageContaining("--client-id");
+        then(ConnectionSettings.resolve(CLIENT_ID, null, stored).requireClientId()).isEqualTo(CLIENT_ID);
+    }
 }

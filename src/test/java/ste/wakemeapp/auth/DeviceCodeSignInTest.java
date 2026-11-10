@@ -189,4 +189,14 @@ class DeviceCodeSignInTest {
         thenThrownBy(() -> new DeviceCodeSignIn(CLIENT_ID, "", null))
             .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("tenant");
     }
+
+    @Test
+    void the_user_is_signed_in_only_after_the_tokens_are_received() throws Exception {
+        DeviceCodeSignIn signIn = signIn(userSignsIn("AT-1"), "organizations");
+        then(signIn.isSignedIn()).isFalse();
+
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        then(signIn.isSignedIn()).isTrue();
+    }
 }

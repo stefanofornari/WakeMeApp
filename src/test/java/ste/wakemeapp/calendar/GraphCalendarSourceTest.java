@@ -109,6 +109,17 @@ class GraphCalendarSourceTest {
         then(source().meetingsStartingBetween(FROM, TO)).isEmpty();
     }
 
+    @Test
+    void should_read_the_calendar_at_the_given_address() throws IOException {
+        String calendar = "https://graph.microsoft.com/v1.0/me/calendars/AAMk123/calendarView";
+        stub(FIRST_PAGE.replace(BASE, calendar), 200, page(null,
+            event("ev-9", "Other calendar", "2026-11-09T11:57:00.0000000", "accepted")));
+        GraphCalendarSource other = new GraphCalendarSource(http, () -> "token-1", URI.create(calendar),
+            ZoneId.of("UTC"), waits::add);
+
+        then(other.meetingsStartingBetween(FROM, TO)).extracting(CalendarEvent::id).containsExactly("ev-9");
+    }
+
     // --- mapping ---
 
     @Test

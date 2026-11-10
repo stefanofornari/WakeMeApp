@@ -271,4 +271,24 @@ class NotificationCommandTest {
 
         then(commandLine.<NotificationCommand>getCommand().isPrintConfig()).isFalse();
     }
+
+    @Test
+    void should_take_a_graph_address_as_the_calendar() {
+        int exitCode = commandLine.execute("--calendar", "https://graph.microsoft.com/v1.0/me/calendars/AAMk");
+
+        then(exitCode).isZero();
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarAddress()).isEqualTo(
+            java.net.URI.create("https://graph.microsoft.com/v1.0/me/calendars/AAMk/calendarView"));
+        then(cmd.getCalendarFile()).isNull();
+    }
+
+    @Test
+    void should_take_a_path_as_a_calendar_file_and_no_address() {
+        commandLine.execute("--calendar", "meetings.csv");
+
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarFile()).isEqualTo(Path.of("meetings.csv"));
+        then(cmd.getCalendarAddress()).isNull();
+    }
 }
