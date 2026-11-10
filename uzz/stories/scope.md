@@ -45,6 +45,7 @@ global lead-time configuration.
 * Configuration (Preferences storage, first-run provisioning from the command line, `--print-config`, inspection docs): `settings/scope.md`
 
 ## Out-of-Scope / Future Enhancements
+* Short form for the Outlook calendar (`graph:me`) and shared calendars of other users (`Calendars.Read.Shared`): deferred; `--calendar` takes the full Graph address for now
 * Keychain, DPAPI, libsecret or any system password manager for the stored sign-in, and encryption of the token file: deferred; for now the file is protected only by owner-only permissions
 * Rule-based filtering (organizer, keywords, categories, calendar selection)
 * Multiple notification rules with different conditions
