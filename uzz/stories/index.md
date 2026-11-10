@@ -8,6 +8,7 @@
 | auth/US-000040 | Handle Device Code Sign-In Failures | TODO |
 | auth/US-000041 | Refresh the Access Token Silently | TODO |
 | auth/US-000042 | Sign In Again When the Refresh Token Is Rejected | TODO |
+| auth/US-000049 | Show the Microsoft Sign-In Page in a WebView | TODO |
 
 ## calendar
 | ID | Title | Status |
@@ -83,4 +84,4 @@
 
 ---
 
-**Total Stories:** 45
+**Total Stories:** 46
