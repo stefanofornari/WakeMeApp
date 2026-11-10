@@ -185,13 +185,8 @@ public class CLILauncher extends Application {
         ConnectionSettings connection = ConnectionSettings.resolve(
             parsedCommand.getClientId(), parsedCommand.getTenant(), Settings.user());
         DeviceCodeSignIn signIn = new DeviceCodeSignIn(connection.requireClientId(), connection.tenant(), null);
-        signIn.signIn().whenComplete((done, failure) -> {
-            if (failure != null) {
-                LOG.log(Level.SEVERE, "The sign-in did not complete: " + failure.getMessage(), failure);
-            } else {
-                LOG.info("Signed in");
-            }
-        });
+        // a failure is logged, once, with the reason, by the sign-in itself
+        signIn.signIn().thenRun(() -> LOG.info("Signed in"));
         CalendarSource calendar = new SignedInCalendarSource(
             new GraphCalendarSource(java.net.http.HttpClient.newBuilder(), signIn.accessTokenSupplier(), address),
             signIn::isSignedIn);

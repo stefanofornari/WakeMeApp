@@ -1,12 +1,19 @@
 package ste.wakemeapp.auth;
 
+import com.microsoft.aad.msal4j.AuthenticationErrorCode;
 import com.microsoft.aad.msal4j.DeviceCode;
 import com.microsoft.aad.msal4j.DeviceCodeFlowParameters;
 import com.microsoft.aad.msal4j.IHttpClient;
+import com.microsoft.aad.msal4j.MsalClientException;
+import com.microsoft.aad.msal4j.MsalServiceException;
 import com.microsoft.aad.msal4j.PublicClientApplication;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -68,8 +75,78 @@ public class DeviceCodeSignIn {
      */
     public CompletableFuture<Void> signIn() {
         Consumer<DeviceCode> consumer = this::present;
-        return app.acquireToken(DeviceCodeFlowParameters.builder(SCOPES, consumer).build())
-            .thenAccept(result -> accessToken.set(result.accessToken()));
+        CompletableFuture<Void> outcome = new CompletableFuture<>();
+        app.acquireToken(DeviceCodeFlowParameters.builder(SCOPES, consumer).build())
+            .whenComplete((result, failure) -> {
+                if (failure == null) {
+                    accessToken.set(result.accessToken());
+                    outcome.complete(null);
+                } else {
+                    outcome.completeExceptionally(explain(failure));
+                }
+            });
+        return outcome;
+    }
+
+    /**
+     * Turns what MSAL reports into a {@link SignInException} worded for the user, and logs it once:
+     * a failure that may pass by itself (network, busy server) or an expired code at WARNING, the
+     * others (declined, unknown client or tenant) at SEVERE.
+     */
+    private SignInException explain(Throwable failure) {
+        Throwable cause = failure;
+        while ((cause instanceof CompletionException || cause instanceof ExecutionException) && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        Level level = Level.SEVERE;
+        boolean temporary = false;
+        String message;
+        if (cause instanceof MsalServiceException service) {
+            String code = service.errorCode();
+            Integer status = service.statusCode();
+            if ("authorization_declined".equals(code)) {
+                message = "The sign-in was declined. Start the sign-in again if this was a mistake (" + service.getMessage() + ")";
+            } else if ("expired_token".equals(code)) {
+                level = Level.WARNING;
+                message = "The code expired before it was entered: start the sign-in again to get a new code (" + service.getMessage() + ")";
+            } else if (status != null && (status == 408 || status == 429 || status >= 500)) {
+                level = Level.WARNING;
+                temporary = true;
+                message = "Microsoft cannot be reached right now (status " + status + "): start the sign-in again later";
+            } else {
+                message = "Microsoft refused the sign-in: " + service.getMessage();
+            }
+        } else if (cause instanceof MsalClientException client
+                   && AuthenticationErrorCode.CODE_EXPIRED.equals(client.errorCode())) {
+            level = Level.WARNING;
+            message = "The code expired before it was entered: start the sign-in again to get a new code";
+        } else if (cause instanceof MsalClientException && causedByIO(cause)) {
+            level = Level.WARNING;
+            temporary = true;
+            message = "Microsoft cannot be reached (" + rootMessage(cause) + "): start the sign-in again when the connection is back";
+        } else {
+            message = "The sign-in failed: " + cause.getMessage();
+        }
+        LOG.log(level, message);
+        LOG.log(Level.FINE, "Details of the sign-in failure", cause);
+        return new SignInException(message, temporary, cause);
+    }
+
+    private static boolean causedByIO(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (c instanceof IOException || c instanceof UncheckedIOException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String rootMessage(Throwable t) {
+        Throwable root = t;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        return root.getMessage();
     }
 
     /** True once the sign-in has completed and an access token is available. */
