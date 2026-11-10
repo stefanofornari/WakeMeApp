@@ -3,7 +3,7 @@
 ## auth
 | ID | Title | Status |
 |----|-------|--------|
-| auth/US-000001 | Sign In with the Device Code Flow | TODO |
+| auth/US-000001 | Sign In with the Device Code Flow | WIP |
 | auth/US-000002 | Remember the Sign-In Across Restarts | TODO |
 | auth/US-000040 | Handle Device Code Sign-In Failures | TODO |
 | auth/US-000041 | Refresh the Access Token Silently | TODO |

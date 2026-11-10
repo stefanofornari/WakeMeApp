@@ -18,6 +18,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>23</javafx.version>
         <lazyjava.version>0.0.2</lazyjava.version>
+        <msal4j.version>1.26.1</msal4j.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
         <javafx.mainClass>ste.wakemeapp.WakeMeApp</javafx.mainClass>
         <logging.config>${project.basedir}/src/main/resources/ste/wakemeapp/log/logging.properties</logging.config>
@@ -59,6 +61,18 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20250107</version>
+        </dependency>
+
+        <!-- Microsoft sign-in (device code flow, token cache); logs through SLF4J, sent to java.util.logging -->
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>msal4j</artifactId>
+            <version>${msal4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>${slf4j.version}</version>
         </dependency>
 
         <dependency>
