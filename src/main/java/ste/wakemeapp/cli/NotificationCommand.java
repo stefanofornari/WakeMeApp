@@ -3,7 +3,9 @@ package ste.wakemeapp.cli;
 import picocli.CommandLine;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.scheduler.NotificationScheduler;
+import ste.wakemeapp.settings.ConfigReport;
 import ste.wakemeapp.settings.ConnectionSettings;
+import ste.wakemeapp.settings.Settings;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Model.CommandSpec;
@@ -64,11 +66,17 @@ public class NotificationCommand implements Callable<Integer> {
             description = "Microsoft tenant id or \"organizations\" for this run; overrules the stored one, is not saved")
     private String tenant;
 
+    @Option(names = "--print-config",
+            description = "Print every setting with its value and where it comes from, then exit")
+    private boolean printConfig;
+
     @Option(names = "--debug", description = "Log the detail needed to investigate a problem (default: INFO and above)")
     private boolean debug;
 
     @Spec
     private CommandSpec spec;
+
+    private Settings settings;
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;
@@ -78,6 +86,12 @@ public class NotificationCommand implements Callable<Integer> {
         try {
             validatePolling();
             ConnectionSettings.validate(clientId, tenant);
+            if (printConfig) {
+                PrintWriter out = spec.commandLine().getOut();
+                ConfigReport.lines(clientId, tenant, settings()).forEach(out::println);
+                out.flush();
+                return 0;
+            }
             if (calendarFile != null) {
                 // the file may be created later: only a directory can never work
                 if (Files.isDirectory(calendarFile)) {
@@ -189,6 +203,23 @@ public class NotificationCommand implements Callable<Integer> {
     /** The value of --tenant, or null if not given (the stored one, if any, applies). */
     public String getTenant() {
         return tenant;
+    }
+
+    /** True with --print-config: the settings were printed and the application must not start. */
+    public boolean isPrintConfig() {
+        return printConfig;
+    }
+
+    private Settings settings() {
+        if (settings == null) {
+            settings = Settings.user();
+        }
+        return settings;
+    }
+
+    /** For tests: the settings to read instead of the user's. */
+    void setSettings(Settings settings) {
+        this.settings = settings;
     }
 
     public boolean isNow() {

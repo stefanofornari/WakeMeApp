@@ -62,11 +62,11 @@ public record ConnectionSettings(String clientId, String tenant) {
         return null;
     }
 
-    private static boolean isClientId(String value) {
+    static boolean isClientId(String value) {
         return UUID.matcher(value).matches();
     }
 
-    private static boolean isTenant(String value) {
+    static boolean isTenant(String value) {
         return DEFAULT_TENANT.equals(value) || UUID.matcher(value).matches();
     }
 }

@@ -1,5 +1,7 @@
 package ste.wakemeapp.settings;
 
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
@@ -59,6 +61,16 @@ public class Settings {
         }
         LOG.warning("The setting " + key + " is '" + value + "', which is not true or false; using " + defaultValue);
         return defaultValue;
+    }
+
+    /** The keys that have a stored value; empty (with a WARNING) if the store cannot be read. */
+    public Set<String> keys() {
+        try {
+            return new TreeSet<>(Set.of(node.keys()));
+        } catch (BackingStoreException | RuntimeException x) {
+            LOG.warning("The stored settings cannot be listed: " + x.getMessage());
+            return Set.of();
+        }
     }
 
     public void putString(String key, String value) {

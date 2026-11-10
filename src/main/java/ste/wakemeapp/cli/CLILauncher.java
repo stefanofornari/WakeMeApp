@@ -64,6 +64,13 @@ public class CLILauncher extends Application {
             return;
         }
 
+        // --print-config: the settings were printed, nothing else starts
+        if (commandLine.<NotificationCommand>getCommand().isPrintConfig()) {
+            Platform.exit();
+            System.exit(0);
+            return;
+        }
+
         parsedCommand = commandLine.getCommand();
         configureLogging();
         LOG.fine(() -> "Raw args: " + rawArgs);
