@@ -5,7 +5,7 @@
 |----|-------|--------|
 | auth/US-000001 | Sign In with the Device Code Flow | DONE |
 | auth/US-000002 | Remember the Sign-In Across Restarts | TODO |
-| auth/US-000040 | Handle Device Code Sign-In Failures | TODO |
+| auth/US-000040 | Handle Device Code Sign-In Failures | WIP |
 | auth/US-000041 | Refresh the Access Token Silently | TODO |
 | auth/US-000042 | Sign In Again When the Refresh Token Is Rejected | TODO |
 | auth/US-000050 | Read My Outlook Calendar from a Graph Address | WIP |

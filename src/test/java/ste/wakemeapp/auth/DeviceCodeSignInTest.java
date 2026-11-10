@@ -5,7 +5,10 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Handler;
@@ -198,5 +201,119 @@ class DeviceCodeSignInTest {
         signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
 
         then(signIn.isSignedIn()).isTrue();
+    }
+
+    // --- failures (auth/US-000040) ---
+
+    private static String error(String code, String description) {
+        return "{\"error\":\"" + code + "\",\"error_description\":\"" + description + "\"}";
+    }
+
+    /** Runs the sign-in and returns why it failed. */
+    private static SignInException failureOf(DeviceCodeSignIn signIn) throws InterruptedException {
+        try {
+            signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        } catch (ExecutionException x) {
+            then(x.getCause()).isInstanceOf(SignInException.class);
+            return (SignInException) x.getCause();
+        } catch (java.util.concurrent.TimeoutException x) {
+            throw new AssertionError("the sign-in did not end", x);
+        }
+        throw new AssertionError("the sign-in was expected to fail");
+    }
+
+    private List<LogRecord> logged(Level level) {
+        synchronized (logged) {
+            return logged.stream().filter(r -> r.getLevel() == level).toList();
+        }
+    }
+
+    @Test
+    void a_declined_sign_in_ends_with_a_severe_message_and_can_be_started_again() throws Exception {
+        AtomicReference<String> tokenAnswer = new AtomicReference<>(
+            error("authorization_declined", "AADSTS70016: The user declined the request"));
+        StubMsalHttpClient http = new StubMsalHttpClient(r -> r.url().getPath().endsWith("/devicecode")
+            ? answer(200, StubMsalHttpClient.DEVICE_CODE)
+            : tokenAnswer.get().contains("access_token") ? answer(200, tokenAnswer.get()) : answer(400, tokenAnswer.get()));
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+
+        SignInException failure = failureOf(signIn);
+
+        then(failure.getMessage()).contains("declined").contains("AADSTS70016");
+        then(failure.isTemporary()).isFalse();
+        then(logged(Level.SEVERE)).hasSize(1);
+        then(logged(Level.SEVERE).get(0).getMessage()).contains("declined");
+        then(signIn.isSignedIn()).isFalse();
+
+        tokenAnswer.set(StubMsalHttpClient.token("AT-9"));
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-9");
+        then(http.requestsTo("/devicecode")).hasSize(2);   // a new code for the new attempt
+    }
+
+    @Test
+    void an_expired_code_asks_to_start_again_and_the_next_attempt_gets_a_new_code() throws Exception {
+        StubMsalHttpClient http = new StubMsalHttpClient(r -> r.url().getPath().endsWith("/devicecode")
+            ? answer(200, StubMsalHttpClient.DEVICE_CODE)
+            : answer(400, error("expired_token", "AADSTS70020: The code has expired")));
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+
+        SignInException failure = failureOf(signIn);
+
+        then(failure.getMessage()).contains("expired").contains("start the sign-in again");
+        then(failure.isTemporary()).isFalse();
+        then(logged(Level.WARNING)).hasSize(1);
+        failureOf(signIn);
+        then(http.requestsTo("/devicecode")).hasSize(2);
+    }
+
+    @Test
+    void a_device_code_that_cannot_be_requested_gives_microsofts_reason_and_does_not_poll() throws Exception {
+        StubMsalHttpClient http = new StubMsalHttpClient(r -> answer(400,
+            error("unauthorized_client", "AADSTS700016: Application with identifier 'x' was not found")));
+
+        SignInException failure = failureOf(signIn(http, "organizations"));
+
+        then(failure.getMessage()).contains("AADSTS700016");
+        then(failure.isTemporary()).isFalse();
+        then(logged(Level.SEVERE)).hasSize(1);
+        then(logged(Level.SEVERE).get(0).getMessage()).contains("AADSTS700016");
+        then(http.requestsTo("/token")).isEmpty();
+        then(shown).isEmpty();
+    }
+
+    @Test
+    void a_network_failure_is_a_warning_and_the_sign_in_can_be_started_again() throws Exception {
+        AtomicReference<Boolean> networkUp = new AtomicReference<>(false);
+        StubMsalHttpClient http = new StubMsalHttpClient(r -> {
+            if (!networkUp.get()) {
+                throw new IOException("connection refused");
+            }
+            return r.url().getPath().endsWith("/devicecode")
+                ? answer(200, StubMsalHttpClient.DEVICE_CODE)
+                : answer(200, StubMsalHttpClient.token("AT-3"));
+        });
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+
+        SignInException failure = failureOf(signIn);
+
+        then(failure.isTemporary()).isTrue();
+        then(failure.getMessage()).contains("cannot be reached").contains("connection refused");
+        then(logged(Level.WARNING)).hasSize(1);
+        then(logged(Level.SEVERE)).isEmpty();
+
+        networkUp.set(true);
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-3");
+    }
+
+    @Test
+    void the_same_failure_is_logged_once() throws Exception {
+        StubMsalHttpClient http = new StubMsalHttpClient(r -> answer(400,
+            error("unauthorized_client", "AADSTS700016: not found")));
+
+        failureOf(signIn(http, "organizations"));
+
+        then(logged(Level.SEVERE).size() + logged(Level.WARNING).size()).isEqualTo(1);
     }
 }

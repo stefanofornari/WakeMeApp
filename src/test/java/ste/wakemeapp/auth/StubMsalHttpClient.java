@@ -6,7 +6,6 @@ import com.microsoft.aad.msal4j.IHttpClient;
 import com.microsoft.aad.msal4j.IHttpResponse;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
 
 /**
  * Replaces the HTTP client of MSAL4J with canned answers: no request leaves the machine. The
@@ -36,16 +35,22 @@ class StubMsalHttpClient implements IHttpClient {
     }
 
     final List<HttpRequest> requests = new CopyOnWriteArrayList<>();
-    private final Function<HttpRequest, IHttpResponse> handler;
+    /** How the stub answers a request: with a response, or by failing like a broken network. */
+    @FunctionalInterface
+    interface Answer {
+        IHttpResponse to(HttpRequest request) throws Exception;
+    }
 
-    StubMsalHttpClient(Function<HttpRequest, IHttpResponse> handler) {
+    private final Answer handler;
+
+    StubMsalHttpClient(Answer handler) {
         this.handler = handler;
     }
 
     @Override
-    public IHttpResponse send(HttpRequest request) {
+    public IHttpResponse send(HttpRequest request) throws Exception {
         requests.add(request);
-        return handler.apply(request);
+        return handler.to(request);
     }
 
     /** The requests whose path ends with the given suffix, e.g. "/devicecode" or "/token". */
