@@ -9,4 +9,4 @@
 6. **SLF4J.** MSAL logs through SLF4J. A JUL binding is to be added so that its messages follow `logging.properties` and nothing goes to stderr.
 
 ## Constraints of the working environment
-Maven Central is not reachable from the environment where the stories were written, so MSAL4J could not be compiled or run there; its API was read from the sources. The build and the tests of this story are run with Maven by the developer.
+Maven Central is not reachable from the environment where the stories were written, so MSAL4J could not be compiled or run there; its API was read from the sources. The build and the tests of this story are run with Maven by the developer; they passed with msal4j 1.26.1 and the stub as written (no extra stub answers were needed).
