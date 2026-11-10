@@ -11,7 +11,7 @@ global lead-time configuration.
 ## In-Scope Capabilities
 * **Microsoft Graph Integration**
   - [ ] Device Code Flow authentication (user logs in via browser on first run)
-  - [ ] Token storage/refresh (local encrypted file)
+  - [ ] Token storage/refresh (local file protected by owner-only permissions)
   - [ ] Poll `/me/calendar/events` for upcoming meetings (configurable interval, 
         default 5 min)
   - [ ] Parse meeting details: title, start/end time, join URL, organizer,
@@ -35,7 +35,6 @@ global lead-time configuration.
   - [ ] Test notification button
 * **Platform Packaging & Integration (macOS MVP)**
   - [ ] macOS: jpackage .dmg + Launch Agent plist + NSStatusItem menu bar integration
-  - [ ] macOS: Keychain integration for secure token storage
   - [ ] macOS: Sleep/wake detection for notification rescheduling
   - [ ] Windows: jpackage .msi + Registry Run key + SystemTray integration
   - [ ] Linux: jpackage .deb/.AppImage + systemd user service / autostart .desktop
@@ -45,6 +44,7 @@ global lead-time configuration.
 * Logging (levels, rolled log file in the platform directory, `--debug`): `logging/scope.md`
 
 ## Out-of-Scope / Future Enhancements
+* Keychain, DPAPI, libsecret or any system password manager for the stored sign-in, and encryption of the token file: deferred; for now the file is protected only by owner-only permissions
 * Rule-based filtering (organizer, keywords, categories, calendar selection)
 * Multiple notification rules with different conditions
 * Apple Calendar (EventKit) / CalDAV support

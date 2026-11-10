@@ -8,7 +8,6 @@
 | auth/US-000040 | Handle Device Code Sign-In Failures | TODO |
 | auth/US-000041 | Refresh the Access Token Silently | TODO |
 | auth/US-000042 | Sign In Again When the Refresh Token Is Rejected | TODO |
-| auth/US-000043 | Encrypt the Stored Sign-In with the macOS Keychain | TODO |
 
 ## calendar
 | ID | Title | Status |
