@@ -42,6 +42,7 @@ global lead-time configuration.
 ## Detailed Scopes
 * Calendar synchronisation (polling policy, eligibility, scheduler reconciliation): `calendar/scope.md`
 * Logging (levels, rolled log file in the platform directory, `--debug`): `logging/scope.md`
+* Configuration (Preferences storage, first-run provisioning from the command line, `--print-config`, inspection docs): `settings/scope.md`
 
 ## Out-of-Scope / Future Enhancements
 * Keychain, DPAPI, libsecret or any system password manager for the stored sign-in, and encryption of the token file: deferred; for now the file is protected only by owner-only permissions

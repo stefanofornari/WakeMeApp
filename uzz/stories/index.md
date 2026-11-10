@@ -52,6 +52,7 @@
 | settings/US-000016 | Sound Selection | TODO |
 | settings/US-000017 | Enable/Disable Notifications | TODO |
 | settings/US-000018 | Test Notification Button | TODO |
+| settings/US-000044 | Document How to Inspect the Stored Settings | TODO |
 
 ## logging
 | ID | Title | Status |
