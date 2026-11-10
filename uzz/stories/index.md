@@ -3,14 +3,17 @@
 ## auth
 | ID | Title | Status |
 |----|-------|--------|
-| auth/US-000001 | Device Code Flow Authentication | TODO |
-| auth/US-000002 | Token Storage and Refresh | TODO |
+| auth/US-000001 | Sign In with the Device Code Flow | TODO |
+| auth/US-000002 | Remember the Sign-In Across Restarts | TODO |
+| auth/US-000040 | Handle Device Code Sign-In Failures | TODO |
+| auth/US-000041 | Refresh the Access Token Silently | TODO |
+| auth/US-000042 | Sign In Again When the Refresh Token Is Rejected | TODO |
+| auth/US-000043 | Encrypt the Stored Sign-In with the macOS Keychain | TODO |
 
 ## calendar
 | ID | Title | Status |
 |----|-------|--------|
 | calendar/US-000003 | Microsoft Graph Calendar Source | DONE |
-| calendar/US-000004 | Extract Meeting Details for Notifications | TODO |
 | calendar/US-000028 | Schedule Upcoming Meetings from a Polled Calendar Source | DONE |
 | calendar/US-000029 | Notify Only for Relevant Meetings | DONE |
 | calendar/US-000031 | Configure Poll Interval and Window from the Command Line | DONE |
@@ -58,7 +61,7 @@
 | logging/US-000035 | Also Log to the Console | DONE |
 | logging/US-000036 | Choose the Log Level with --debug | DONE |
 | logging/US-000037 | Log the Main Flows at the Right Level | DONE |
-| logging/US-000039 | Log Calendar Access Failures at the Right Level | WIP |
+| logging/US-000039 | Log Calendar Access Failures at the Right Level | DONE |
 
 ## packaging.macos
 | ID | Title | Status |
