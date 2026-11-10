@@ -72,6 +72,11 @@ public class DeviceCodeSignIn {
             .thenAccept(result -> accessToken.set(result.accessToken()));
     }
 
+    /** True once the sign-in has completed and an access token is available. */
+    public boolean isSignedIn() {
+        return accessToken.get() != null;
+    }
+
     /** The access token of the signed in user; fails if the sign-in has not completed. */
     public Supplier<String> accessTokenSupplier() {
         return () -> {

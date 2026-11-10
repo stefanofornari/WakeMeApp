@@ -49,15 +49,30 @@ public class GraphCalendarSource implements CalendarSource {
         + "onlineMeeting,onlineMeetingUrl,bodyPreview";
 
     private final HttpClient client;
+    private final URI base;
     private final Supplier<String> accessToken;
     private final ZoneId zone;
     private final Consumer<Duration> sleeper;
 
+    /** The default calendar of the signed in user. */
     public GraphCalendarSource(HttpClient.Builder http, Supplier<String> accessToken) {
-        this(http, accessToken, ZoneId.systemDefault(), GraphCalendarSource::sleep);
+        this(http, accessToken, URI.create(BASE));
+    }
+
+    /**
+     * @param calendar the calendar view to read, as returned by {@link CalendarAddress#parse(String)}
+     */
+    public GraphCalendarSource(HttpClient.Builder http, Supplier<String> accessToken, URI calendar) {
+        this(http, accessToken, calendar, ZoneId.systemDefault(), GraphCalendarSource::sleep);
     }
 
     GraphCalendarSource(HttpClient.Builder http, Supplier<String> accessToken, ZoneId zone, Consumer<Duration> sleeper) {
+        this(http, accessToken, URI.create(BASE), zone, sleeper);
+    }
+
+    GraphCalendarSource(HttpClient.Builder http, Supplier<String> accessToken, URI calendar,
+                        ZoneId zone, Consumer<Duration> sleeper) {
+        this.base = calendar;
         this.client = http.build();
         this.accessToken = accessToken;
         this.zone = zone;
@@ -69,7 +84,7 @@ public class GraphCalendarSource implements CalendarSource {
         String token = accessToken.get();
         List<CalendarEvent> events = new ArrayList<>();
 
-        URI page = URI.create(BASE
+        URI page = URI.create(base
             + "?startDateTime=" + utc(from) + "&endDateTime=" + utc(to)
             + "&$select=" + FIELDS + "&$orderby=start/dateTime&$top=50");
         while (page != null) {

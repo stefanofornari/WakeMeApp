@@ -22,6 +22,18 @@ public record ConnectionSettings(String clientId, String tenant) {
         "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
     /**
+     * @return the client id
+     * @throws IllegalArgumentException if there is none: it is needed to sign in
+     */
+    public String requireClientId() {
+        if (clientId == null) {
+            throw new IllegalArgumentException(
+                "A client id is needed to read an Outlook calendar: give it with --client-id");
+        }
+        return clientId;
+    }
+
+    /**
      * Checks the command line values (null means not given).
      *
      * @throws IllegalArgumentException with a message naming the option that is wrong

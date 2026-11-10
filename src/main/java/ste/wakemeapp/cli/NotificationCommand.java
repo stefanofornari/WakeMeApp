@@ -1,6 +1,7 @@
 package ste.wakemeapp.cli;
 
 import picocli.CommandLine;
+import ste.wakemeapp.calendar.CalendarAddress;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.settings.ConfigReport;
@@ -47,8 +48,11 @@ public class NotificationCommand implements Callable<Integer> {
     private boolean now;
 
     @Option(names = "--calendar",
-            description = "CSV file of meetings to poll like a calendar, instead of a single meeting")
-    private Path calendarFile;
+            paramLabel = "<file|address>",
+            description = "CSV file of meetings, or the address of an Outlook calendar on Microsoft Graph "
+                + "(e.g. https://graph.microsoft.com/v1.0/me/calendarView), to poll like a calendar, "
+                + "instead of a single meeting")
+    private String calendar;
 
     @Option(names = "--poll-interval", paramLabel = "<minutes>",
             description = "How often the calendar file is polled (default: 5)")
@@ -92,10 +96,14 @@ public class NotificationCommand implements Callable<Integer> {
                 out.flush();
                 return 0;
             }
-            if (calendarFile != null) {
+            if (CalendarAddress.isAddress(calendar)) {
+                CalendarAddress.parse(calendar);   // refuses an address that must not get the token
+                return 0;
+            }
+            if (calendar != null) {
                 // the file may be created later: only a directory can never work
-                if (Files.isDirectory(calendarFile)) {
-                    throw new IllegalArgumentException("The calendar file is a directory: " + calendarFile);
+                if (Files.isDirectory(Path.of(calendar))) {
+                    throw new IllegalArgumentException("The calendar file is a directory: " + calendar);
                 }
                 return 0;
             }
@@ -192,7 +200,7 @@ public class NotificationCommand implements Callable<Integer> {
     }
 
     public Path getCalendarFile() {
-        return calendarFile;
+        return (calendar == null || CalendarAddress.isAddress(calendar)) ? null : Path.of(calendar);
     }
 
     /** The value of --client-id, or null if not given (the stored one, if any, applies). */
@@ -220,6 +228,11 @@ public class NotificationCommand implements Callable<Integer> {
     /** For tests: the settings to read instead of the user's. */
     void setSettings(Settings settings) {
         this.settings = settings;
+    }
+
+    /** The Graph calendar to poll when --calendar is an address, otherwise null. */
+    public java.net.URI getCalendarAddress() {
+        return CalendarAddress.isAddress(calendar) ? CalendarAddress.parse(calendar) : null;
     }
 
     public boolean isNow() {

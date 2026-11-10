@@ -4,13 +4,19 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import picocli.CommandLine;
+import ste.wakemeapp.auth.DeviceCodeSignIn;
+import ste.wakemeapp.auth.SignedInCalendarSource;
 import ste.wakemeapp.calendar.CalendarPoller;
+import ste.wakemeapp.calendar.CalendarSource;
 import ste.wakemeapp.calendar.CsvCalendarSource;
+import ste.wakemeapp.calendar.GraphCalendarSource;
 import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
+import ste.wakemeapp.settings.ConnectionSettings;
+import ste.wakemeapp.settings.Settings;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -78,6 +84,10 @@ public class CLILauncher extends Application {
 
         try {
             registerShutdownHook();
+            if (parsedCommand.getCalendarAddress() != null) {
+                pollGraphCalendar(parsedCommand.getCalendarAddress());
+                return;
+            }
             if (parsedCommand.getCalendarFile() != null) {
                 pollCalendar(parsedCommand.getCalendarFile());
                 return;
@@ -163,6 +173,34 @@ public class CLILauncher extends Application {
             parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
         poller.start();
         LOG.info(() -> "Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
+            + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
+        LOG.info("Press Ctrl+C to stop");
+    }
+
+    /**
+     * Signs the user in (the code is in the log) and polls the Outlook calendar at {@code address};
+     * until the sign-in is done the polls only log that they are waiting.
+     */
+    private void pollGraphCalendar(java.net.URI address) {
+        ConnectionSettings connection = ConnectionSettings.resolve(
+            parsedCommand.getClientId(), parsedCommand.getTenant(), Settings.user());
+        DeviceCodeSignIn signIn = new DeviceCodeSignIn(connection.requireClientId(), connection.tenant(), null);
+        signIn.signIn().whenComplete((done, failure) -> {
+            if (failure != null) {
+                LOG.log(Level.SEVERE, "The sign-in did not complete: " + failure.getMessage(), failure);
+            } else {
+                LOG.info("Signed in");
+            }
+        });
+        CalendarSource calendar = new SignedInCalendarSource(
+            new GraphCalendarSource(java.net.http.HttpClient.newBuilder(), signIn.accessTokenSupplier(), address),
+            signIn::isSignedIn);
+        calendarMode = true;
+        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        poller = new CalendarPoller(calendar, scheduler,
+            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
+        poller.start();
+        LOG.info(() -> "Polling " + address + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
         LOG.info("Press Ctrl+C to stop");
     }
