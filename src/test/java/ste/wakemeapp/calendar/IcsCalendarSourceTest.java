@@ -182,15 +182,6 @@ class IcsCalendarSourceTest {
         then(read()).extracting(CalendarEvent::id).containsExactly("from");
     }
 
-    @Test
-    void should_see_only_the_first_occurrence_of_a_recurring_meeting_for_now() throws IOException {
-        // calendar/US-000052 expands the series; until then the first occurrence is all there is
-        answer(feed(event("UID:1", "SUMMARY:Weekly", "DTSTART:20261109T105000Z", "RRULE:FREQ=WEEKLY")));
-
-        then(read()).hasSize(1);
-        then(source().meetingsStartingBetween(FROM.plusDays(7), TO.plusDays(7))).isEmpty();
-    }
-
     // --- times ---
 
     @Test
