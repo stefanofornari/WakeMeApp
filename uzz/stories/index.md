@@ -4,12 +4,12 @@
 | ID | Title | Status |
 |----|-------|--------|
 | auth/US-000001 | Sign In with the Device Code Flow | DONE |
-| auth/US-000002 | Remember the Sign-In Across Restarts | WIP |
+| auth/US-000002 | Remember the Sign-In Across Restarts | DONE |
 | auth/US-000040 | Handle Device Code Sign-In Failures | DONE |
 | auth/US-000041 | Refresh the Access Token Silently | DONE |
 | auth/US-000042 | Sign In Again When the Refresh Token Is Rejected | DONE |
 | auth/US-000050 | Read My Outlook Calendar from a Graph Address | DONE |
-| auth/US-000049 | Show the Microsoft Sign-In Page in a WebView | TODO |
+| auth/US-000049 | Show the Microsoft Sign-In Page in a WebView | WIP |
 
 ## calendar
 | ID | Title | Status |

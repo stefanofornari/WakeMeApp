@@ -556,4 +556,23 @@ class DeviceCodeSignInTest {
         then(restarted.isSignedIn()).isFalse();
         then(store.text.get()).doesNotContain("RT-1");   // the rejected sign-in is no longer saved
     }
+
+    @Test
+    void the_presenter_is_told_when_the_sign_in_completes_or_fails() throws Exception {
+        List<String> events = new ArrayList<>();
+        VerificationPresenter presenter = new VerificationPresenter() {
+            @Override public void show(String uri, String code, String message) { events.add("show"); }
+            @Override public void completed() { events.add("completed"); }
+        };
+        new DeviceCodeSignIn(clientId, "organizations", presenter, userSignsIn("AT-1"), false)
+            .signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        then(events).containsExactly("show", "completed");
+
+        events.clear();
+        StubMsalHttpClient declined = new StubMsalHttpClient(r -> r.url().getPath().endsWith("/devicecode")
+            ? answer(200, StubMsalHttpClient.DEVICE_CODE)
+            : answer(400, error("authorization_declined", "AADSTS70016: declined")));
+        failureOf(new DeviceCodeSignIn(clientId, "organizations", presenter, declined, false));
+        then(events).containsExactly("show", "completed");   // the window must not stay open either
+    }
 }
