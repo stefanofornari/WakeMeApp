@@ -346,4 +346,83 @@ class OverlayWindowTest {
 
         thenCountdownAndDotHaveStyle("overlay-state-yellow");
     }
+
+    // --- Join Meeting (notify/US-000007) ---
+
+    private static final String TEAMS = "https://teams.microsoft.com/l/meetup-join/abc";
+
+    private void notifyAbout(String joinUrl, FxRobot robot) {
+        robot.interact(() -> {
+            overlay.setNotification(new MeetingNotification(
+                "Standup", java.time.LocalDateTime.now().plusMinutes(5), joinUrl));
+            overlay.show();
+        });
+    }
+
+    @Test
+    void should_open_the_join_link_and_close_the_overlay_when_join_is_clicked(FxRobot robot) throws Exception {
+        java.util.List<java.net.URI> opened = new java.util.ArrayList<>();
+        overlay.getController().setJoinMeeting(new JoinMeeting(opened::add, text -> { }));
+        notifyAbout(TEAMS, robot);
+
+        robot.interact(() -> overlay.getController().getJoinButton().fire());
+
+        then(opened).containsExactly(java.net.URI.create(TEAMS));
+        org.testfx.util.WaitForAsyncUtils.waitFor(3, java.util.concurrent.TimeUnit.SECONDS,
+            () -> !overlay.getStage().isShowing());
+    }
+
+    @Test
+    void should_keep_the_overlay_when_it_is_configured_not_to_close_after_joining(FxRobot robot) throws Exception {
+        overlay.getController().setJoinMeeting(new JoinMeeting(uri -> { }, text -> { }));
+        overlay.getController().setCloseOnJoin(false);
+        notifyAbout(TEAMS, robot);
+
+        robot.interact(() -> overlay.getController().getJoinButton().fire());
+        Thread.sleep(800);   // longer than the fade-out
+
+        then(overlay.getStage().isShowing()).isTrue();
+    }
+
+    @Test
+    void should_copy_the_link_and_say_so_when_the_browser_cannot_be_opened(FxRobot robot) throws Exception {
+        java.util.List<String> copied = new java.util.ArrayList<>();
+        overlay.getController().setJoinMeeting(new JoinMeeting(
+            uri -> { throw new UnsupportedOperationException("no browser"); }, copied::add));
+        notifyAbout(TEAMS, robot);
+
+        robot.interact(() -> overlay.getController().getJoinButton().fire());
+        Thread.sleep(800);
+
+        then(copied).containsExactly(TEAMS);
+        then(overlay.getController().getToastLabel().isVisible()).isTrue();
+        then(overlay.getController().getToastLabel().getText()).isEqualTo("Meeting link copied to clipboard");
+        then(overlay.getStage().isShowing()).isTrue();   // the overlay stays open
+    }
+
+    @Test
+    void should_hide_the_join_button_for_a_meeting_without_a_link(FxRobot robot) {
+        notifyAbout(null, robot);
+
+        then(overlay.getController().getJoinButton().isVisible()).isFalse();
+        then(overlay.getController().getJoinButton().isManaged()).isFalse();
+        then(overlay.getController().getSnoozeButton()).isNotNull();
+        then(overlay.getController().getDismissButton().isVisible()).isTrue();
+    }
+
+    @Test
+    void should_hide_the_join_button_for_a_link_that_is_not_a_meeting_link(FxRobot robot) {
+        notifyAbout("file:///etc/passwd", robot);
+
+        then(overlay.getController().getJoinButton().isVisible()).isFalse();
+    }
+
+    @Test
+    void should_show_the_join_button_again_for_the_next_meeting_with_a_link(FxRobot robot) {
+        notifyAbout(null, robot);
+        notifyAbout(TEAMS, robot);
+
+        then(overlay.getController().getJoinButton().isVisible()).isTrue();
+        then(overlay.getController().getJoinButton().isManaged()).isTrue();
+    }
 }
