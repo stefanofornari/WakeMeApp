@@ -3,6 +3,7 @@ package ste.wakemeapp.cli;
 import picocli.CommandLine;
 import ste.wakemeapp.calendar.CalendarAddress;
 import ste.wakemeapp.calendar.CalendarPoller;
+import ste.wakemeapp.calendar.IcsAddress;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.settings.ConfigReport;
 import ste.wakemeapp.settings.ConnectionSettings;
@@ -49,9 +50,9 @@ public class NotificationCommand implements Callable<Integer> {
 
     @Option(names = "--calendar",
             paramLabel = "<file|address>",
-            description = "CSV file of meetings, or the address of an Outlook calendar on Microsoft Graph "
-                + "(e.g. https://graph.microsoft.com/v1.0/me/calendarView), to poll like a calendar, "
-                + "instead of a single meeting")
+            description = "CSV file of meetings, the address of an Outlook calendar on Microsoft Graph "
+                + "(e.g. https://graph.microsoft.com/v1.0/me/calendarView), or the link of a published "
+                + "calendar (ICS), to poll like a calendar, instead of a single meeting")
     private String calendar;
 
     @Option(names = "--poll-interval", paramLabel = "<minutes>",
@@ -94,6 +95,10 @@ public class NotificationCommand implements Callable<Integer> {
                 PrintWriter out = spec.commandLine().getOut();
                 ConfigReport.lines(clientId, tenant, settings()).forEach(out::println);
                 out.flush();
+                return 0;
+            }
+            if (IcsAddress.isFeed(calendar)) {
+                IcsAddress.parse(calendar);   // refuses a link that is not https
                 return 0;
             }
             if (CalendarAddress.isAddress(calendar)) {
@@ -200,7 +205,7 @@ public class NotificationCommand implements Callable<Integer> {
     }
 
     public Path getCalendarFile() {
-        return (calendar == null || CalendarAddress.isAddress(calendar)) ? null : Path.of(calendar);
+        return (calendar == null || IcsAddress.isFeed(calendar) || CalendarAddress.isAddress(calendar)) ? null : Path.of(calendar);
     }
 
     /** The value of --client-id, or null if not given (the stored one, if any, applies). */
@@ -232,7 +237,12 @@ public class NotificationCommand implements Callable<Integer> {
 
     /** The Graph calendar to poll when --calendar is an address, otherwise null. */
     public java.net.URI getCalendarAddress() {
-        return CalendarAddress.isAddress(calendar) ? CalendarAddress.parse(calendar) : null;
+        return (!IcsAddress.isFeed(calendar) && CalendarAddress.isAddress(calendar)) ? CalendarAddress.parse(calendar) : null;
+    }
+
+    /** The published calendar (ICS feed) to poll when --calendar is a link to one, otherwise null. */
+    public java.net.URI getCalendarFeed() {
+        return IcsAddress.isFeed(calendar) ? IcsAddress.parse(calendar) : null;
     }
 
     public boolean isNow() {

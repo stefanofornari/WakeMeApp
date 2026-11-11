@@ -13,6 +13,8 @@ import ste.wakemeapp.calendar.CalendarSource;
 import ste.wakemeapp.calendar.CsvCalendarSource;
 import ste.wakemeapp.calendar.DismissedMeetings;
 import ste.wakemeapp.calendar.GraphCalendarSource;
+import ste.wakemeapp.calendar.IcsAddress;
+import ste.wakemeapp.calendar.IcsCalendarSource;
 import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.OverlayManager;
@@ -87,6 +89,10 @@ public class CLILauncher extends Application {
 
         try {
             registerShutdownHook();
+            if (parsedCommand.getCalendarFeed() != null) {
+                pollIcsFeed(parsedCommand.getCalendarFeed());
+                return;
+            }
             if (parsedCommand.getCalendarAddress() != null) {
                 pollGraphCalendar(parsedCommand.getCalendarAddress());
                 return;
@@ -178,6 +184,25 @@ public class CLILauncher extends Application {
         poller.start();
         LOG.info(() -> "Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
+        LOG.info("Press Ctrl+C to stop");
+    }
+
+    /**
+     * Polls a published calendar (ICS feed). No sign-in: the link is the credential, so only its
+     * host is ever shown.
+     */
+    private void pollIcsFeed(java.net.URI feed) {
+        CalendarSource calendar = new IcsCalendarSource(
+            java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL), feed);
+        calendarMode = true;
+        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        poller = new CalendarPoller(calendar, scheduler,
+            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone(),
+            new DismissedMeetings(DismissedMeetings.defaultFile()));
+        poller.start();
+        LOG.info(() -> "Polling the calendar feed on " + IcsAddress.hostOf(feed) + " every "
+            + parsedCommand.getPollInterval().toMinutes() + " min for meetings starting in the next "
+            + parsedCommand.getWindow().toMinutes() + " min");
         LOG.info("Press Ctrl+C to stop");
     }
 

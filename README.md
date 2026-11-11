@@ -88,11 +88,35 @@ macOS and Linux), so you are not asked again until Microsoft asks for a new sign
 not using the application, or when your password changes). The file is not encrypted: do not copy it around.
 To sign out, stop the application and delete the file.
 
+## Using an ICS link instead (no Microsoft sign-in)
+
+Some organisations let only managed devices sign in to Microsoft 365 (the sign-in ends with *"your admin
+requires the device to be managed"*, error **530033**, whatever browser you use). WakeMeApp can then read
+your calendar from a **published calendar link**, which needs no sign-in and no client id:
+
+1. In Outlook on the web open **Settings → Calendar → Shared calendars → Publish a calendar**.
+2. Choose the calendar and **Can view all details**, then **Publish**.
+3. Copy the **ICS** link and start the application with it:
+
+```
+mvn javafx:run -Djavafx.args="--calendar https://outlook.office365.com/owa/calendar/.../calendar.ics"
+```
+
+The link is read again at every poll. Things to know:
+
+* If your organisation does not allow publishing, the option is missing: ask your administrator.
+* **Treat the link as a password**: anybody who has it can read your whole calendar. WakeMeApp only
+  shows the host of the link in its messages. To revoke it, unpublish the calendar in the same place.
+* A feed does not say whether you accepted a meeting, so every meeting is notified except cancelled and
+  all-day ones.
+* Recurring meetings: only the first occurrence is seen for now.
+* The link may be out of date by a few minutes: a meeting moved a moment ago may be notified late.
+
 ## Command line options
 
 | Option | Meaning |
 |---|---|
-| `--calendar <file\|address>` | The Outlook calendar address (`https://graph.microsoft.com/v1.0/me/calendarView`), or a CSV file of meetings to try the application without an account. |
+| `--calendar <file\|address>` | The Outlook calendar address (`https://graph.microsoft.com/v1.0/me/calendarView`), the link of a published calendar (ICS), or a CSV file of meetings to try the application without an account. |
 | `--client-id <uuid>` | The application (client) id of the registration. |
 | `--tenant <id>` | The tenant id, or `organizations` (default). |
 | `--poll-interval <minutes>` | How often the calendar is read (default 5). |
@@ -142,6 +166,8 @@ The application writes what it does to the terminal; add `--debug` for the detai
 failed and whether it will try again. The usual ones:
 
 * *"Waiting for the sign-in to complete"*: nobody entered the code yet.
+* *"your admin requires the device to be managed"* or *530033*: the organisation allows only managed devices; use an ICS link (above).
+* *"The calendar link no longer works"*: the link was unpublished or changed; publish the calendar again.
 * *"administrator must approve"* or *AADSTS65001*: step 7 above.
 * *"public client"* or *AADSTS7000218*: **Allow public client flows** is not set to **Yes** (step 5).
 * *"Cannot read the calendar … 401"*: the sign-in is no longer valid; delete `signin.json` and start again.

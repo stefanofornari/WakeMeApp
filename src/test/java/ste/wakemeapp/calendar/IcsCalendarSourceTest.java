@@ -42,7 +42,7 @@ class IcsCalendarSourceTest {
     private static final LocalDateTime FROM = LocalDateTime.of(2026, 11, 9, 11, 45);
     private static final LocalDateTime TO = LocalDateTime.of(2026, 11, 9, 12, 0);
 
-    private final HttpClientStubber http = new HttpClientStubber();
+    private HttpClientStubber http = new HttpClientStubber();
 
     private IcsCalendarSource source() {
         return new IcsCalendarSource(http, URI.create(LINK), ROME);
@@ -209,7 +209,7 @@ class IcsCalendarSourceTest {
     }
 
     @Test
-    void should_skip_an_unknown_time_zone_with_a_warning_and_read_the_others() throws IOException {
+    void should_skip_an_unknown_time_zone_with_a_warning_and_read_the_others() throws Exception {
         List<LogRecord> warnings = warningsOf(() -> {
             answer(feed(
                 event("UID:1", "SUMMARY:Lost", "DTSTART;TZID=Nowhere Standard Time:20261109T115000"),
@@ -219,7 +219,7 @@ class IcsCalendarSourceTest {
         });
 
         then(warnings).hasSize(1);
-        then(warnings.get(0).getMessage()).contains("Lost").contains("Nowhere Standard Time");
+        then(new java.util.logging.SimpleFormatter().formatMessage(warnings.get(0))).contains("Lost").contains("Nowhere Standard Time");
     }
 
     // --- what the feed says about the response ---
@@ -259,6 +259,7 @@ class IcsCalendarSourceTest {
     @Test
     void should_say_the_link_does_not_work_any_more_on_404_and_410() {
         for (int status : new int[] {404, 410}) {
+            http = new HttpClientStubber();
             answer(status, "gone");
 
             thenThrownBy(this::read)
@@ -273,6 +274,7 @@ class IcsCalendarSourceTest {
     @Test
     void should_call_a_server_failure_temporary() {
         for (int status : new int[] {408, 429, 500, 503}) {
+            http = new HttpClientStubber();
             answer(status, "busy");
 
             thenThrownBy(this::read)
@@ -313,7 +315,12 @@ class IcsCalendarSourceTest {
             });
     }
 
-    private static List<LogRecord> warningsOf(Runnable action) {
+    @FunctionalInterface
+    private interface Action {
+        void run() throws Exception;
+    }
+
+    private static List<LogRecord> warningsOf(Action action) throws Exception {
         List<LogRecord> warnings = new ArrayList<>();
         Handler handler = new Handler() {
             @Override public void publish(LogRecord r) { if (r.getLevel() == Level.WARNING) warnings.add(r); }
