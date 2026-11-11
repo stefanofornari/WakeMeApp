@@ -24,16 +24,20 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -46,8 +50,8 @@ import java.util.regex.Pattern;
  * What is read: id (UID), title, start and end, organizer, description, the join link and the
  * all-day flag; cancelled events are skipped. A feed does not say whether the user accepted: every
  * event is reported as accepted, and what the feed says about the attendees is logged to be able to
- * use it later. Recurring events are not expanded yet (calendar/US-000052): only the first occurrence
- * is seen.
+ * use it later. Recurring events give one event per occurrence (see {@link Recurrence}); a rule that is
+ * not supported leaves the first occurrence only, with a warning.
  * <p>
  * The address of the feed is its credential: no message made here contains more than its host.
  */
@@ -78,16 +82,32 @@ public class IcsCalendarSource implements CalendarSource {
     @Override
     public List<CalendarEvent> meetingsStartingBetween(LocalDateTime from, LocalDateTime to) throws IOException {
         List<CalendarEvent> events = new ArrayList<>();
-        for (List<Property> properties : vevents(download())) {
-            CalendarEvent event = toEvent(properties);
-            if (event != null && !event.start().isBefore(from) && event.start().isBefore(to)) {
-                events.add(event);
-                logAttendees(event.title(), properties);
+        for (List<List<Property>> series : bySeries(vevents(download()))) {
+            for (Occurrence occurrence : occurrences(series, from, to)) {
+                CalendarEvent event = occurrence.event();
+                if (!event.start().isBefore(from) && event.start().isBefore(to)) {
+                    events.add(event);
+                    logAttendees(event.title(), occurrence.properties());
+                }
             }
         }
         LOG.log(Level.FINE, "The feed on {0} returned {1} meeting(s) between {2} and {3}",
             new Object[] {IcsAddress.hostOf(feed), events.size(), from, to});
         return events;
+    }
+
+    private record Occurrence(CalendarEvent event, List<Property> properties) {
+    }
+
+    /** The VEVENTs of the same UID together: a series, with the occurrences that were changed. */
+    private static List<List<List<Property>>> bySeries(List<List<Property>> vevents) {
+        Map<String, List<List<Property>>> series = new LinkedHashMap<>();
+        int anonymous = 0;
+        for (List<Property> vevent : vevents) {
+            String uid = textOf(vevent, "UID");
+            series.computeIfAbsent((uid == null || uid.isBlank()) ? "\0" + anonymous++ : uid, k -> new ArrayList<>()).add(vevent);
+        }
+        return new ArrayList<>(series.values());
     }
 
     // ------------------------------------------------------------------ HTTP
@@ -238,38 +258,136 @@ public class IcsCalendarSource implements CalendarSource {
 
     // ------------------------------------------------------------------ events
 
-    /** @return the event, or null if it is cancelled or cannot be read (the latter is logged) */
-    private CalendarEvent toEvent(List<Property> properties) {
+    /** The occurrences of a series that may start in the window; what cannot be read is logged and left out. */
+    private List<Occurrence> occurrences(List<List<Property>> series, LocalDateTime from, LocalDateTime to) {
+        List<Property> master = null;
+        List<List<Property>> changed = new ArrayList<>();
+        for (List<Property> vevent : series) {
+            if (first(vevent, "RECURRENCE-ID") != null) {
+                changed.add(vevent);
+            } else if (master == null) {
+                master = vevent;
+            }
+        }
+        String title = titleOf(series.get(0));
+        List<Occurrence> result = new ArrayList<>();
+        try {
+            Property rule = (master == null) ? null : first(master, "RRULE");
+            if (master != null && rule == null) {
+                add(result, build(master, textOf(master, "UID"), time(first(master, "DTSTART")), master));
+                return result;
+            }
+            ZoneId seriesZone = (master != null) ? zoneOf(first(master, "DTSTART")) : zoneOf(first(changed.get(0), "RECURRENCE-ID"));
+            Set<Instant> replaced = new HashSet<>();
+            for (List<Property> vevent : changed) {
+                Instant original = zoned(first(vevent, "RECURRENCE-ID")).toInstant();
+                replaced.add(original);
+                String id = idOf(vevent, original, seriesZone);
+                add(result, build(vevent, id, time(first(vevent, "DTSTART")), vevent));
+            }
+            if (master != null) {
+                expand(master, rule.value(), from, to, replaced, seriesZone, result);
+            }
+        } catch (UnknownZone x) {
+            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: unknown time zone \"{1}\"",
+                new Object[] {title, x.getMessage()});
+            return List.of();
+        } catch (DateTimeParseException | NullPointerException x) {
+            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: its time cannot be read", title);
+            return List.of();
+        }
+        return result;
+    }
+
+    private void expand(List<Property> master, String rule, LocalDateTime from, LocalDateTime to,
+                        Set<Instant> replaced, ZoneId seriesZone, List<Occurrence> result) {
+        String status = textOf(master, "STATUS");
+        if (status != null && status.equalsIgnoreCase("CANCELLED")) {
+            return;
+        }
+        Property startProperty = first(master, "DTSTART");
+        ZonedDateTime start = zoned(startProperty);
+        Property endProperty = first(master, "DTEND");
+        java.time.Duration length = (endProperty == null) ? null : java.time.Duration.between(start, zoned(endProperty));
+        Recurrence recurrence;
+        try {
+            recurrence = Recurrence.parse(rule);
+        } catch (Recurrence.Unsupported x) {
+            LOG.log(Level.WARNING, "The event \"{0}\" of the feed repeats in a way that is not supported ({1}): only its first occurrence is used",
+                new Object[] {titleOf(master), x.getMessage()});
+            add(result, build(master, textOf(master, "UID"), start.withZoneSameInstant(zone).toLocalDateTime(), master));
+            return;
+        }
+        Set<Instant> excluded = new HashSet<>();
+        Set<LocalDate> excludedDates = new HashSet<>();
+        for (Property p : master) {
+            if (p.name().equals("EXDATE")) {
+                for (String value : p.value().split(",")) {
+                    Property one = new Property("EXDATE", p.parameters(), value.trim());
+                    if (value.trim().length() == 8) {
+                        excludedDates.add(LocalDate.parse(value.trim(), DATE));
+                    } else {
+                        excluded.add(zoned(one).toInstant());
+                    }
+                }
+            }
+        }
+        Instant notBefore = from.atZone(zone).toInstant();
+        Instant end = to.atZone(zone).toInstant();
+        // an occurrence may last into the window while it started before it: only the start counts
+        for (ZonedDateTime occurrence : recurrence.occurrences(start, notBefore, end)) {
+            Instant instant = occurrence.toInstant();
+            if (replaced.contains(instant) || excluded.contains(instant) || excludedDates.contains(occurrence.toLocalDate())) {
+                continue;
+            }
+            String id = idOf(master, instant, seriesZone);
+            LocalDateTime localStart = occurrence.withZoneSameInstant(zone).toLocalDateTime();
+            LocalDateTime localEnd = (length == null) ? null : occurrence.plus(length).withZoneSameInstant(zone).toLocalDateTime();
+            CalendarEvent event = build(master, id, localStart, localEnd, "DATE".equalsIgnoreCase(startProperty.parameters().get("VALUE")));
+            add(result, new Occurrence(event, master));
+        }
+    }
+
+    private static final DateTimeFormatter ID_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+    /** UID of the series plus the original start of the occurrence in the zone of the series. */
+    private static String idOf(List<Property> vevent, Instant original, ZoneId seriesZone) {
+        String uid = textOf(vevent, "UID");
+        return uid + "#" + ID_TIME.format(original.atZone(seriesZone));
+    }
+
+    private static String titleOf(List<Property> properties) {
+        String title = textOf(properties, "SUMMARY");
+        return (title == null || title.isBlank()) ? "(no title)" : title;
+    }
+
+    private static void add(List<Occurrence> result, Occurrence occurrence) {
+        if (occurrence != null) {
+            result.add(occurrence);
+        }
+    }
+
+    /** A single event (or one changed occurrence): null if it is cancelled. */
+    private Occurrence build(List<Property> properties, String id, LocalDateTime start, List<Property> source) {
+        Property endProperty = first(source, "DTEND");
+        return build0(properties, id, start, endProperty == null ? null : time(endProperty),
+            "DATE".equalsIgnoreCase(first(source, "DTSTART").parameters().get("VALUE")));
+    }
+
+    private CalendarEvent build(List<Property> properties, String id, LocalDateTime start, LocalDateTime end, boolean allDay) {
+        return build0(properties, id, start, end, allDay).event();
+    }
+
+    private Occurrence build0(List<Property> properties, String id, LocalDateTime start, LocalDateTime end, boolean allDay) {
         String status = textOf(properties, "STATUS");
         if (status != null && status.equalsIgnoreCase("CANCELLED")) {
             return null;
         }
-        String title = textOf(properties, "SUMMARY");
-        if (title == null || title.isBlank()) {
-            title = "(no title)";
-        }
-        Property startProperty = first(properties, "DTSTART");
-        if (startProperty == null) {
-            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: it has no start", title);
-            return null;
-        }
-        try {
-            boolean allDay = "DATE".equalsIgnoreCase(startProperty.parameters().get("VALUE"));
-            LocalDateTime start = time(startProperty);
-            Property endProperty = first(properties, "DTEND");
-            LocalDateTime end = (endProperty == null) ? null : time(endProperty);
-            String id = textOf(properties, "UID");
-            return new CalendarEvent(
-                (id == null || id.isBlank()) ? title + "@" + start : id,
-                title, start, end, joinUrl(properties), organizer(properties), textOf(properties, "DESCRIPTION"),
-                ResponseStatus.ACCEPTED, allDay);
-        } catch (UnknownZone x) {
-            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: unknown time zone \"{1}\"",
-                new Object[] {title, x.getMessage()});
-        } catch (DateTimeParseException x) {
-            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: its time cannot be read", title);
-        }
-        return null;
+        String title = titleOf(properties);
+        return new Occurrence(new CalendarEvent(
+            (id == null || id.isBlank()) ? title + "@" + start : id,
+            title, start, end, joinUrl(properties), organizer(properties), textOf(properties, "DESCRIPTION"),
+            ResponseStatus.ACCEPTED, allDay), properties);
     }
 
     private static final class UnknownZone extends RuntimeException {
@@ -278,26 +396,36 @@ public class IcsCalendarSource implements CalendarSource {
         }
     }
 
-    /** A date, a UTC time, a time in a zone or a floating time (taken as local), in the local time. */
-    private LocalDateTime time(Property property) {
+    /** The zone a time is written in: UTC for Z, the TZID, the local zone for a floating time or a date. */
+    private ZoneId zoneOf(Property property) {
         String value = property.value().trim();
-        if ("DATE".equalsIgnoreCase(property.parameters().get("VALUE")) || value.length() == 8) {
-            return LocalDate.parse(value, DATE).atStartOfDay();
-        }
         if (value.endsWith("Z") || value.endsWith("z")) {
-            return LocalDateTime.parse(value.substring(0, value.length() - 1), DATE_TIME)
-                .atOffset(ZoneOffset.UTC).atZoneSameInstant(zone).toLocalDateTime();
+            return ZoneOffset.UTC;
         }
-        LocalDateTime time = LocalDateTime.parse(value, DATE_TIME);
         String tzid = property.parameters().get("TZID");
-        if (tzid == null) {
-            return time;
+        if (tzid == null || "DATE".equalsIgnoreCase(property.parameters().get("VALUE")) || value.length() == 8) {
+            return zone;
         }
         ZoneId zoneOfTime = WindowsZones.zoneOf(tzid);
         if (zoneOfTime == null) {
             throw new UnknownZone(tzid);
         }
-        return time.atZone(zoneOfTime).withZoneSameInstant(zone).toLocalDateTime();
+        return zoneOfTime;
+    }
+
+    /** A date, a UTC time, a time in a zone or a floating time (taken as local), with its zone. */
+    private ZonedDateTime zoned(Property property) {
+        String value = property.value().trim();
+        if ("DATE".equalsIgnoreCase(property.parameters().get("VALUE")) || value.length() == 8) {
+            return LocalDate.parse(value, DATE).atStartOfDay(zone);
+        }
+        boolean utc = value.endsWith("Z") || value.endsWith("z");
+        LocalDateTime time = LocalDateTime.parse(utc ? value.substring(0, value.length() - 1) : value, DATE_TIME);
+        return time.atZone(zoneOf(property));
+    }
+
+    private LocalDateTime time(Property property) {
+        return zoned(property).withZoneSameInstant(zone).toLocalDateTime();
     }
 
     private static String organizer(List<Property> properties) {

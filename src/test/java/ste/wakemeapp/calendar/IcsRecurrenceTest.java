@@ -42,8 +42,6 @@ class IcsRecurrenceTest {
     private static final String WEEKLY_MONDAY = "UID:weekly\r\nSUMMARY:Weekly\r\n"
         + "DTSTART;TZID=Europe/Rome:20251110T100000\r\nDTEND;TZID=Europe/Rome:20251110T103000\r\n";
 
-    private final HttpClientStubber http = new HttpClientStubber();
-
     private static String feed(String... events) {
         StringBuilder b = new StringBuilder("BEGIN:VCALENDAR\r\nVERSION:2.0\r\n");
         for (String e : events) {
@@ -53,6 +51,7 @@ class IcsRecurrenceTest {
     }
 
     private List<CalendarEvent> read(ZoneId zone, String feed, LocalDateTime from, LocalDateTime to) throws IOException {
+        HttpClientStubber http = new HttpClientStubber();   // a stub added later would not win over an earlier one
         http.withStub(new URIMatcher(LINK), new StubHttpResponse<String>().statusCode(200).text(feed));
         return new IcsCalendarSource(http, URI.create(LINK), zone).meetingsStartingBetween(from, to);
     }

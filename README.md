@@ -109,7 +109,7 @@ The link is read again at every poll. Things to know:
   shows the host of the link in its messages. To revoke it, unpublish the calendar in the same place.
 * A feed does not say whether you accepted a meeting, so every meeting is notified except cancelled and
   all-day ones.
-* Recurring meetings: only the first occurrence is seen for now.
+* Recurring meetings are notified one occurrence at a time, also when one was moved or removed. Daily, weekly, monthly and yearly repetitions are supported; a rarer rule falls back to the first occurrence, with a warning.
 * The link may be out of date by a few minutes: a meeting moved a moment ago may be notified late.
 
 ## Command line options
