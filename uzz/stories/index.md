@@ -9,7 +9,7 @@
 | auth/US-000041 | Refresh the Access Token Silently | DONE |
 | auth/US-000042 | Sign In Again When the Refresh Token Is Rejected | DONE |
 | auth/US-000050 | Read My Outlook Calendar from a Graph Address | DONE |
-| auth/US-000049 | Show the Microsoft Sign-In Page in a WebView | WIP |
+| auth/US-000049 | Show the Microsoft Sign-In Page in a WebView | DONE |
 
 ## calendar
 | ID | Title | Status |
