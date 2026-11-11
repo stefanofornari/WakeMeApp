@@ -6,6 +6,7 @@ import com.microsoft.aad.msal4j.DeviceCodeFlowParameters;
 import com.microsoft.aad.msal4j.IAuthenticationResult;
 import com.microsoft.aad.msal4j.IHttpClient;
 import com.microsoft.aad.msal4j.MsalClientException;
+import com.microsoft.aad.msal4j.MsalInteractionRequiredException;
 import com.microsoft.aad.msal4j.MsalServiceException;
 import com.microsoft.aad.msal4j.MsalThrottlingException;
 import com.microsoft.aad.msal4j.PublicClientApplication;
@@ -101,10 +102,7 @@ public class DeviceCodeSignIn {
      * WARNING, the others (declined, unknown client or tenant) are SEVERE.
      */
     private Explained explain(Throwable failure) {
-        Throwable cause = failure;
-        while ((cause instanceof CompletionException || cause instanceof ExecutionException) && cause.getCause() != null) {
-            cause = cause.getCause();
-        }
+        Throwable cause = unwrap(failure);
         Level level = Level.SEVERE;
         boolean temporary = false;
         String message;
@@ -144,6 +142,32 @@ public class DeviceCodeSignIn {
     }
 
     private record Explained(Level level, SignInException exception) {
+    }
+
+    /**
+     * Microsoft no longer accepts the refresh token (expired, revoked, password changed): forget the
+     * sign-in and start a new one, which shows a new code. Until it completes the user is not signed
+     * in and the calendar is not read (see {@link SignedInCalendarSource}).
+     */
+    private SignInException signInAgain(IAuthenticationResult current, MsalInteractionRequiredException rejected) {
+        String message = "Your sign-in expired or was revoked: sign in again with the new code";
+        LOG.warning(message + " (" + rejected.getMessage() + ")");
+        try {
+            app.removeAccount(current.account()).join();
+        } catch (RuntimeException x) {
+            LOG.log(Level.FINE, "Details of the failure to forget the sign-in", x);
+        }
+        last.set(null);
+        signIn();
+        return new SignInException("Your sign-in expired: a new sign-in was started", true, rejected);
+    }
+
+    private static Throwable unwrap(Throwable failure) {
+        Throwable cause = failure;
+        while ((cause instanceof CompletionException || cause instanceof ExecutionException) && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        return cause;
     }
 
     private static boolean causedByIO(Throwable t) {
@@ -191,6 +215,9 @@ public class DeviceCodeSignIn {
             last.set(renewed);
             return renewed.accessToken();
         } catch (CompletionException | MalformedURLException x) {
+            if (unwrap(x) instanceof MsalInteractionRequiredException rejected) {
+                throw signInAgain(current, rejected);
+            }
             SignInException why = explain(x).exception();
             if (why.isTemporary() && current.expiresOnDate().after(new Date())) {
                 LOG.warning("The access token could not be renewed, using the current one until it expires: "
