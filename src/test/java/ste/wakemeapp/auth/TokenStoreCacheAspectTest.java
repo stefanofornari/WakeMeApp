@@ -49,6 +49,11 @@ class TokenStoreCacheAspectTest {
         log.removeHandler(capture);
     }
 
+    /** The warnings only: the details of a failure are logged at FINE too. */
+    private List<LogRecord> warnings() {
+        return logged.stream().filter(r -> r.getLevel() == Level.WARNING).toList();
+    }
+
     private ITokenCacheAccessContext context(boolean changed) {
         return new ITokenCacheAccessContext() {
             @Override public ITokenCache tokenCache() { return cache; }
@@ -97,9 +102,8 @@ class TokenStoreCacheAspectTest {
 
         new TokenStoreCacheAspect(store).beforeCacheAccess(context(false));
 
-        then(logged).hasSize(1);
-        then(logged.get(0).getLevel()).isEqualTo(Level.WARNING);
-        then(logged.get(0).getMessage()).contains("saved sign-in").contains("ignored");
+        then(warnings()).hasSize(1);
+        then(warnings().get(0).getMessage()).contains("saved sign-in").contains("ignored");
     }
 
     @Test
@@ -115,8 +119,8 @@ class TokenStoreCacheAspectTest {
         aspect.afterCacheAccess(context(true));
 
         then(deserialized).isEmpty();
-        then(logged).hasSize(2);
-        then(logged.get(0).getMessage()).contains("unreadable");
-        then(logged.get(1).getMessage()).contains("not saved").contains("read-only");
+        then(warnings()).hasSize(2);
+        then(warnings().get(0).getMessage()).contains("unreadable");
+        then(warnings().get(1).getMessage()).contains("not saved").contains("read-only");
     }
 }
