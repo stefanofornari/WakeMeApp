@@ -37,8 +37,9 @@ dismiss it. It is for people who miss meetings because a small notification went
 WakeMeApp asks Microsoft for permission to read your calendar, and Microsoft requires every program that does
 so to be registered. You register WakeMeApp in your own organisation, so no data goes through anybody else.
 
-1. Open the [Microsoft Entra admin center](https://entra.microsoft.com) and sign in with your work or school
-   account. If you have access to several tenants, pick the right one with the settings icon at the top.
+1. Open the [Microsoft Entra admin center](https://entra.microsoft.com) (or the
+   [Azure portal](https://portal.azure.com) and its Microsoft Entra ID page) and sign in with your work or
+   school account. If you have access to several tenants, pick the right one with the settings icon at the top.
 2. Go to **Entra ID → App registrations** and choose **New registration**.
 3. Give it a name (for example *WakeMeApp*). Under **Supported account types** choose
    **Accounts in this organizational directory only** (single tenant), then **Register**.
@@ -46,7 +47,9 @@ so to be registered. You register WakeMeApp in your own organisation, so no data
    department to register the application for you, or to give you the role.
 4. On the **Overview** page copy the **Application (client) ID** and the **Directory (tenant) ID**.
 5. Open **Authentication** and, under **Advanced settings**, set **Allow public client flows** to **Yes**, then
-   **Save**. This is what lets a program without a secret sign you in with a code. No redirect URI is needed.
+   **Save**. This is what lets a program without a secret sign you in with a code. No redirect URI is needed,
+   and you do **not** create a client secret under *Certificates & secrets*: a desktop program cannot keep a
+   secret, WakeMeApp never asks for one, and the sign-in does not use it.
 6. Open **API permissions → Add a permission → Microsoft Graph → Delegated permissions** and add
    **Calendars.Read** and **User.Read** (the second is usually there already). WakeMeApp only reads: it never
    changes your calendar.
