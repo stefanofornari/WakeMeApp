@@ -31,9 +31,10 @@ import static ste.wakemeapp.auth.StubMsalHttpClient.answer;
  */
 class DeviceCodeSignInTest {
 
-    private static final String CLIENT_ID = "11111111-2222-3333-4444-555555555555";
     private static final long WAIT_SECONDS = 10;
 
+    /** One per test: MSAL's throttling of failed requests is static and would make tests disturb each other. */
+    private final String clientId = java.util.UUID.randomUUID().toString();
     private final List<String[]> shown = new ArrayList<>();
     private final List<LogRecord> logged = new ArrayList<>();
     private final Logger log = Logger.getLogger(DeviceCodeSignIn.class.getName());
@@ -68,7 +69,7 @@ class DeviceCodeSignInTest {
     }
 
     private DeviceCodeSignIn signIn(StubMsalHttpClient http, String tenant) {
-        return new DeviceCodeSignIn(CLIENT_ID, tenant,
+        return new DeviceCodeSignIn(clientId, tenant,
             (uri, code, message) -> shown.add(new String[] {uri, code, message}), http, false);
     }
 
@@ -84,7 +85,7 @@ class DeviceCodeSignInTest {
         signIn(http, "organizations").signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
 
         HttpRequest request = http.requestsTo("/devicecode").get(0);
-        then(decoded(request)).contains("client_id=" + CLIENT_ID).contains("Calendars.Read").contains("User.Read");
+        then(decoded(request)).contains("client_id=" + clientId).contains("Calendars.Read").contains("User.Read");
         then(shown).hasSize(1);
         then(shown.get(0)[0]).isEqualTo("https://microsoft.com/devicelogin");
         then(shown.get(0)[1]).isEqualTo("ABCD-EFGH");
@@ -147,7 +148,7 @@ class DeviceCodeSignInTest {
     @Test
     void the_message_is_logged_even_if_the_presenter_fails() throws Exception {
         StubMsalHttpClient http = userSignsIn("AT-1");
-        DeviceCodeSignIn signIn = new DeviceCodeSignIn(CLIENT_ID, "organizations",
+        DeviceCodeSignIn signIn = new DeviceCodeSignIn(clientId, "organizations",
             (uri, code, message) -> { throw new IllegalStateException("no window"); }, http, false);
 
         signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
@@ -192,7 +193,7 @@ class DeviceCodeSignInTest {
     void a_blank_client_id_or_tenant_is_refused() {
         thenThrownBy(() -> new DeviceCodeSignIn(" ", "organizations", null))
             .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("client id");
-        thenThrownBy(() -> new DeviceCodeSignIn(CLIENT_ID, "", null))
+        thenThrownBy(() -> new DeviceCodeSignIn(clientId, "", null))
             .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("tenant");
     }
 
@@ -390,7 +391,7 @@ class DeviceCodeSignInTest {
     }
 
     @Test
-    void a_temporary_failure_keeps_the_current_token_while_it_is_valid_and_tries_again_next_time() throws Exception {
+    void a_temporary_failure_keeps_the_current_token_while_it_is_valid_and_msal_backs_off_before_asking_again() throws Exception {
         StubMsalHttpClient http = signedInWith("AT-1", 240, r -> answer(503,
             error("temporarily_unavailable", "AADSTS50000: The service is busy")));
         DeviceCodeSignIn signIn = signIn(http, "organizations");
@@ -402,8 +403,12 @@ class DeviceCodeSignInTest {
         then(logged(Level.WARNING).get(0).getMessage()).contains("current one");
         int first = refreshes(http);
         then(first >= 1).isTrue();
+
+        // MSAL does not ask again for a few seconds after a server error; the token still serves
         then(signIn.accessTokenSupplier().get()).isEqualTo("AT-1");
-        then(refreshes(http) > first).isTrue();   // tried again, not given up
+        then(refreshes(http)).isEqualTo(first);
+        then(logged(Level.WARNING)).hasSize(2);
+        then(logged(Level.WARNING).get(1).getMessage()).contains("current one").contains("wait");
     }
 
     @Test

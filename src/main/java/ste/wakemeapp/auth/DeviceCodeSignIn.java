@@ -7,6 +7,7 @@ import com.microsoft.aad.msal4j.IAuthenticationResult;
 import com.microsoft.aad.msal4j.IHttpClient;
 import com.microsoft.aad.msal4j.MsalClientException;
 import com.microsoft.aad.msal4j.MsalServiceException;
+import com.microsoft.aad.msal4j.MsalThrottlingException;
 import com.microsoft.aad.msal4j.PublicClientApplication;
 import com.microsoft.aad.msal4j.SilentParameters;
 import java.io.IOException;
@@ -107,7 +108,13 @@ public class DeviceCodeSignIn {
         Level level = Level.SEVERE;
         boolean temporary = false;
         String message;
-        if (cause instanceof MsalServiceException service) {
+        if (cause instanceof MsalThrottlingException throttled) {
+            // after a server error or a 429 MSAL does not ask again for a few seconds (or what Microsoft says)
+            level = Level.WARNING;
+            temporary = true;
+            message = "Microsoft asked to wait before trying again (" + (throttled.retryInMs() / 1000 + 1)
+                + " s): the sign-in will be tried again later";
+        } else if (cause instanceof MsalServiceException service) {
             String code = service.errorCode();
             Integer status = service.statusCode();
             if ("authorization_declined".equals(code)) {
