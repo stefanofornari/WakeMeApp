@@ -441,4 +441,31 @@ class OverlayWindowTest {
         then(overlay.getController().getJoinButton().isVisible()).isTrue();
         then(overlay.getController().getJoinButton().isManaged()).isTrue();
     }
+
+    @Test
+    void should_notify_listener_and_close_when_the_dismiss_button_is_clicked(FxRobot robot) {
+        java.util.concurrent.atomic.AtomicInteger dismissals = new java.util.concurrent.atomic.AtomicInteger();
+        overlay.setOnDismiss(dismissals::incrementAndGet);
+        overlay.setNotification(new MeetingNotification("Standup", java.time.LocalDateTime.now().plusMinutes(5), null));
+        robot.interact(() -> overlay.show());
+
+        robot.interact(() -> overlay.getController().getDismissButton().fire());
+        robot.sleep(500);
+
+        then(dismissals.get()).isEqualTo(1);
+        then(overlay.getStage().isShowing()).isFalse();
+    }
+
+    @Test
+    void should_not_count_escape_or_automatic_closing_as_a_dismissal(FxRobot robot) {
+        java.util.concurrent.atomic.AtomicInteger dismissals = new java.util.concurrent.atomic.AtomicInteger();
+        overlay.setOnDismiss(dismissals::incrementAndGet);
+        overlay.setNotification(new MeetingNotification("Standup", java.time.LocalDateTime.now().plusMinutes(5), null));
+        robot.interact(() -> overlay.show());
+
+        robot.interact(() -> overlay.hide());
+        robot.sleep(500);
+
+        then(dismissals.get()).isZero();
+    }
 }

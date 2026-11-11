@@ -199,4 +199,60 @@ class OverlayManagerTest {
             then(fired.get().originalStartTime()).isEqualTo(meeting.startTime());
         }
     }
+
+    private static MeetingNotification standup() {
+        return new MeetingNotification("Standup", LocalDateTime.now().plusMinutes(5), null, null, null, null,
+            0, 3, LocalDateTime.now().plusMinutes(5), "standup-1");
+    }
+
+    @Test
+    void should_tell_who_listens_and_offer_an_undo_when_a_meeting_is_dismissed(FxRobot robot) {
+        java.util.List<MeetingNotification> dismissed = new java.util.concurrent.CopyOnWriteArrayList<>();
+        manager.setOnDismissed(dismissed::add);
+        MeetingNotification notification = standup();
+        robot.interact(() -> manager.showNotification(notification));
+
+        robot.interact(() -> manager.getOverlays().get(0).getController().getDismissButton().fire());
+        robot.sleep(500);
+
+        then(dismissed).containsExactly(notification);
+        then(manager.getOverlayCount()).isZero();
+        then(manager.getUndoToast()).isNotNull();
+        then(manager.getUndoToast().isShowing()).isTrue();
+        then(manager.getUndoToast().getMessage()).isEqualTo("Dismissed. Undo?");
+    }
+
+    @Test
+    void should_show_the_overlay_again_and_tell_who_listens_when_the_dismissal_is_undone(FxRobot robot) {
+        java.util.List<MeetingNotification> undone = new java.util.concurrent.CopyOnWriteArrayList<>();
+        manager.setOnDismissUndone(undone::add);
+        MeetingNotification notification = standup();
+        robot.interact(() -> manager.showNotification(notification));
+        robot.interact(() -> manager.getOverlays().get(0).getController().getDismissButton().fire());
+        robot.sleep(500);
+
+        robot.interact(() -> manager.getUndoToast().getUndoButton().fire());
+        robot.sleep(500);
+
+        then(undone).containsExactly(notification);
+        then(manager.getOverlayCount()).isGreaterThanOrEqualTo(1);
+        then(manager.getUndoToast().isShowing()).isFalse();
+    }
+
+    @Test
+    void should_close_the_undo_offer_after_its_time(FxRobot robot) {
+        manager.setUndoTime(java.time.Duration.ofMillis(300));
+        robot.interact(() -> manager.showNotification(standup()));
+        robot.interact(() -> manager.getOverlays().get(0).getController().getDismissButton().fire());
+
+        robot.sleep(1000);
+
+        then(manager.getUndoToast().isShowing()).isFalse();
+        then(manager.getOverlayCount()).isZero();
+    }
+
+    @Test
+    void should_use_five_seconds_for_the_undo_offer_by_default() {
+        then(manager.getUndoTime()).isEqualTo(java.time.Duration.ofSeconds(5));
+    }
 }

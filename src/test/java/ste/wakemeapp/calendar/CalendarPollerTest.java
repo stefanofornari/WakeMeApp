@@ -472,4 +472,115 @@ class CalendarPollerTest {
 
         then(records).anySatisfy(r -> then(text(r)).contains("5 min").contains("down"));
     }
+
+    private static ste.wakemeapp.notify.MeetingNotification notificationOf(CalendarEvent event) {
+        return event.toNotification();
+    }
+
+    @Test
+    void should_cancel_what_is_pending_and_not_schedule_again_a_dismissed_meeting() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        CalendarEvent standup = event("standup", LocalDateTime.now().plusMinutes(12));
+        source.add(standup);
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone(), new DismissedMeetings());
+        poller.pollOnce();
+
+        poller.dismiss(notificationOf(standup));
+        poller.pollOnce();
+
+        then(poller.scheduled()).isEmpty();
+    }
+
+    @Test
+    void should_drop_the_pending_snooze_of_a_dismissed_meeting() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        CalendarEvent standup = event("standup", LocalDateTime.now().plusMinutes(12));
+        source.add(standup);
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone(), new DismissedMeetings());
+        poller.pollOnce();
+        ScheduledNotification snooze = scheduler.scheduleAtExactTime(
+            notificationOf(standup).withSnooze(5, LocalDateTime.now().plusMinutes(5)));
+
+        poller.dismiss(notificationOf(standup));
+
+        then(snooze.isCancelled()).isTrue();
+    }
+
+    @Test
+    void should_notify_the_next_occurrence_of_a_dismissed_recurring_meeting() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        LocalDateTime today = LocalDateTime.now().plusMinutes(12);
+        CalendarEvent first = event("weekly", today);
+        source.add(first);
+        MutableClock clock = new MutableClock();
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, clock, new DismissedMeetings());
+        poller.pollOnce();
+        poller.dismiss(notificationOf(first));
+
+        // next week the same series comes back with the same id and a start a week later
+        source.remove("weekly");
+        source.add(event("weekly", today.plusDays(7)));
+        clock.advance(Duration.ofDays(7));
+        poller.pollOnce();
+
+        then(poller.scheduled()).hasSize(1);
+    }
+
+    @Test
+    void should_not_notify_a_meeting_dismissed_before_a_restart() {
+        DismissedMeetings dismissed = new DismissedMeetings();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(12);
+        dismissed.dismiss("standup", start);
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", start));
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone(), dismissed);
+
+        poller.pollOnce();
+
+        then(poller.scheduled()).isEmpty();
+    }
+
+    @Test
+    void should_notify_again_a_dismissed_meeting_whose_time_changed() {
+        DismissedMeetings dismissed = new DismissedMeetings();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(12);
+        dismissed.dismiss("standup", start);
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", start.plusMinutes(3)));
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone(), dismissed);
+
+        poller.pollOnce();
+
+        then(poller.scheduled()).hasSize(1);
+        then(dismissed.isDismissed("standup", start)).isFalse();
+    }
+
+    @Test
+    void should_keep_the_meeting_known_after_an_undone_dismissal() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        CalendarEvent standup = event("standup", LocalDateTime.now().plusMinutes(12));
+        source.add(standup);
+        DismissedMeetings dismissed = new DismissedMeetings();
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone(), dismissed);
+        poller.pollOnce();
+        ScheduledNotification before = poller.scheduled().get(0);
+        poller.dismiss(notificationOf(standup));
+
+        poller.undoDismiss(notificationOf(standup));
+        poller.pollOnce();
+
+        then(dismissed.isDismissed("standup", standup.start())).isFalse();
+        then(poller.scheduled()).hasSize(1);
+        then(poller.scheduled().get(0)).isSameAs(before);   // known again, not scheduled a second time
+    }
+
+    @Test
+    void should_ignore_the_dismissal_of_a_notification_without_event() {
+        poller = new CalendarPoller(new InMemoryCalendarSource(), scheduler, POLL_INTERVAL, WINDOW,
+            Clock.systemDefaultZone(), new DismissedMeetings());
+
+        poller.dismiss(new ste.wakemeapp.notify.MeetingNotification("manual", LocalDateTime.now(), null));
+
+        then(poller.scheduled()).isEmpty();
+    }
 }
