@@ -42,4 +42,23 @@ class SignedInCalendarSourceTest {
         then(events).isEmpty();
         then(reads.get()).isEqualTo(1);
     }
+
+    @Test
+    void a_failed_renewal_of_the_sign_in_is_a_calendar_access_error_with_the_same_kind() {
+        signedIn.set(true);
+        CalendarSource temporary = new SignedInCalendarSource((from, to) -> {
+            throw new SignInException("Microsoft cannot be reached", true, null);
+        }, signedIn::get);
+        CalendarSource permanent = new SignedInCalendarSource((from, to) -> {
+            throw new SignInException("Microsoft refused the sign-in", false, null);
+        }, signedIn::get);
+
+        thenThrownBy(() -> temporary.meetingsStartingBetween(FROM, TO))
+            .isInstanceOf(CalendarAccessException.class)
+            .hasMessageContaining("cannot be reached")
+            .satisfies(x -> then(((CalendarAccessException) x).isTemporary()).isTrue());
+        thenThrownBy(() -> permanent.meetingsStartingBetween(FROM, TO))
+            .isInstanceOf(CalendarAccessException.class)
+            .satisfies(x -> then(((CalendarAccessException) x).isTemporary()).isFalse());
+    }
 }

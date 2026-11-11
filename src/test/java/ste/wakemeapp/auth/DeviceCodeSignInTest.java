@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.TimeUnit;
@@ -315,5 +318,103 @@ class DeviceCodeSignInTest {
         failureOf(signIn(http, "organizations"));
 
         then(logged(Level.SEVERE).size() + logged(Level.WARNING).size()).isEqualTo(1);
+    }
+
+    // --- silent renewal (auth/US-000041) ---
+
+    /**
+     * The user signs in at once and gets {@code firstToken} valid for {@code expiresIn} seconds; a refresh
+     * is answered by {@code refresh}.
+     */
+    private static StubMsalHttpClient signedInWith(String firstToken, long expiresIn, StubMsalHttpClient.Answer refresh) {
+        return new StubMsalHttpClient(r -> {
+            if (r.url().getPath().endsWith("/devicecode")) {
+                return answer(200, StubMsalHttpClient.DEVICE_CODE);
+            }
+            if (r.body().contains("grant_type=refresh_token")) {
+                return refresh.to(r);
+            }
+            return answer(200, StubMsalHttpClient.token(firstToken, expiresIn));
+        });
+    }
+
+    private static int refreshes(StubMsalHttpClient http) {
+        return (int) http.requestsTo("/token").stream().filter(r -> r.body().contains("grant_type=refresh_token")).count();
+    }
+
+    @Test
+    void a_token_far_from_its_expiry_is_used_as_it_is_without_a_request() throws Exception {
+        StubMsalHttpClient http = signedInWith("AT-1", 3599, r -> answer(500, "must not be asked"));
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        int before = http.requests.size();
+
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-1");
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-1");
+
+        then(http.requests.size()).isEqualTo(before);
+    }
+
+    @Test
+    void a_token_close_to_its_expiry_is_renewed_first_and_the_new_one_is_kept() throws Exception {
+        StubMsalHttpClient http = signedInWith("AT-1", 240, r -> answer(200, StubMsalHttpClient.token("AT-2", 3599)));
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-2");
+        then(refreshes(http)).isEqualTo(1);
+
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-2");   // from the cache now
+        then(refreshes(http)).isEqualTo(1);
+    }
+
+    @Test
+    void callers_asking_at_the_same_time_cause_one_refresh() throws Exception {
+        StubMsalHttpClient http = signedInWith("AT-1", 240, r -> {
+            Thread.sleep(300);   // long enough for the second caller to arrive
+            return answer(200, StubMsalHttpClient.token("AT-2", 3599));
+        });
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<String> first = pool.submit(() -> signIn.accessTokenSupplier().get());
+            Future<String> second = pool.submit(() -> signIn.accessTokenSupplier().get());
+
+            then(first.get(WAIT_SECONDS, TimeUnit.SECONDS)).isEqualTo("AT-2");
+            then(second.get(WAIT_SECONDS, TimeUnit.SECONDS)).isEqualTo("AT-2");
+        } finally {
+            pool.shutdownNow();
+        }
+        then(refreshes(http)).isEqualTo(1);
+    }
+
+    @Test
+    void a_temporary_failure_keeps_the_current_token_while_it_is_valid_and_tries_again_next_time() throws Exception {
+        StubMsalHttpClient http = signedInWith("AT-1", 240, r -> answer(503,
+            error("temporarily_unavailable", "AADSTS50000: The service is busy")));
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-1");
+
+        then(logged(Level.WARNING)).hasSize(1);
+        then(logged(Level.WARNING).get(0).getMessage()).contains("current one");
+        int first = refreshes(http);
+        then(first >= 1).isTrue();
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-1");
+        then(refreshes(http) > first).isTrue();   // tried again, not given up
+    }
+
+    @Test
+    void a_token_that_expired_cannot_be_used_when_the_renewal_fails() throws Exception {
+        StubMsalHttpClient http = signedInWith("AT-1", -60, r -> { throw new IOException("connection refused"); });
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        thenThrownBy(() -> signIn.accessTokenSupplier().get())
+            .isInstanceOf(SignInException.class)
+            .hasMessageContaining("cannot be reached")
+            .satisfies(x -> then(((SignInException) x).isTemporary()).isTrue());
     }
 }

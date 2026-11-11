@@ -24,10 +24,25 @@ class StubMsalHttpClient implements IHttpClient {
         """;
 
     static String token(String accessToken) {
+        return token(accessToken, 3599);
+    }
+
+    /** A token answer with the identity MSAL needs to cache the tokens for an account (silent renewal). */
+    static String token(String accessToken, long expiresIn) {
+        String idToken = b64("{\"alg\":\"none\"}") + "." + b64("""
+            {"iss":"https://login.microsoftonline.com/tid-1/v2.0","sub":"sub-1","aud":"client","exp":4102444800,
+             "iat":1700000000,"nbf":1700000000,"name":"Ann Smith","preferred_username":"ann@example.com",
+             "oid":"oid-1","tid":"tid-1"}""") + ".sig";
         return """
-            {"token_type":"Bearer","scope":"Calendars.Read User.Read","expires_in":3599,
-             "ext_expires_in":3599,"access_token":"%s","refresh_token":"RT-1"}
-            """.formatted(accessToken);
+            {"token_type":"Bearer","scope":"Calendars.Read User.Read","expires_in":%d,
+             "ext_expires_in":3599,"access_token":"%s","refresh_token":"RT-1",
+             "id_token":"%s","client_info":"%s"}
+            """.formatted(expiresIn, accessToken, idToken, b64("{\"uid\":\"oid-1\",\"utid\":\"tid-1\"}"));
+    }
+
+    private static String b64(String text) {
+        return java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     static HttpResponse answer(int status, String body) {
