@@ -2,7 +2,7 @@
 
 ## Coverage of the scenarios
 * Opens the link / deep link: `JoinMeetingTest` (only http, https and msteams are handed to the system; anything else is refused).
-* Clipboard fallback with toast, overlay stays open: `OverlayWindowTest` (`should_copy_the_link_and_show_a_toast...`).
+* Clipboard fallback with toast, overlay stays open: `OverlayWindowTest`.
 * Button hidden for a meeting without a link or with a link that is not a meeting link: `OverlayWindowTest`.
 * Hover and pressed states: in `overlay.css`; not testable headless, to be checked by eye.
 
