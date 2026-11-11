@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 the original author or authors from the WakeMeApp project (https://github.com/stefanofornari/WakeMeApp)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ste.wakemeapp.notify;
 
 import javafx.scene.control.Label;
@@ -214,13 +230,13 @@ class OverlayWindowTest {
         robot.interact(() -> overlay.show());
 
         OverlayController controller = overlay.getController();
-        
+
         // Click snooze button
         robot.interact(() -> controller.getSnoozeButton().fire());
-        
+
         // Context menu should be showing
         then(controller.getSnoozeMenu().isShowing()).isTrue();
-        
+
         // Menu should have 4 items
         then(controller.getSnoozeMenu().getItems()).hasSize(4);
         then(controller.getSnoozeMenu().getItems().get(0).getText()).isEqualTo("Snooze 1 min");
@@ -239,7 +255,7 @@ class OverlayWindowTest {
         // Press escape key - in headless test env, animations may not run
         // So we verify the dismissal logic by calling hide directly
         robot.interact(() -> overlay.hide());
-        
+
         // Give time for fade-out animation (if running)
         robot.sleep(500);
 

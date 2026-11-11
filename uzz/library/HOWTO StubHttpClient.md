@@ -4,7 +4,7 @@ This guide explains how to use `ste.xtest.net.http.StubHttpClient` and
 `HttpClientStubber` to test code that depends on the JDK 11+
 `java.net.http.HttpClient` without making real network calls.
 
-Package: `ste.xtest.net.http`  
+Package: `ste.xtest.net.http`
 Main classes: `HttpClientStubber`, `StubHttpClient`, `StubHttpClient.StubHttpResponse`, `StubHttpClient.NetworkError`
 
 ## 1. Idea
