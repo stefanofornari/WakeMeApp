@@ -40,7 +40,7 @@ global lead-time configuration.
   - [ ] Linux: jpackage .deb/.AppImage + systemd user service / autostart .desktop
 
 ## Detailed Scopes
-* Calendar synchronisation (polling policy, eligibility, scheduler reconciliation): `calendar/scope.md`
+* Calendar synchronisation (polling policy, eligibility, scheduler reconciliation, ICS feed): `calendar/scope.md`
 * Logging (levels, rolled log file in the platform directory, `--debug`): `logging/scope.md`
 * Configuration (Preferences storage, first-run provisioning from the command line, `--print-config`, inspection docs): `settings/scope.md`
 

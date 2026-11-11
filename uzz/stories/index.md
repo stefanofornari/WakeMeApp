@@ -20,6 +20,9 @@
 | calendar/US-000031 | Configure Poll Interval and Window from the Command Line | DONE |
 | calendar/US-000032 | Simulate the Calendar from a CSV File | DONE |
 | calendar/US-000038 | Skip Malformed Calendar Lines with a Warning | TODO |
+| calendar/US-000051 | Read My Calendar from an ICS Link | TODO |
+| calendar/US-000052 | Notify for Recurring Meetings and in the Right Time Zone | TODO |
+| calendar/US-000053 | Keep the Calendar Link Secret | TODO |
 
 ## notify
 | ID | Title | Status |
@@ -85,4 +88,4 @@
 
 ---
 
-**Total Stories:** 47
+**Total Stories:** 50

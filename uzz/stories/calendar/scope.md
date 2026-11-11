@@ -29,6 +29,12 @@ real Microsoft Graph source is delivered separately (auth and calendar domains).
   - [ ] Poll interval and window can be changed from the command line (defaults apply when omitted)
   - [ ] A command line where the window is shorter than poll interval + lead time is rejected with an error
   - [ ] A failed poll is logged and the next poll runs at the normal interval; already scheduled notifications keep firing
+* **ICS feed** (for organisations whose Conditional Access blocks the Microsoft sign-in, error 530033):
+  - [ ] `--calendar` accepts an `https://` (or `webcal://`) ICS address, which is read at every poll without sign-in
+  - [ ] Events give id, title, start, end, organizer, join link and all-day flag; cancelled and all-day events are not notified
+  - [ ] Recurring meetings are expanded per occurrence, with moved and removed occurrences, and every time zone (IANA and Windows names, UTC, floating) is converted to local time with daylight saving
+  - [ ] Every event is eligible except cancelled and all-day ones; the user's response status is logged when the feed has it
+  - [ ] The address is a secret: logs and messages show the host only
 * **Calendar file robustness**:
   - [ ] A malformed line of the calendar file is skipped with a warning naming the file and the line, and the other meetings are still read
 * **Eligibility filter**:
@@ -44,6 +50,8 @@ real Microsoft Graph source is delivered separately (auth and calendar domains).
   - [ ] Snoozes already scheduled are not dropped by a poll
 
 ## Out-of-Scope / Future Enhancements
+* CalDAV source: Microsoft 365 does not offer it, so it does not solve the blocked sign-in; future, for Google or iCloud calendars
+* The macOS Calendar app as a source, several feeds at once, authenticated feeds, conditional requests (ETag), saving the feed address in the settings, stricter eligibility by response status: future
 * Microsoft Graph implementation of the calendar source (pagination, throttling, timezone conversion stay with calendar/US-000003)
 * All-day events (to be tracked as a future feature)
 * Rule-based filtering (organizer, keywords, categories, calendar selection)
