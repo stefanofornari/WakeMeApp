@@ -28,6 +28,11 @@ public class SignedInCalendarSource implements CalendarSource {
         if (!signedIn.getAsBoolean()) {
             throw new CalendarAccessException("Waiting for the sign-in to complete: the calendar is not read yet", true);
         }
-        return calendar.meetingsStartingBetween(from, to);
+        try {
+            return calendar.meetingsStartingBetween(from, to);
+        } catch (SignInException x) {
+            // the access token supplier could not renew the sign-in: a calendar error of the same kind
+            throw new CalendarAccessException(x.getMessage(), x, x.isTemporary());
+        }
     }
 }

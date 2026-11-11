@@ -3,13 +3,16 @@ package ste.wakemeapp.auth;
 import com.microsoft.aad.msal4j.AuthenticationErrorCode;
 import com.microsoft.aad.msal4j.DeviceCode;
 import com.microsoft.aad.msal4j.DeviceCodeFlowParameters;
+import com.microsoft.aad.msal4j.IAuthenticationResult;
 import com.microsoft.aad.msal4j.IHttpClient;
 import com.microsoft.aad.msal4j.MsalClientException;
 import com.microsoft.aad.msal4j.MsalServiceException;
 import com.microsoft.aad.msal4j.PublicClientApplication;
+import com.microsoft.aad.msal4j.SilentParameters;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
+import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -34,7 +37,7 @@ public class DeviceCodeSignIn {
 
     private final PublicClientApplication app;
     private final VerificationPresenter presenter;
-    private final AtomicReference<String> accessToken = new AtomicReference<>();
+    private final AtomicReference<IAuthenticationResult> last = new AtomicReference<>();
 
     /**
      * @param clientId the application (client) id registered with Microsoft
@@ -79,21 +82,24 @@ public class DeviceCodeSignIn {
         app.acquireToken(DeviceCodeFlowParameters.builder(SCOPES, consumer).build())
             .whenComplete((result, failure) -> {
                 if (failure == null) {
-                    accessToken.set(result.accessToken());
+                    last.set(result);
                     outcome.complete(null);
                 } else {
-                    outcome.completeExceptionally(explain(failure));
+                    Explained why = explain(failure);
+                    LOG.log(why.level(), why.exception().getMessage());
+                    LOG.log(Level.FINE, "Details of the sign-in failure", why.exception().getCause());
+                    outcome.completeExceptionally(why.exception());
                 }
             });
         return outcome;
     }
 
     /**
-     * Turns what MSAL reports into a {@link SignInException} worded for the user, and logs it once:
-     * a failure that may pass by itself (network, busy server) or an expired code at WARNING, the
-     * others (declined, unknown client or tenant) at SEVERE.
+     * Turns what MSAL reports into a {@link SignInException} worded for the user, with the level to
+     * log it at: a failure that may pass by itself (network, busy server) or an expired code is a
+     * WARNING, the others (declined, unknown client or tenant) are SEVERE.
      */
-    private SignInException explain(Throwable failure) {
+    private Explained explain(Throwable failure) {
         Throwable cause = failure;
         while ((cause instanceof CompletionException || cause instanceof ExecutionException) && cause.getCause() != null) {
             cause = cause.getCause();
@@ -127,9 +133,10 @@ public class DeviceCodeSignIn {
         } else {
             message = "The sign-in failed: " + cause.getMessage();
         }
-        LOG.log(level, message);
-        LOG.log(Level.FINE, "Details of the sign-in failure", cause);
-        return new SignInException(message, temporary, cause);
+        return new Explained(level, new SignInException(message, temporary, cause));
+    }
+
+    private record Explained(Level level, SignInException exception) {
     }
 
     private static boolean causedByIO(Throwable t) {
@@ -151,18 +158,40 @@ public class DeviceCodeSignIn {
 
     /** True once the sign-in has completed and an access token is available. */
     public boolean isSignedIn() {
-        return accessToken.get() != null;
+        return last.get() != null;
     }
 
-    /** The access token of the signed in user; fails if the sign-in has not completed. */
+    /**
+     * The access token of the signed in user. MSAL answers from its cache, or renews the token with
+     * the refresh token when it expires within 5 minutes; one renewal at a time whatever the number of
+     * callers. A temporary failure to renew keeps the current token while it is still valid.
+     *
+     * @throws IllegalStateException if the sign-in has not completed
+     * @throws SignInException if the token cannot be renewed
+     */
     public Supplier<String> accessTokenSupplier() {
-        return () -> {
-            String token = accessToken.get();
-            if (token == null) {
-                throw new IllegalStateException("The user is not signed in yet");
+        return this::currentAccessToken;
+    }
+
+    private synchronized String currentAccessToken() {
+        IAuthenticationResult current = last.get();
+        if (current == null) {
+            throw new IllegalStateException("The user is not signed in yet");
+        }
+        try {
+            IAuthenticationResult renewed = app.acquireTokenSilently(
+                SilentParameters.builder(SCOPES, current.account()).build()).join();
+            last.set(renewed);
+            return renewed.accessToken();
+        } catch (CompletionException | MalformedURLException x) {
+            SignInException why = explain(x).exception();
+            if (why.isTemporary() && current.expiresOnDate().after(new Date())) {
+                LOG.warning("The access token could not be renewed, using the current one until it expires: "
+                    + why.getMessage());
+                return current.accessToken();
             }
-            return token;
-        };
+            throw why;   // the caller (the calendar poller) reports it
+        }
     }
 
     private void present(DeviceCode code) {
