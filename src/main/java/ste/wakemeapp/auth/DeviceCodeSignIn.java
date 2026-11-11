@@ -3,6 +3,7 @@ package ste.wakemeapp.auth;
 import com.microsoft.aad.msal4j.AuthenticationErrorCode;
 import com.microsoft.aad.msal4j.DeviceCode;
 import com.microsoft.aad.msal4j.DeviceCodeFlowParameters;
+import com.microsoft.aad.msal4j.IAccount;
 import com.microsoft.aad.msal4j.IAuthenticationResult;
 import com.microsoft.aad.msal4j.IHttpClient;
 import com.microsoft.aad.msal4j.MsalClientException;
@@ -48,12 +49,24 @@ public class DeviceCodeSignIn {
      *        is always logged
      */
     public DeviceCodeSignIn(String clientId, String tenant, VerificationPresenter presenter) {
-        this(clientId, tenant, presenter, null, true);
+        this(clientId, tenant, presenter, null, true, null);
+    }
+
+    /**
+     * @param store where the sign-in is kept between runs, or null to keep it in memory only
+     */
+    public DeviceCodeSignIn(String clientId, String tenant, VerificationPresenter presenter, TokenStore store) {
+        this(clientId, tenant, presenter, null, true, store);
     }
 
     /** For tests: {@code http} replaces the HTTP client of MSAL, {@code discovery} its instance discovery. */
     DeviceCodeSignIn(String clientId, String tenant, VerificationPresenter presenter,
                      IHttpClient http, boolean discovery) {
+        this(clientId, tenant, presenter, http, discovery, null);
+    }
+
+    DeviceCodeSignIn(String clientId, String tenant, VerificationPresenter presenter,
+                     IHttpClient http, boolean discovery, TokenStore store) {
         if (clientId == null || clientId.isBlank()) {
             throw new IllegalArgumentException("The client id is required to sign in");
         }
@@ -67,6 +80,9 @@ public class DeviceCodeSignIn {
                 .instanceDiscovery(discovery);
             if (http != null) {
                 builder.httpClient(http);
+            }
+            if (store != null) {
+                builder.setTokenCacheAccessAspect(new TokenStoreCacheAspect(store));
             }
             this.app = builder.build();
         } catch (MalformedURLException x) {
@@ -185,6 +201,38 @@ public class DeviceCodeSignIn {
             root = root.getCause();
         }
         return root.getMessage();
+    }
+
+    /**
+     * Uses the sign-in saved by an earlier run, if there is one that Microsoft still accepts: the
+     * user is then signed in without a code. Completes with false (and starts nothing) when there is
+     * nothing saved or it cannot be used; a sign-in that Microsoft rejects is forgotten.
+     */
+    public CompletableFuture<Boolean> resume() {
+        return app.getAccounts().thenCompose(accounts -> {
+            if (accounts.isEmpty()) {
+                return CompletableFuture.completedFuture(false);
+            }
+            IAccount account = accounts.iterator().next();
+            try {
+                return app.acquireTokenSilently(SilentParameters.builder(SCOPES, account).build())
+                    .handle((result, failure) -> {
+                        if (failure == null) {
+                            last.set(result);
+                            LOG.info("Signed in with the saved sign-in");
+                            return true;
+                        }
+                        LOG.warning("The saved sign-in cannot be used, a new sign-in is needed: "
+                            + explain(failure).exception().getMessage());
+                        if (unwrap(failure) instanceof MsalInteractionRequiredException) {
+                            app.removeAccount(account).join();   // forget what Microsoft rejects
+                        }
+                        return false;
+                    });
+            } catch (MalformedURLException x) {
+                return CompletableFuture.failedFuture(x);
+            }
+        });
     }
 
     /** True once the sign-in has completed and an access token is available. */

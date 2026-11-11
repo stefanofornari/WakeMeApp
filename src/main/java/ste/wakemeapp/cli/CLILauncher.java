@@ -5,6 +5,7 @@ import javafx.application.Platform;
 import javafx.stage.Stage;
 import picocli.CommandLine;
 import ste.wakemeapp.auth.DeviceCodeSignIn;
+import ste.wakemeapp.auth.FileTokenStore;
 import ste.wakemeapp.auth.SignedInCalendarSource;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.calendar.CalendarSource;
@@ -184,9 +185,15 @@ public class CLILauncher extends Application {
     private void pollGraphCalendar(java.net.URI address) {
         ConnectionSettings connection = ConnectionSettings.resolve(
             parsedCommand.getClientId(), parsedCommand.getTenant(), Settings.user());
-        DeviceCodeSignIn signIn = new DeviceCodeSignIn(connection.requireClientId(), connection.tenant(), null);
+        DeviceCodeSignIn signIn = new DeviceCodeSignIn(
+            connection.requireClientId(), connection.tenant(), null, new FileTokenStore(FileTokenStore.defaultFile()));
+        // a sign-in saved by an earlier run is used if Microsoft still accepts it, otherwise the user gets a code;
         // a failure is logged, once, with the reason, by the sign-in itself
-        signIn.signIn().thenRun(() -> LOG.info("Signed in"));
+        signIn.resume().whenComplete((resumed, failure) -> {
+            if (failure != null || !resumed) {
+                signIn.signIn().thenRun(() -> LOG.info("Signed in"));
+            }
+        });
         CalendarSource calendar = new SignedInCalendarSource(
             new GraphCalendarSource(java.net.http.HttpClient.newBuilder(), signIn.accessTokenSupplier(), address),
             signIn::isSignedIn);
