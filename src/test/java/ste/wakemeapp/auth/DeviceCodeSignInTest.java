@@ -470,4 +470,90 @@ class DeviceCodeSignInTest {
         then(signIn.accessTokenSupplier().get()).isEqualTo("AT-9");
         then(refreshes(http)).isEqualTo(1);   // the new token needs no renewal
     }
+
+    // --- remembering the sign-in (auth/US-000002) ---
+
+    private DeviceCodeSignIn signInWith(StubMsalHttpClient http, TokenStore store) {
+        return new DeviceCodeSignIn(clientId, "organizations",
+            (uri, code, message) -> shown.add(new String[] {uri, code, message}), http, false, store);
+    }
+
+    @Test
+    void the_sign_in_is_saved_in_the_store() throws Exception {
+        MemoryTokenStore store = new MemoryTokenStore();
+
+        signInWith(userSignsIn("AT-1"), store).signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        then(store.load()).isPresent();
+        then(store.text.get()).contains("AT-1").contains("RT-1");
+    }
+
+    @Test
+    void a_saved_sign_in_is_used_after_a_restart_without_asking_the_user() throws Exception {
+        MemoryTokenStore store = new MemoryTokenStore();
+        StubMsalHttpClient http = userSignsIn("AT-1");
+        signInWith(http, store).signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        shown.clear();
+        int deviceCodeRequests = http.requestsTo("/devicecode").size();
+
+        DeviceCodeSignIn restarted = signInWith(http, store);   // a new run of the application
+        then(restarted.isSignedIn()).isFalse();
+        boolean resumed = restarted.resume().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        then(resumed).isTrue();
+        then(restarted.isSignedIn()).isTrue();
+        then(restarted.accessTokenSupplier().get()).isEqualTo("AT-1");
+        then(shown).isEmpty();
+        then(http.requestsTo("/devicecode")).hasSize(deviceCodeRequests);
+    }
+
+    @Test
+    void a_renewed_token_replaces_the_saved_one() throws Exception {
+        MemoryTokenStore store = new MemoryTokenStore();
+        StubMsalHttpClient http = signedInWith("AT-1", 240, r -> answer(200, StubMsalHttpClient.token("AT-2", 3599)));
+        DeviceCodeSignIn signIn = signInWith(http, store);
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        then(store.text.get()).contains("AT-1");
+
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-2");
+
+        then(store.text.get()).contains("AT-2");
+    }
+
+    @Test
+    void without_a_saved_sign_in_there_is_nothing_to_resume() throws Exception {
+        DeviceCodeSignIn signIn = signInWith(userSignsIn("AT-1"), new MemoryTokenStore());
+
+        then(signIn.resume().get(WAIT_SECONDS, TimeUnit.SECONDS)).isFalse();
+        then(signIn.isSignedIn()).isFalse();
+    }
+
+    @Test
+    void a_saved_text_that_is_not_a_cache_is_ignored_and_the_user_can_sign_in() throws Exception {
+        MemoryTokenStore store = new MemoryTokenStore();
+        store.save("this is not a cache");
+        StubMsalHttpClient http = userSignsIn("AT-1");
+        DeviceCodeSignIn signIn = signInWith(http, store);
+
+        then(signIn.resume().get(WAIT_SECONDS, TimeUnit.SECONDS)).isFalse();
+
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-1");
+        then(store.text.get()).contains("AT-1");   // the new sign-in replaced the unusable text
+    }
+
+    @Test
+    void a_saved_sign_in_that_microsoft_rejects_is_forgotten_and_not_resumed() throws Exception {
+        MemoryTokenStore store = new MemoryTokenStore();
+        StubMsalHttpClient first = signedInWith("AT-1", 240, r -> answer(200, StubMsalHttpClient.token("AT-2", 3599)));
+        signInWith(first, store).signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+        StubMsalHttpClient rejecting = new StubMsalHttpClient(r -> answer(400,
+            error("invalid_grant", "AADSTS70008: The refresh token has expired")));
+        DeviceCodeSignIn restarted = signInWith(rejecting, store);
+
+        then(restarted.resume().get(WAIT_SECONDS, TimeUnit.SECONDS)).isFalse();
+
+        then(restarted.isSignedIn()).isFalse();
+        then(store.text.get()).doesNotContain("RT-1");   // the rejected sign-in is no longer saved
+    }
 }
