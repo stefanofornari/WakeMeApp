@@ -422,4 +422,52 @@ class DeviceCodeSignInTest {
             .hasMessageContaining("cannot be reached")
             .satisfies(x -> then(((SignInException) x).isTemporary()).isTrue());
     }
+
+    // --- a rejected sign-in (auth/US-000042) ---
+
+    private static void waitUntil(java.util.function.BooleanSupplier condition) throws InterruptedException {
+        long end = System.currentTimeMillis() + WAIT_SECONDS * 1000;
+        while (!condition.getAsBoolean() && System.currentTimeMillis() < end) {
+            Thread.sleep(20);
+        }
+        then(condition.getAsBoolean()).isTrue();
+    }
+
+    @Test
+    void a_rejected_refresh_token_clears_the_sign_in_and_starts_a_new_one_that_replaces_it() throws Exception {
+        AtomicInteger grants = new AtomicInteger();
+        CountDownLatch secondGrantMayAnswer = new CountDownLatch(1);
+        StubMsalHttpClient http = new StubMsalHttpClient(r -> {
+            if (r.url().getPath().endsWith("/devicecode")) {
+                return answer(200, StubMsalHttpClient.DEVICE_CODE);
+            }
+            if (r.body().contains("grant_type=refresh_token")) {
+                return answer(400, error("invalid_grant", "AADSTS70008: The refresh token has expired"));
+            }
+            if (grants.incrementAndGet() == 1) {
+                return answer(200, StubMsalHttpClient.token("AT-1", 240));   // within the renewal buffer
+            }
+            secondGrantMayAnswer.await(WAIT_SECONDS, TimeUnit.SECONDS);       // the user is at the browser
+            return answer(200, StubMsalHttpClient.token("AT-9", 3599));
+        });
+        DeviceCodeSignIn signIn = signIn(http, "organizations");
+        signIn.signIn().get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+        thenThrownBy(() -> signIn.accessTokenSupplier().get())
+            .isInstanceOf(SignInException.class)
+            .hasMessageContaining("expired")
+            .satisfies(x -> then(((SignInException) x).isTemporary()).isTrue());
+
+        // the old sign-in is gone and a new one is waiting for the user
+        then(signIn.isSignedIn()).isFalse();
+        waitUntil(() -> shown.size() == 2);
+        then(http.requestsTo("/devicecode")).hasSize(2);
+        then(logged(Level.WARNING)).anySatisfy(r -> then(r.getMessage()).contains("sign in again"));
+
+        // the user completes the new sign-in
+        secondGrantMayAnswer.countDown();
+        waitUntil(signIn::isSignedIn);
+        then(signIn.accessTokenSupplier().get()).isEqualTo("AT-9");
+        then(refreshes(http)).isEqualTo(1);   // the new token needs no renewal
+    }
 }
