@@ -12,4 +12,8 @@ public interface VerificationPresenter {
      * @param message the instructions as worded by Microsoft
      */
     void show(String verificationUri, String userCode, String message);
+
+    /** The sign-in ended, successfully or not: whatever was shown can go away. */
+    default void completed() {
+    }
 }

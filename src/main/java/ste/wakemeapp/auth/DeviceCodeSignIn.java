@@ -101,8 +101,10 @@ public class DeviceCodeSignIn {
             .whenComplete((result, failure) -> {
                 if (failure == null) {
                     last.set(result);
+                    finished();
                     outcome.complete(null);
                 } else {
+                    finished();
                     Explained why = explain(failure);
                     LOG.log(why.level(), why.exception().getMessage());
                     LOG.log(Level.FINE, "Details of the sign-in failure", why.exception().getCause());
@@ -273,6 +275,18 @@ public class DeviceCodeSignIn {
                 return current.accessToken();
             }
             throw why;   // the caller (the calendar poller) reports it
+        }
+    }
+
+    /** Tells the presenter that the sign-in ended; a presenter that fails does not matter. */
+    private void finished() {
+        if (presenter == null) {
+            return;
+        }
+        try {
+            presenter.completed();
+        } catch (RuntimeException x) {
+            LOG.log(Level.FINE, "The presenter failed to close", x);
         }
     }
 
