@@ -73,6 +73,8 @@
         </HBox>
 
         <!-- Auto-close timer and current time -->
+        <Label fx:id="toastLabel" styleClass="overlay-toast" visible="false" managed="false" wrapText="true" />
+
         <VBox spacing="10">
             <ProgressBar fx:id="autoCloseBar" styleClass="overlay-auto-close-bar" maxWidth="Infinity" progress="1.0" />
             <HBox alignment="CENTER_LEFT">

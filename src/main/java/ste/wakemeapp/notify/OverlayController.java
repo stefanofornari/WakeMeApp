@@ -82,6 +82,9 @@ public class OverlayController implements Initializable {
     private Label snoozeStatusLabel;
 
     @FXML
+    private Label toastLabel;
+
+    @FXML
     private Label countdownLabel;
 
     /** How urgent the meeting is; drives the colour of the countdown and of the status dot. */
@@ -105,6 +108,10 @@ public class OverlayController implements Initializable {
     private FadeTransition pulse;
     private Timeline clock;
     private Timeline flash;
+    private JoinMeeting joinMeeting = new JoinMeeting(JoinMeeting::openInBrowser, OverlayController::copyToClipboard);
+    private boolean closeOnJoin = true;
+    private javafx.animation.PauseTransition toastTimer;
+
     private ContextMenu snoozeMenu;
     private java.util.function.IntConsumer onSnoozeSelected;
 
@@ -263,6 +270,12 @@ public class OverlayController implements Initializable {
         organizerBox.setVisible(hasOrganizer);
         organizerBox.setManaged(hasOrganizer);
 
+        // the Join button is for meetings that have a link we can open
+        boolean canJoin = JoinMeeting.canJoin(notification.joinUrl());
+        joinButton.setVisible(canJoin);
+        joinButton.setManaged(canJoin);
+        hideToast();
+
         // Update snooze status
         updateSnoozeStatus(notification);
 
@@ -322,10 +335,57 @@ public class OverlayController implements Initializable {
 
     @FXML
     private void handleJoin() {
-        if (overlayWindow != null) {
-            // TODO: Open join URL
-            overlayWindow.hide();
+        MeetingNotification notification = overlayWindow != null ? overlayWindow.getNotification() : null;
+        if (notification == null || !JoinMeeting.canJoin(notification.joinUrl())) {
+            return;
         }
+        if (joinMeeting.join(notification.joinUrl()) == JoinMeeting.Result.OPENED) {
+            if (closeOnJoin) {
+                overlayWindow.hide();
+            }
+        } else {
+            showToast("Meeting link copied to clipboard");   // the overlay stays open
+        }
+    }
+
+    /** For tests: how the link is opened and copied. */
+    void setJoinMeeting(JoinMeeting joinMeeting) {
+        this.joinMeeting = joinMeeting;
+    }
+
+    /** Whether the overlay closes after the meeting was joined (it does by default). */
+    public void setCloseOnJoin(boolean closeOnJoin) {
+        this.closeOnJoin = closeOnJoin;
+    }
+
+    private static void copyToClipboard(String text) {
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(text);
+        javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    private void showToast(String text) {
+        toastLabel.setText(text);
+        toastLabel.setVisible(true);
+        toastLabel.setManaged(true);
+        if (toastTimer != null) {
+            toastTimer.stop();
+        }
+        toastTimer = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(4));
+        toastTimer.setOnFinished(e -> hideToast());
+        toastTimer.play();
+    }
+
+    private void hideToast() {
+        if (toastTimer != null) {
+            toastTimer.stop();
+        }
+        toastLabel.setVisible(false);
+        toastLabel.setManaged(false);
+    }
+
+    public Label getToastLabel() {
+        return toastLabel;
     }
 
     @FXML
