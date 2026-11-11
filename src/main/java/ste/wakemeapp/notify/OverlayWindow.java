@@ -28,6 +28,7 @@ public final class OverlayWindow {
     private java.time.Duration autoClose = java.time.Duration.ofSeconds(90);
     private java.time.Instant startedAt;
     private IntConsumer onSnooze;
+    private Runnable onDismiss;
 
     public OverlayWindow() {
         this.stage = createStage();
@@ -166,6 +167,19 @@ public final class OverlayWindow {
     public void snooze(int minutes) {
         if (onSnooze != null) {
             onSnooze.accept(minutes);
+        }
+        hide();
+    }
+
+    /** Registers a listener called when the user dismisses the notification with the Dismiss button. */
+    public void setOnDismiss(Runnable onDismiss) {
+        this.onDismiss = onDismiss;
+    }
+
+    /** Closes the overlay on behalf of the user and tells the dismiss listener, if any. */
+    public void dismiss() {
+        if (onDismiss != null) {
+            onDismiss.run();
         }
         hide();
     }

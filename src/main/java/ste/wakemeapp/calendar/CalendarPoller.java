@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
 
@@ -55,6 +56,9 @@ public final class CalendarPoller implements AutoCloseable {
     private final ScheduledExecutorService executor;
     /** What has been handed to the scheduler for each event id: its start and the notification. */
     private final Map<String, Known> known = new ConcurrentHashMap<>();
+    private final DismissedMeetings dismissed;
+    /** What was known of the meetings dismissed in this run, to give back on undo. */
+    private final Map<String, Known> dismissedKnown = new ConcurrentHashMap<>();
 
     private record Known(LocalDateTime start, ScheduledNotification scheduled) { }
 
@@ -64,6 +68,12 @@ public final class CalendarPoller implements AutoCloseable {
 
     public CalendarPoller(CalendarSource source, NotificationScheduler scheduler,
                           Duration pollInterval, Duration window, Clock clock) {
+        this(source, scheduler, pollInterval, window, clock, new DismissedMeetings());
+    }
+
+    public CalendarPoller(CalendarSource source, NotificationScheduler scheduler,
+                          Duration pollInterval, Duration window, Clock clock, DismissedMeetings dismissed) {
+        this.dismissed = dismissed;
         this.source = source;
         this.scheduler = scheduler;
         this.pollInterval = pollInterval;
@@ -113,6 +123,11 @@ public final class CalendarPoller implements AutoCloseable {
                 returned.add(event.id());
                 if (!event.isEligible()) {
                     cancel(event.id());
+                    continue;
+                }
+                dismissed.meetingMoved(event.id(), event.start());
+                if (dismissed.isDismissed(event.id(), event.start())) {
+                    forget(event.id());
                     continue;
                 }
                 Known current = known.get(event.id());
@@ -169,6 +184,38 @@ public final class CalendarPoller implements AutoCloseable {
             LOG.info(() -> "Meeting \"" + removed.scheduled().notification().title()
                 + "\" no longer applies, its notification was cancelled");
         }
+    }
+
+    /**
+     * The user dismissed this occurrence: whatever is pending for it, a snooze included, is cancelled
+     * and it is not notified again, not even after a restart. A notification that does not come from
+     * the calendar has nothing to remember.
+     */
+    public void dismiss(MeetingNotification notification) {
+        String id = notification.eventId();
+        if (id == null) {
+            return;
+        }
+        dismissed.dismiss(id, notification.originalStartTime());
+        Known removed = forget(id);
+        if (removed != null) {
+            dismissedKnown.put(id, removed);
+        }
+        LOG.info(() -> "Meeting \"" + notification.title() + "\" dismissed, it will not be notified again");
+    }
+
+    /** Takes back {@link #dismiss}: the meeting counts as it did before, without being scheduled again. */
+    public void undoDismiss(MeetingNotification notification) {
+        String id = notification.eventId();
+        if (id == null) {
+            return;
+        }
+        dismissed.undo(id, notification.originalStartTime());
+        Known previous = dismissedKnown.remove(id);
+        if (previous != null) {
+            known.put(id, previous);
+        }
+        LOG.info(() -> "Dismissal of meeting \"" + notification.title() + "\" undone");
     }
 
     private Known forget(String eventId) {

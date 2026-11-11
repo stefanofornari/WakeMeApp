@@ -20,6 +20,10 @@ public final class OverlayManager {
     private final AtomicInteger pendingSnoozes = new AtomicInteger(0);
     private java.util.function.BooleanSupplier hasPendingSnoozesSupplier;
     private Runnable onSnoozeScheduled;
+    private java.util.function.Consumer<MeetingNotification> onDismissed;
+    private java.util.function.Consumer<MeetingNotification> onDismissUndone;
+    private java.time.Duration undoTime = java.time.Duration.ofSeconds(5);
+    private DismissToast undoToast;
 
     public OverlayManager() {
         // Default constructor for backward compatibility
@@ -43,6 +47,29 @@ public final class OverlayManager {
         this.hasPendingSnoozesSupplier = supplier;
     }
 
+    /** Register a listener called when the user dismisses a meeting for good. */
+    public void setOnDismissed(java.util.function.Consumer<MeetingNotification> listener) {
+        this.onDismissed = listener;
+    }
+
+    /** Register a listener called when the user takes a dismissal back within the undo time. */
+    public void setOnDismissUndone(java.util.function.Consumer<MeetingNotification> listener) {
+        this.onDismissUndone = listener;
+    }
+
+    /** For tests: how long the undo is offered (5 seconds by default). */
+    void setUndoTime(java.time.Duration undoTime) {
+        this.undoTime = undoTime;
+    }
+
+    java.time.Duration getUndoTime() {
+        return undoTime;
+    }
+
+    DismissToast getUndoToast() {
+        return undoToast;
+    }
+
     public void showNotification(MeetingNotification notification) {
         // Close any existing overlays
         hideAll();
@@ -56,10 +83,28 @@ public final class OverlayManager {
             
             // Set up snooze handler
             overlay.setOnSnooze(minutes -> handleSnooze(notification, minutes));
+            overlay.setOnDismiss(() -> handleDismiss(notification));
             
             overlays.add(overlay);
             overlay.show();
         }
+    }
+
+    private void handleDismiss(MeetingNotification notification) {
+        if (onDismissed != null) {
+            onDismissed.accept(notification);
+        }
+        hideAll();   // the same meeting may be up on other screens
+        if (undoToast != null) {
+            undoToast.close();
+        }
+        undoToast = new DismissToast(undoTime, () -> {
+            if (onDismissUndone != null) {
+                onDismissUndone.accept(notification);
+            }
+            showNotification(notification);
+        });
+        undoToast.show();
     }
 
     private void handleSnooze(MeetingNotification notification, int minutes) {

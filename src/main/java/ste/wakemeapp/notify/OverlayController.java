@@ -393,7 +393,7 @@ public class OverlayController implements Initializable {
         if (overlayWindow != null) {
             MeetingNotification dismissed = overlayWindow.getNotification();
             LOG.info(() -> "Notification \"" + (dismissed != null ? dismissed.title() : "") + "\" dismissed");
-            overlayWindow.hide();
+            overlayWindow.dismiss();
         }
     }
 

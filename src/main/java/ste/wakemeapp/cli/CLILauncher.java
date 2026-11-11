@@ -11,6 +11,7 @@ import ste.wakemeapp.auth.SignedInCalendarSource;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.calendar.CalendarSource;
 import ste.wakemeapp.calendar.CsvCalendarSource;
+import ste.wakemeapp.calendar.DismissedMeetings;
 import ste.wakemeapp.calendar.GraphCalendarSource;
 import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
@@ -172,7 +173,8 @@ public class CLILauncher extends Application {
         calendarMode = true;
         scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
         poller = new CalendarPoller(new CsvCalendarSource(calendarFile), scheduler,
-            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
+            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone(),
+            new DismissedMeetings(DismissedMeetings.defaultFile()));
         poller.start();
         LOG.info(() -> "Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
@@ -202,7 +204,8 @@ public class CLILauncher extends Application {
         calendarMode = true;
         scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
         poller = new CalendarPoller(calendar, scheduler,
-            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone());
+            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone(),
+            new DismissedMeetings(DismissedMeetings.defaultFile()));
         poller.start();
         LOG.info(() -> "Polling " + address + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
@@ -256,6 +259,10 @@ public class CLILauncher extends Application {
         overlayManager = new OverlayManager(scheduler);
         // Track snoozes scheduled from this overlay
         overlayManager.setOnSnoozeScheduled(() -> pendingNotifications.incrementAndGet());
+        if (poller != null) {
+            overlayManager.setOnDismissed(poller::dismiss);
+            overlayManager.setOnDismissUndone(poller::undoDismiss);
+        }
         overlayManager.showNotification(notification);
 
         LOG.info(() -> "Showing notification \"" + notification.title() + "\"");
