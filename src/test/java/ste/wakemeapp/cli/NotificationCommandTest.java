@@ -284,6 +284,35 @@ class NotificationCommandTest {
     }
 
     @Test
+    void should_take_an_ics_address_as_the_calendar_feed() {
+        int exitCode = commandLine.execute("--calendar", "https://outlook.office365.com/owa/calendar/a/b/calendar.ics");
+
+        then(exitCode).isZero();
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarFeed()).isEqualTo(
+            java.net.URI.create("https://outlook.office365.com/owa/calendar/a/b/calendar.ics"));
+        then(cmd.getCalendarAddress()).isNull();
+        then(cmd.getCalendarFile()).isNull();
+    }
+
+    @Test
+    void should_read_webcal_as_https() {
+        commandLine.execute("--calendar", "webcal://outlook.office365.com/c.ics");
+
+        then(commandLine.<NotificationCommand>getCommand().getCalendarFeed()).isEqualTo(
+            java.net.URI.create("https://outlook.office365.com/c.ics"));
+    }
+
+    @Test
+    void should_have_no_feed_for_graph_or_a_file() {
+        commandLine.execute("--calendar", "https://graph.microsoft.com/v1.0/me/calendarView");
+        then(commandLine.<NotificationCommand>getCommand().getCalendarFeed()).isNull();
+
+        commandLine.execute("--calendar", "meetings.csv");
+        then(commandLine.<NotificationCommand>getCommand().getCalendarFeed()).isNull();
+    }
+
+    @Test
     void should_take_a_path_as_a_calendar_file_and_no_address() {
         commandLine.execute("--calendar", "meetings.csv");
 

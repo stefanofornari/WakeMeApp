@@ -115,11 +115,20 @@ class InvalidArgumentsTest {
     }
 
     @Test
-    void should_refuse_a_calendar_address_on_another_host() {
-        int exitCode = run("--calendar", "https://example.com/v1.0/me/calendarView");
+    void should_refuse_a_graph_address_that_is_not_https() {
+        int exitCode = run("--calendar", "http://graph.microsoft.com/v1.0/me/calendarView");
 
         then(exitCode).isNotEqualTo(0);
         then(err.toString()).contains("--calendar address must be on graph.microsoft.com over https");
+        thenFullHelpIsShown();
+    }
+
+    @Test
+    void should_refuse_a_plain_http_feed_without_showing_the_address() {
+        int exitCode = run("--calendar", "http://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
+
+        then(exitCode).isNotEqualTo(0);
+        then(err.toString()).contains("--calendar").contains("https").doesNotContain("secret456");
         thenFullHelpIsShown();
     }
 }
