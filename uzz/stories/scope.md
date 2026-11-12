@@ -25,7 +25,7 @@ global lead-time configuration.
   - [ ] Dismiss action
 * **Scheduling & Background Operation**
   - [ ] Background scheduler checks for meetings within lead-time window
-  - [ ] System tray / menu bar icon (macOS) with show/hide window; started without arguments the app lives only in the tray, with an exclamation mark when not configured (settings/scope.md)
+  - [ ] System tray / menu bar icon (all platforms, via FXTrayIcon) with show/hide window; started without arguments the app lives only in the tray, with an exclamation mark when not configured (settings/scope.md)
   - [ ] Auto-start at login (via platform-specific launcher)
 * **Settings UI (JavaFX)**
   - [ ] Microsoft Graph configuration (Tenant ID, Client ID)
