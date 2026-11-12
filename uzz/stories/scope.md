@@ -42,11 +42,11 @@ global lead-time configuration.
 ## Detailed Scopes
 * Calendar synchronisation (polling policy, eligibility, scheduler reconciliation, ICS feed): `calendar/scope.md`
 * Logging (levels, rolled log file in the platform directory, `--debug`): `logging/scope.md`
-* Configuration (Preferences storage, first-run provisioning from the command line, `--print-config`, inspection docs): `settings/scope.md`
+* Configuration (Preferences storage, the settings dialog and how it opens, where the calendar link is kept, `--print-config`, inspection docs): `settings/scope.md`
 
 ## Out-of-Scope / Future Enhancements
 * Short form for the Outlook calendar (`graph:me`) and shared calendars of other users (`Calendars.Read.Shared`): deferred; `--calendar` takes the full Graph address for now
-* Keychain, DPAPI, libsecret or any system password manager for the stored sign-in, and encryption of the token file: deferred; for now the file is protected only by owner-only permissions
+* Keychain, DPAPI, libsecret or any system password manager for the stored sign-in, and encryption of the token file: deferred; for now the file is protected only by owner-only permissions. The same holds for the stored calendar value (settings/scope.md)
 * Rule-based filtering (organizer, keywords, categories, calendar selection)
 * Multiple notification rules with different conditions
 * Apple Calendar (EventKit) / CalDAV support
