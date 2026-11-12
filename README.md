@@ -71,6 +71,15 @@ mvn javafx:run -Djavafx.args="--calendar https://graph.microsoft.com/v1.0/me/cal
 `--tenant` is the **Directory (tenant) ID** of step 4. If you registered the application as multi-tenant you
 can leave it out and WakeMeApp uses `organizations`.
 
+### In the tray
+
+Started without arguments, the application shows no window: it lives in the tray / menu bar. The icon has an
+exclamation mark, and the tooltip says "WakeMeApp - no calendar configured", while no calendar is configured
+(until the settings dialog exists, only `--calendar` configures one). With `--calendar` the application works as
+described below and shows the icon too. The menu has **Quit**, which cancels the pending reminders and ends the
+application ("Settings…" is there but disabled for now). On a desktop without a system tray the log says so and
+the application keeps running; stop it with Ctrl+C.
+
 ### The first time: signing in
 
 1. WakeMeApp opens a small window with a short **code** and a Microsoft address.

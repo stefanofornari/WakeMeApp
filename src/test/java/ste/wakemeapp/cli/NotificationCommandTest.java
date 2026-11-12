@@ -26,6 +26,31 @@ class NotificationCommandTest {
     }
 
     @Test
+    void should_run_in_the_tray_when_started_without_arguments() {
+        int exitCode = commandLine.execute();
+
+        then(exitCode).isZero();
+        then(commandLine.<NotificationCommand>getCommand().isTrayOnly()).isTrue();
+    }
+
+    @Test
+    void should_run_in_the_tray_with_only_the_debug_option() {
+        commandLine.execute("--debug");
+
+        then(commandLine.<NotificationCommand>getCommand().isTrayOnly()).isTrue();
+    }
+
+    @Test
+    void should_not_run_in_the_tray_only_when_a_meeting_or_a_calendar_is_given() {
+        commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00");
+        then(commandLine.<NotificationCommand>getCommand().isTrayOnly()).isFalse();
+
+        CommandLine other = new CommandLine(new NotificationCommand());
+        other.execute("--calendar", "meetings.csv");
+        then(other.<NotificationCommand>getCommand().isTrayOnly()).isFalse();
+    }
+
+    @Test
     void should_not_show_immediately_by_default() {
         commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00");
 

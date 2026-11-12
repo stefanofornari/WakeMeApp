@@ -22,6 +22,7 @@ import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
 import ste.wakemeapp.settings.ConnectionSettings;
 import ste.wakemeapp.settings.Settings;
+import ste.wakemeapp.tray.Tray;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -41,7 +42,12 @@ public class CLILauncher extends Application {
     private OverlayManager overlayManager;
     private NotificationScheduler scheduler;
     private CalendarPoller poller;
+    private Tray tray;
     private boolean calendarMode;
+    private final ApplicationShutdown shutdown = new ApplicationShutdown(code -> {
+        Platform.exit();
+        System.exit(code);
+    });
     private final AtomicInteger pendingNotifications = new AtomicInteger(0);
 
     @Override
@@ -87,8 +93,28 @@ public class CLILauncher extends Application {
         LOG.fine(() -> "Raw args: " + redact(rawArgs));
         LOG.fine(() -> "Processed args: " + redact(java.util.Arrays.asList(args)));
 
+        shutdown.onShutdown(() -> {
+            if (poller != null) {
+                poller.close();
+            }
+            if (scheduler != null) {
+                scheduler.close();
+            }
+            if (overlayManager != null) {
+                overlayManager.hideAll();
+            }
+        });
         try {
             registerShutdownHook();
+            boolean configured = hasCalendar();
+            if (configured || parsedCommand.isTrayOnly()) {
+                tray = Tray.create(primaryStage, this::shutdown);
+                tray.start(configured);
+            }
+            if (parsedCommand.isTrayOnly()) {
+                LOG.info("Running in the tray; no calendar is configured, nothing is polled");
+                return;
+            }
             if (parsedCommand.getCalendarFeed() != null) {
                 pollIcsFeed(parsedCommand.getCalendarFeed());
                 return;
@@ -112,6 +138,11 @@ public class CLILauncher extends Application {
             Platform.exit();
             System.exit(1);
         }
+    }
+
+    private boolean hasCalendar() {
+        return parsedCommand.getCalendarFeed() != null || parsedCommand.getCalendarAddress() != null
+            || parsedCommand.getCalendarFile() != null;
     }
 
     private void configureLogging() {
@@ -275,6 +306,18 @@ public class CLILauncher extends Application {
         long minutes = (seconds + 59) / 60;
         return "Scheduled \"" + title + "\" for " + DateTimeFormatter.ofPattern("HH:mm").format(triggerTime)
             + " (in " + minutes + " min)";
+    }
+
+    /**
+     * Ends the application: closes the overlays, cancels what is pending and exits with code 0.
+     * Callable from any thread (the tray menu will call it); the cleanup runs on the FX thread.
+     */
+    void shutdown() {
+        if (Platform.isFxApplicationThread()) {
+            shutdown.run();
+        } else {
+            Platform.runLater(shutdown::run);
+        }
     }
 
     private void registerShutdownHook() {

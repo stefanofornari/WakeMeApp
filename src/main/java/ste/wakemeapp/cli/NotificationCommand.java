@@ -114,6 +114,9 @@ public class NotificationCommand implements Callable<Integer> {
                 }
                 return 0;
             }
+            if (isTrayOnly()) {
+                return 0;
+            }
             if (title == null || startDateStr == null) {
                 throw new IllegalArgumentException("--title and --start-date are required (or use --calendar)");
             }
@@ -253,6 +256,15 @@ public class NotificationCommand implements Callable<Integer> {
     /** The published calendar (ICS feed) to poll when --calendar is a link to one, otherwise null. */
     public java.net.URI getCalendarFeed() {
         return IcsAddress.isFeed(calendar) ? IcsAddress.parse(calendar) : null;
+    }
+
+    /**
+     * True when neither a calendar nor a single meeting was asked for (at most options like
+     * {@code --debug}): the application then lives in the tray.
+     */
+    public boolean isTrayOnly() {
+        return calendar == null && title == null && startDateStr == null && endDateStr == null
+            && organizer == null && url == null && description == null && !now;
     }
 
     public boolean isNow() {
