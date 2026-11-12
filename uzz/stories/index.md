@@ -61,6 +61,10 @@
 | settings/US-000045 | Store Settings in Java Preferences | DONE |
 | settings/US-000046 | Overrule Settings from the Command Line | DONE |
 | settings/US-000047 | Print the Effective Configuration | DONE |
+| settings/US-000054 | Start in the Tray | TODO |
+| settings/US-000055 | Keep the Calendar Value in an Owner-Only File | TODO |
+| settings/US-000056 | Open the Settings Dialog | TODO |
+| settings/US-000057 | Set the Calendar in the Settings Dialog | TODO |
 
 ## logging
 | ID | Title | Status |

@@ -9,3 +9,5 @@
 ## Not covered
 * The address stays in the shell history and in the process list of the computer while the app runs: the README says so. Reading it from a file or the settings is a possible future story (out of scope for now).
 * The meeting links found in events (Teams and others) are shown to the user on purpose and logged only at debug level.
+
+* Amended by the settings scope: saving the link from the settings dialog (settings/US-000055) writes it to one owner-only file; nothing else changes here.
