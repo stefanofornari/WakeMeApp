@@ -87,7 +87,7 @@ class IcsFeedSecretTest {
         return poll(http);
     }
 
-    private String pollWith(NetworkError failure) {
+    private String pollFailing(NetworkError failure) {
         HttpClientStubber http = new HttpClientStubber();
         http.withStub(new URIMatcher(LINK), failure);
         return poll(http);
@@ -149,7 +149,7 @@ class IcsFeedSecretTest {
 
     @Test
     void should_show_the_host_only_when_the_network_fails() {
-        thenNothingOfTheLinkIsIn(pollWith(new NetworkError()));
+        thenNothingOfTheLinkIsIn(pollFailing(new NetworkError()));
     }
 
     @Test
