@@ -94,6 +94,8 @@ public class NotificationCommand implements Callable<Integer> {
             if (printConfig) {
                 PrintWriter out = spec.commandLine().getOut();
                 ConfigReport.lines(clientId, tenant, settings()).forEach(out::println);
+                out.println(String.format("%-16s %s  (%s)", "calendar", calendarShown(),
+                    calendar == null ? "default" : "command line"));
                 out.flush();
                 return 0;
             }
@@ -221,6 +223,14 @@ public class NotificationCommand implements Callable<Integer> {
     /** True with --print-config: the settings were printed and the application must not start. */
     public boolean isPrintConfig() {
         return printConfig;
+    }
+
+    /** The --calendar value as it may be shown: a feed link is cut to its host, since the path is a secret. */
+    private String calendarShown() {
+        if (calendar == null) {
+            return "(not set)";
+        }
+        return IcsAddress.isFeed(calendar) ? IcsAddress.redact(calendar) : calendar;
     }
 
     private Settings settings() {

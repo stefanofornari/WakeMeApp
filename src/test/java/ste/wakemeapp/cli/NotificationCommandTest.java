@@ -278,8 +278,43 @@ class NotificationCommandTest {
             "https://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
 
         then(exitCode).isZero();
-        then(out.toString()).doesNotContain("abc123").doesNotContain("secret456");
+        then(out.toString()).doesNotContain("abc123").doesNotContain("secret456")
+            .doesNotContain("calendar.ics");
         then(node.keys()).isEmpty();
+    }
+
+    @Test
+    void should_print_the_calendar_of_a_feed_as_its_host_only() throws Exception {
+        NotificationCommand command = new NotificationCommand();
+        command.setSettings(new Settings(new MemoryPreferences()));
+        CommandLine line = new CommandLine(command);
+        java.io.StringWriter out = new java.io.StringWriter();
+        line.setOut(new java.io.PrintWriter(out, true));
+
+        line.execute("--print-config", "--calendar",
+            "webcal://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
+
+        then(out.toString()).contains("calendar").contains("https://outlook.office365.com/\u2026")
+            .contains("(command line)");
+    }
+
+    @Test
+    void should_print_a_calendar_file_as_given_and_a_missing_calendar_as_not_set() throws Exception {
+        NotificationCommand command = new NotificationCommand();
+        command.setSettings(new Settings(new MemoryPreferences()));
+        CommandLine line = new CommandLine(command);
+        java.io.StringWriter out = new java.io.StringWriter();
+        line.setOut(new java.io.PrintWriter(out, true));
+        line.execute("--print-config", "--calendar", "meetings.csv");
+        then(out.toString()).contains("meetings.csv");
+
+        NotificationCommand none = new NotificationCommand();
+        none.setSettings(new Settings(new MemoryPreferences()));
+        CommandLine line2 = new CommandLine(none);
+        java.io.StringWriter out2 = new java.io.StringWriter();
+        line2.setOut(new java.io.PrintWriter(out2, true));
+        line2.execute("--print-config");
+        then(out2.toString()).contains("(not set)");
     }
 
     @Test

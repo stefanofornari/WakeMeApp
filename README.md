@@ -124,7 +124,7 @@ The link is read again at every poll. Things to know:
 | `--poll-interval <minutes>` | How often the calendar is read (default 5). |
 | `--window <minutes>` | How far ahead each reading looks (default 15; at least poll interval + 5). |
 | `--debug` | Logs the detail needed to investigate a problem. |
-| `--print-config` | Prints every setting, its value and where it comes from, then exits. |
+| `--print-config` | Prints every setting, its value and where it comes from, then exits. The `--calendar` value is included; an ICS link is shown as its host only. |
 | `-t`, `-s`, `-e`, `-o`, `-u`, `-d` | Title, start, end, organiser, join link and description of a single meeting, to try the reminder without a calendar (`--title`, `--start-date`, …). |
 | `-n`, `--now` | Shows the reminder immediately instead of before the start time. |
 
