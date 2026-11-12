@@ -51,11 +51,15 @@ class IcsFeedSecretTest {
     @TempDir
     Path folder;
 
-    /** Everything logged, at every level, with the stack traces, while the action runs. */
+    /** Everything the application logs, at every level, with the stack traces, while the action runs. */
     private static String logged(Runnable action) {
         List<String> lines = new ArrayList<>();
         Handler handler = new Handler() {
             @Override public void publish(LogRecord r) {
+                // the HTTP test double logs the requests it receives, link included: not the app's output
+                if (r.getLoggerName() == null || !r.getLoggerName().startsWith("ste.wakemeapp")) {
+                    return;
+                }
                 lines.add(new SimpleFormatter().format(r));
                 if (r.getThrown() != null) {
                     StringWriter trace = new StringWriter();
