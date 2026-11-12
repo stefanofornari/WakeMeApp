@@ -101,4 +101,43 @@ class CLILauncherTest {
 
         then(javafx.application.Platform.isImplicitExit()).isFalse();
     }
+
+    private static final String LINK = "https://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics";
+
+    @Test
+    void should_hide_the_path_of_a_feed_address_in_the_arguments_that_are_logged() {
+        List<String> shown = CLILauncher.redact(List.of("--calendar", LINK, "--debug"));
+
+        then(shown).containsExactly("--calendar", "https://outlook.office365.com/\u2026", "--debug");
+    }
+
+    @Test
+    void should_hide_the_path_of_a_feed_address_given_with_an_equals_sign_or_as_webcal() {
+        then(CLILauncher.redact(List.of("--calendar=" + LINK)))
+            .containsExactly("--calendar=https://outlook.office365.com/\u2026");
+        then(CLILauncher.redact(List.of("--calendar", "webcal://outlook.office365.com/x/y/c.ics")))
+            .containsExactly("--calendar", "https://outlook.office365.com/\u2026");
+        then(CLILauncher.redact(List.of("--calendar=\"" + LINK + "\"")))
+            .containsExactly("--calendar=https://outlook.office365.com/\u2026");
+    }
+
+    @Test
+    void should_hide_a_feed_address_that_is_not_https_without_showing_it() {
+        then(CLILauncher.redact(List.of("--calendar", "http://outlook.office365.com/x/secret456/c.ics")))
+            .containsExactly("--calendar", "http://outlook.office365.com/\u2026");
+    }
+
+    @Test
+    void should_leave_alone_the_arguments_that_are_not_a_feed_address() {
+        List<String> args = List.of("--calendar", "meetings.csv", "--client-id", "abc", "-t", "Standup",
+            "--calendar=https://graph.microsoft.com/v1.0/me/calendarView");
+
+        then(CLILauncher.redact(args)).containsExactlyElementsOf(args);
+    }
+
+    @Test
+    void should_hide_the_link_when_the_option_value_is_in_the_next_argument_after_other_options() {
+        then(CLILauncher.redact(List.of("--debug", "--calendar", LINK, "--poll-interval", "5")))
+            .containsExactly("--debug", "--calendar", "https://outlook.office365.com/\u2026", "--poll-interval", "5");
+    }
 }
