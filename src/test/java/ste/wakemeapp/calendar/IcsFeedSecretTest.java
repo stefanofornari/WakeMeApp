@@ -81,9 +81,19 @@ class IcsFeedSecretTest {
         return String.join("\n", lines);
     }
 
-    private String pollWith(Object answer) {
+    private String pollWith(StubHttpResponse<String> answer) {
         HttpClientStubber http = new HttpClientStubber();
         http.withStub(new URIMatcher(LINK), answer);
+        return poll(http);
+    }
+
+    private String pollWith(NetworkError failure) {
+        HttpClientStubber http = new HttpClientStubber();
+        http.withStub(new URIMatcher(LINK), failure);
+        return poll(http);
+    }
+
+    private String poll(HttpClientStubber http) {
         NotificationScheduler scheduler = new NotificationScheduler(n -> { });
         CalendarPoller poller = new CalendarPoller(new IcsCalendarSource(http, URI.create(LINK)), scheduler,
             Duration.ofMinutes(5), Duration.ofMinutes(15), Clock.systemDefaultZone(),
