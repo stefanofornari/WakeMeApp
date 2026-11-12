@@ -25,7 +25,7 @@ global lead-time configuration.
   - [ ] Dismiss action
 * **Scheduling & Background Operation**
   - [ ] Background scheduler checks for meetings within lead-time window
-  - [ ] System tray / menu bar icon (macOS) with show/hide window
+  - [ ] System tray / menu bar icon (macOS) with show/hide window; started without arguments the app lives only in the tray, with an exclamation mark when not configured (settings/scope.md)
   - [ ] Auto-start at login (via platform-specific launcher)
 * **Settings UI (JavaFX)**
   - [ ] Microsoft Graph configuration (Tenant ID, Client ID)
@@ -59,6 +59,7 @@ global lead-time configuration.
 ## Technical Context & Infrastructure
 * **Development Toolchain**: Maven + JavaFX 25 + Java 25
 * **Target Systems/Platforms**: macOS (primary), Windows/Linux (future)
+* **Tray integration**: FXTrayIcon (https://github.com/dustinkredmond/FXTrayIcon); see settings/scope.md
 * **Architecture Decision**: Long-lived background process managed by Launch Agent (macOS) / Registry Run (Windows) / systemd user service (Linux). NOT launchd periodic scheduling — the JVM stays running to maintain in-memory state (snoozes, pending notifications) and avoid startup latency.
 * **Project Reference Docs**:
   - Coding Standard: `../project/coding_standard.md`
