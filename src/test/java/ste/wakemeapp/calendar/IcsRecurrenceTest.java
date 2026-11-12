@@ -242,7 +242,19 @@ class IcsRecurrenceTest {
     }
 
     @Test
-    void should_use_the_first_occurrence_only_and_warn_for_a_rule_it_does_not_know() throws IOException {
+    void should_read_a_rule_with_a_position_in_the_set() throws IOException {
+        // the first Monday or Tuesday of every month, from Tuesday 2026-12-01
+        String series = "UID:p\r\nSUMMARY:P\r\nDTSTART;TZID=Europe/Rome:20261201T100000\r\n"
+            + "RRULE:FREQ=MONTHLY;BYDAY=MO,TU;BYSETPOS=1\r\n";
+
+        then(read(feed(series), at(12, 1, 0, 0), at(12, 31, 0, 0))).extracting(CalendarEvent::start)
+            .containsExactly(at(12, 1, 10, 0));
+        then(read(feed(series), LocalDateTime.of(2027, 1, 1, 0, 0), LocalDateTime.of(2027, 1, 31, 0, 0)))
+            .extracting(CalendarEvent::start).containsExactly(LocalDateTime.of(2027, 1, 4, 10, 0));
+    }
+
+    @Test
+    void should_skip_an_event_whose_rule_cannot_be_read_with_a_warning_and_read_the_others() throws IOException {
         List<LogRecord> warnings = new ArrayList<>();
         Handler handler = new Handler() {
             @Override public void publish(LogRecord r) { if (r.getLevel() == Level.WARNING) warnings.add(r); }
@@ -252,17 +264,38 @@ class IcsRecurrenceTest {
         Logger log = Logger.getLogger(IcsCalendarSource.class.getName());
         log.addHandler(handler);
         try {
-            String series = "UID:r\r\nSUMMARY:Odd\r\nDTSTART;TZID=Europe/Rome:20261109T100000\r\n"
-                + "RRULE:FREQ=MONTHLY;BYDAY=MO,TU;BYSETPOS=1\r\n";
+            String odd = "UID:r\r\nSUMMARY:Odd\r\nDTSTART;TZID=Europe/Rome:20261109T100000\r\nRRULE:FREQ=SOMETIMES\r\n";
+            String fine = "UID:f\r\nSUMMARY:Fine\r\nDTSTART;TZID=Europe/Rome:20261109T100500\r\n";
 
-            then(read(feed(series), at(11, 9, 9, 55), at(11, 9, 10, 5))).hasSize(1);
-            then(read(feed(series), at(12, 7, 9, 55), at(12, 7, 10, 5))).isEmpty();
+            then(read(feed(odd, fine), at(11, 9, 9, 55), at(11, 9, 10, 10))).extracting(CalendarEvent::title)
+                .containsExactly("Fine");
         } finally {
             log.removeHandler(handler);
         }
 
-        then(warnings).isNotEmpty();
-        then(new java.util.logging.SimpleFormatter().formatMessage(warnings.get(0))).contains("Odd").contains("BYSETPOS");
+        then(warnings).hasSize(1);
+        then(new java.util.logging.SimpleFormatter().formatMessage(warnings.get(0))).contains("Odd");
+    }
+
+    @Test
+    void should_not_grow_the_zones_of_the_java_runtime_with_every_poll() throws IOException {
+        String vtimezone = "BEGIN:VTIMEZONE\r\nTZID:W. Europe Standard Time\r\nBEGIN:STANDARD\r\n"
+            + "DTSTART:16010101T030000\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\n"
+            + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=10\r\nEND:STANDARD\r\nBEGIN:DAYLIGHT\r\n"
+            + "DTSTART:16010101T020000\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\n"
+            + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=3\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\n";
+        String body = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n" + vtimezone
+            + "BEGIN:VEVENT\r\nUID:w\r\nSUMMARY:W\r\nDTSTART;TZID=W. Europe Standard Time:20261109T100000\r\nEND:VEVENT\r\n"
+            + "END:VCALENDAR\r\n";
+        read(body, at(11, 9, 9, 55), at(11, 9, 10, 5));   // the first poll may register what it needs
+        int before = ZoneId.getAvailableZoneIds().size();
+
+        for (int i = 0; i < 50; i++) {
+            then(read(body, at(11, 9, 9, 55), at(11, 9, 10, 5))).hasSize(1);
+        }
+
+        // the app runs for weeks: a zone registered at every poll would be a leak
+        then(ZoneId.getAvailableZoneIds().size()).isEqualTo(before);
     }
 
     @Test
