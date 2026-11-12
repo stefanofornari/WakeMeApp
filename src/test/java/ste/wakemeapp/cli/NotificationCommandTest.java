@@ -266,6 +266,23 @@ class NotificationCommandTest {
     }
 
     @Test
+    void should_neither_print_nor_store_the_address_of_a_feed() throws Exception {
+        MemoryPreferences node = new MemoryPreferences();
+        NotificationCommand command = new NotificationCommand();
+        command.setSettings(new Settings(node));
+        CommandLine line = new CommandLine(command);
+        java.io.StringWriter out = new java.io.StringWriter();
+        line.setOut(new java.io.PrintWriter(out, true));
+
+        int exitCode = line.execute("--print-config", "--calendar",
+            "https://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
+
+        then(exitCode).isZero();
+        then(out.toString()).doesNotContain("abc123").doesNotContain("secret456");
+        then(node.keys()).isEmpty();
+    }
+
+    @Test
     void should_not_print_the_configuration_by_default() {
         commandLine.execute("--calendar", "meetings.csv");
 

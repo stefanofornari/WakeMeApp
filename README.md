@@ -106,7 +106,9 @@ The link is read again at every poll. Things to know:
 
 * If your organisation does not allow publishing, the option is missing: ask your administrator.
 * **Treat the link as a password**: anybody who has it can read your whole calendar. WakeMeApp only
-  shows the host of the link in its messages. To revoke it, unpublish the calendar in the same place.
+  shows the host of the link in its messages and never saves it. The link given on the command line stays in
+  your shell history and is visible in the list of processes of your computer. To revoke it, unpublish the
+  calendar in the same place.
 * A feed does not say whether you accepted a meeting, so every meeting is notified except cancelled and
   all-day ones.
 * Recurring meetings are notified one occurrence at a time, also when one was moved or removed. A meeting whose rule or time zone cannot be read is skipped, with a warning, and the others are still notified.

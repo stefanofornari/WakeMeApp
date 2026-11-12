@@ -84,8 +84,8 @@ public class CLILauncher extends Application {
 
         parsedCommand = commandLine.getCommand();
         configureLogging();
-        LOG.fine(() -> "Raw args: " + rawArgs);
-        LOG.fine(() -> "Processed args: " + java.util.Arrays.toString(args));
+        LOG.fine(() -> "Raw args: " + redact(rawArgs));
+        LOG.fine(() -> "Processed args: " + redact(java.util.Arrays.asList(args)));
 
         try {
             registerShutdownHook();
@@ -137,6 +137,35 @@ public class CLILauncher extends Application {
             .map(a -> a.length() >= 2 && a.startsWith("\"") && a.endsWith("\"")
                 ? a.substring(1, a.length() - 1) : a)
             .toArray(String[]::new);
+    }
+
+    /**
+     * The arguments as they may be logged: the address of an ICS feed is a secret, so it is cut to its
+     * host. The other arguments are unchanged.
+     */
+    static List<String> redact(List<String> args) {
+        List<String> shown = new java.util.ArrayList<>();
+        for (int i = 0; i < args.size(); i++) {
+            String arg = args.get(i);
+            if (arg.equals("--calendar") && i + 1 < args.size()) {
+                shown.add(arg);
+                shown.add(redactFeed(args.get(++i)));
+            } else if (arg.startsWith("--calendar=")) {
+                String value = arg.substring("--calendar=".length());
+                String unquoted = (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\""))
+                    ? value.substring(1, value.length() - 1) : value;
+                shown.add(IcsAddress.isFeed(unquoted) ? "--calendar=" + IcsAddress.redact(unquoted) : arg);
+            } else {
+                shown.add(arg);
+            }
+        }
+        return shown;
+    }
+
+    private static String redactFeed(String value) {
+        String unquoted = (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\""))
+            ? value.substring(1, value.length() - 1) : value;
+        return IcsAddress.isFeed(unquoted) ? IcsAddress.redact(unquoted) : value;
     }
 
     private MeetingNotification buildNotification() {

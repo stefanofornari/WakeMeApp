@@ -22,7 +22,7 @@
 | calendar/US-000038 | Skip Malformed Calendar Lines with a Warning | TODO |
 | calendar/US-000051 | Read My Calendar from an ICS Link | DONE |
 | calendar/US-000052 | Notify for Recurring Meetings and in the Right Time Zone | DONE |
-| calendar/US-000053 | Keep the Calendar Link Secret | TODO |
+| calendar/US-000053 | Keep the Calendar Link Secret | DONE |
 
 ## notify
 | ID | Title | Status |

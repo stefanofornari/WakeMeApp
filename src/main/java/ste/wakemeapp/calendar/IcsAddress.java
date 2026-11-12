@@ -80,6 +80,31 @@ public final class IcsAddress {
         return uri;
     }
 
+    /**
+     * The address of a feed as it may be shown: scheme and host, the rest replaced by an ellipsis. Nothing
+     * of the path, the query or the user info is kept. {@code webcal} is shown as {@code https}.
+     */
+    public static String redact(String value) {
+        String v = value.trim();
+        int sep = v.indexOf("://");
+        if (sep < 0) {
+            return "\u2026";
+        }
+        String scheme = v.substring(0, sep).toLowerCase(Locale.ROOT);
+        String authority = v.substring(sep + 3);
+        for (char c : new char[] {'/', '?', '#'}) {
+            int i = authority.indexOf(c);
+            if (i >= 0) {
+                authority = authority.substring(0, i);
+            }
+        }
+        authority = authority.substring(authority.lastIndexOf('@') + 1);
+        if (!authority.startsWith("[") && authority.indexOf(':') >= 0) {
+            authority = authority.substring(0, authority.indexOf(':'));
+        }
+        return ("webcal".equals(scheme) ? "https" : scheme) + "://" + authority + "/\u2026";
+    }
+
     /** The only part of the address that may be shown. */
     public static String hostOf(URI feed) {
         return feed.getHost();
