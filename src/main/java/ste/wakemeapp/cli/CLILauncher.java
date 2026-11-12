@@ -8,6 +8,7 @@ import ste.wakemeapp.auth.DeviceCodeSignIn;
 import ste.wakemeapp.auth.FileTokenStore;
 import ste.wakemeapp.auth.WebViewPresenter;
 import ste.wakemeapp.auth.SignedInCalendarSource;
+import ste.wakemeapp.calendar.CalendarAddress;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.calendar.CalendarSource;
 import ste.wakemeapp.calendar.CsvCalendarSource;
@@ -21,7 +22,10 @@ import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
 import ste.wakemeapp.settings.ConnectionSettings;
+import ste.wakemeapp.settings.CalendarInput;
 import ste.wakemeapp.settings.Settings;
+import ste.wakemeapp.settings.SettingsDialog;
+import ste.wakemeapp.settings.StoredCalendar;
 import ste.wakemeapp.tray.Tray;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -43,6 +47,7 @@ public class CLILauncher extends Application {
     private NotificationScheduler scheduler;
     private CalendarPoller poller;
     private Tray tray;
+    private SettingsDialog settingsDialog;
     private boolean calendarMode;
     private final ApplicationShutdown shutdown = new ApplicationShutdown(code -> {
         Platform.exit();
@@ -108,8 +113,11 @@ public class CLILauncher extends Application {
             registerShutdownHook();
             boolean configured = hasCalendar();
             if (configured || parsedCommand.isTrayOnly()) {
-                tray = Tray.create(primaryStage, this::shutdown);
+                tray = Tray.create(primaryStage, this::showSettings, this::shutdown);
                 tray.start(configured);
+            }
+            if (parsedCommand.isSettings()) {
+                showSettings();
             }
             if (parsedCommand.isTrayOnly()) {
                 LOG.info("Running in the tray; no calendar is configured, nothing is polled");
@@ -137,6 +145,56 @@ public class CLILauncher extends Application {
             LOG.log(Level.SEVERE, "WakeMeApp cannot start: " + e.getMessage(), e);
             Platform.exit();
             System.exit(1);
+        }
+    }
+
+    /** Opens the settings dialog, or brings the open one to the front. FX thread only. */
+    private void showSettings() {
+        if (settingsDialog == null) {
+            settingsDialog = new SettingsDialog(StoredCalendar.user(), this::calendarChanged);
+        }
+        settingsDialog.show();
+    }
+
+    /**
+     * The user saved another calendar (or removed it, {@code value} null): stops polling the old one,
+     * polls the new one and shows in the tray whether a calendar is configured. FX thread only.
+     */
+    private void calendarChanged(String value) {
+        stopPolling();
+        if (value == null) {
+            if (tray != null) {
+                tray.setConfigured(false);
+            }
+            LOG.info("No calendar is configured: nothing is polled");
+            return;
+        }
+        try {
+            switch (CalendarInput.kindOf(value).orElseThrow()) {
+                case ICS_LINK -> pollIcsFeed(IcsAddress.parse(value));
+                case GRAPH_ADDRESS -> pollGraphCalendar(CalendarAddress.parse(value));
+                case CSV_FILE -> pollCalendar(Path.of(value.strip()));
+            }
+            if (tray != null) {
+                tray.setConfigured(true);
+            }
+        } catch (RuntimeException x) {
+            // the message of the exceptions of the calendar sources never holds a link
+            LOG.severe("The new calendar cannot be polled: " + x.getMessage());
+            if (tray != null) {
+                tray.setConfigured(false);
+            }
+        }
+    }
+
+    private void stopPolling() {
+        if (poller != null) {
+            poller.close();
+            poller = null;
+        }
+        if (scheduler != null) {
+            scheduler.close();
+            scheduler = null;
         }
     }
 

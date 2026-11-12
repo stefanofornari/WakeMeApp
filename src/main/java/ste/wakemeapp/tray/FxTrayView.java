@@ -5,23 +5,21 @@ import java.awt.Image;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
-import javafx.scene.control.MenuItem;
+import javafx.application.Platform;
 import javafx.stage.Stage;
 import javax.imageio.ImageIO;
 
-/** The native tray icon, through FXTrayIcon. Menu: "Settings…" (disabled for now) and "Quit". */
+/** The native tray icon, through FXTrayIcon. Menu: "Settings…" and "Quit". */
 final class FxTrayView implements TrayView {
 
     private final FXTrayIcon icon;
     private final Image normal = load("tray.png");
     private final Image alert = load("tray-alert.png");
 
-    FxTrayView(Stage stage, Runnable onQuit) {
+    FxTrayView(Stage stage, Runnable onSettings, Runnable onQuit) {
         icon = new FXTrayIcon.Builder(stage, normal).noDefaultAction().build();
         icon.addTitleItem(false);
-        MenuItem settings = new MenuItem("Settings…");
-        settings.setDisable(true);   // enabled by settings/US-000056
-        icon.addMenuItem(settings);
+        icon.addMenuItem("Settings…", e -> Platform.runLater(onSettings));
         icon.addMenuItem("Quit", e -> onQuit.run());
     }
 

@@ -75,10 +75,22 @@ can leave it out and WakeMeApp uses `organizations`.
 
 Started without arguments, the application shows no window: it lives in the tray / menu bar. The icon has an
 exclamation mark, and the tooltip says "WakeMeApp - no calendar configured", while no calendar is configured
-(until the settings dialog exists, a calendar is configured with `--calendar`, or by the file `calendar.txt` described below). With `--calendar` the application works as
-described below and shows the icon too. The menu has **Quit**, which cancels the pending reminders and ends the
-application ("Settings…" is there but disabled for now). On a desktop without a system tray the log says so and
+(set one in the settings dialog, below, or start with `--calendar`). With `--calendar` the application works as
+described below and shows the icon too. The menu has **Settings…**, which opens the settings dialog, and **Quit**,
+which cancels the pending reminders and ends the application. On a desktop without a system tray the log says so and
 the application keeps running; stop it with Ctrl+C.
+
+### The settings dialog
+
+Choose **Settings…** in the tray menu, or start the application with `--settings`, to open the dialog (only one
+at a time; a meeting reminder still appears while it is open). Type your calendar in the one field: the link of a
+published calendar (ICS), the address of an Outlook calendar on Microsoft Graph, or the path of a CSV file. The
+dialog tells which kind it recognised and refuses what cannot work: a link that does not start with `https://` or
+`webcal://`, a file that cannot be read, anything else. **Save** stores it, starts polling it at once and clears the
+exclamation mark of the tray icon, with no restart; **Cancel** changes nothing. A saved link is shown as
+`https://host/…` when you open the dialog again: type the whole link to change it. Emptying the field and saving
+removes the calendar. A Microsoft Graph address also needs a client id and a tenant (`--client-id`, `--tenant`; the
+dialog will ask for them in a later version).
 
 ### The first time: signing in
 
@@ -132,7 +144,7 @@ without a single meeting (`--title`, `--start-date`…), that calendar is used. 
 backup of them can read the link, so unpublish it (Outlook on the web: **Publish a calendar → Unpublish**) if
 it leaks. A saved value that is not valid (for example a link starting with `http://`) is ignored with a
 warning in the log. `--print-config` shows it as `https://host/…`.
-Until the settings dialog exists the file can only be written by hand.
+The settings dialog writes this file; it can also be written by hand.
 
 ## Command line options
 
@@ -144,6 +156,7 @@ Until the settings dialog exists the file can only be written by hand.
 | `--poll-interval <minutes>` | How often the calendar is read (default 5). |
 | `--window <minutes>` | How far ahead each reading looks (default 15; at least poll interval + 5). |
 | `--debug` | Logs the detail needed to investigate a problem. |
+| `--settings` | Opens the settings dialog at launch. |
 | `--print-config` | Prints every setting, its value and where it comes from, then exits. The `--calendar` value is included; an ICS link is shown as its host only. |
 | `-t`, `-s`, `-e`, `-o`, `-u`, `-d` | Title, start, end, organiser, join link and description of a single meeting, to try the reminder without a calendar (`--title`, `--start-date`, …). |
 | `-n`, `--now` | Shows the reminder immediately instead of before the start time. |

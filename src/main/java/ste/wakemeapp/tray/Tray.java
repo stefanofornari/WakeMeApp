@@ -26,11 +26,12 @@ public final class Tray {
     }
 
     /**
-     * Creates the tray for this platform; the menu has "Settings…" (disabled until the dialog
-     * exists) and "Quit", which runs {@code onQuit}. Call on the JavaFX Application Thread.
+     * Creates the tray for this platform; the menu has "Settings…", which runs {@code onSettings} on
+     * the JavaFX Application Thread, and "Quit", which runs {@code onQuit}. Call on the JavaFX
+     * Application Thread.
      */
-    public static Tray create(Stage stage, Runnable onQuit) {
-        return new Tray(FxTrayView.supported() ? new FxTrayView(stage, onQuit) : null, FxTrayView::supported);
+    public static Tray create(Stage stage, Runnable onSettings, Runnable onQuit) {
+        return new Tray(FxTrayView.supported() ? new FxTrayView(stage, onSettings, onQuit) : null, FxTrayView::supported);
     }
 
     /** Shows the icon in the state that matches {@code configured}. */

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="root" xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ste.wakemeapp.settings.SettingsController"
+      styleClass="settings-root" spacing="14" prefWidth="560">
+    <padding>
+        <Insets top="28" right="28" bottom="24" left="28"/>
+    </padding>
+
+    <Label text="Calendar" styleClass="settings-heading"/>
+    <Label text="The link of a published calendar (ICS), the address of an Outlook calendar on Microsoft Graph, or the path of a CSV file."
+           styleClass="settings-help" wrapText="true"/>
+
+    <TextField fx:id="calendarField" styleClass="settings-field" promptText="https://…"/>
+
+    <Label fx:id="kindLabel" styleClass="settings-kind" text=""/>
+    <Label fx:id="hintLabel" styleClass="settings-help" wrapText="true" visible="false" managed="false"
+           text="This calendar needs a Microsoft account: a client id and a tenant (--client-id, --tenant)."/>
+    <Label fx:id="errorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
+
+    <Region VBox.vgrow="ALWAYS" minHeight="6"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="cancelButton" text="Cancel" styleClass="settings-button" cancelButton="true" onAction="#handleCancel"/>
+        <Button fx:id="saveButton" text="Save" styleClass="settings-button, settings-button-primary" defaultButton="true" onAction="#handleSave"/>
+    </HBox>
+</VBox>

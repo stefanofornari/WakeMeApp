@@ -1,0 +1,73 @@
+/* Settings dialog - same flat dark look as the notification overlay, lime accent */
+
+.settings-root {
+    -fx-background-color: #0B0F1A;
+    -fx-text-background-color: #F4F6FB;
+    -fx-font-family: 'Inter', 'Segoe UI', 'System';
+    -fx-font-size: 14px;
+}
+
+.settings-heading {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #F4F6FB;
+}
+
+.settings-help {
+    -fx-font-size: 13px;
+    -fx-text-fill: #A3ACC2;
+}
+
+.settings-field {
+    -fx-background-color: #141A2B;
+    -fx-border-color: #232C4A;
+    -fx-border-width: 1;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-text-fill: #F4F6FB;
+    -fx-prompt-text-fill: #5C6788;
+    -fx-highlight-fill: #C6FF3D;
+    -fx-highlight-text-fill: #0B0F1A;
+    -fx-padding: 10 12 10 12;
+}
+
+.settings-field:focused {
+    -fx-border-color: #C6FF3D;
+}
+
+.settings-field.settings-invalid {
+    -fx-border-color: #FF5C5C;
+}
+
+.settings-kind {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #C6FF3D;
+}
+
+.settings-error {
+    -fx-font-size: 13px;
+    -fx-text-fill: #FF5C5C;
+}
+
+.settings-button {
+    -fx-background-color: #141A2B;
+    -fx-border-color: #232C4A;
+    -fx-border-width: 1;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-text-fill: #F4F6FB;
+    -fx-font-weight: bold;
+    -fx-padding: 9 22 9 22;
+    -fx-cursor: hand;
+}
+
+.settings-button:hover {
+    -fx-border-color: #C6FF3D;
+}
+
+.settings-button-primary {
+    -fx-background-color: #C6FF3D;
+    -fx-border-color: #C6FF3D;
+    -fx-text-fill: #0B0F1A;
+}

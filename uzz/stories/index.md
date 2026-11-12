@@ -63,8 +63,8 @@
 | settings/US-000047 | Print the Effective Configuration | DONE |
 | settings/US-000054 | Start in the Tray | WIP |
 | settings/US-000055 | Keep the Calendar Value in an Owner-Only File | DONE |
-| settings/US-000056 | Open the Settings Dialog | TODO |
-| settings/US-000057 | Set the Calendar in the Settings Dialog | TODO |
+| settings/US-000056 | Open the Settings Dialog | DONE |
+| settings/US-000057 | Set the Calendar in the Settings Dialog | DONE |
 | settings/US-000058 | Show an About Dialog from the Tray Menu | TODO |
 
 ## logging

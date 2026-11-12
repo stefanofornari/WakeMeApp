@@ -514,4 +514,23 @@ class NotificationCommandTest {
 
         then(out.toString()).contains("other.csv").contains("(command line)").doesNotContain("outlook");
     }
+
+    @Test
+    void should_open_the_settings_dialog_only_when_asked() {
+        commandLine.execute();
+        then(commandLine.<NotificationCommand>getCommand().isSettings()).isFalse();
+
+        CommandLine asked = new CommandLine(commandWith(emptyStore()));
+        int exitCode = asked.execute("--settings");
+
+        then(exitCode).isZero();
+        then(asked.<NotificationCommand>getCommand().isSettings()).isTrue();
+    }
+
+    @Test
+    void should_stay_in_the_tray_with_only_the_settings_option() {
+        commandLine.execute("--settings");
+
+        then(commandLine.<NotificationCommand>getCommand().isTrayOnly()).isTrue();
+    }
 }

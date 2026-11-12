@@ -77,6 +77,10 @@ public class NotificationCommand implements Callable<Integer> {
             description = "Print every setting with its value and where it comes from, then exit")
     private boolean printConfig;
 
+    @Option(names = "--settings",
+            description = "Open the settings dialog at launch (it can always be opened from the tray menu)")
+    private boolean settingsDialog;
+
     @Option(names = "--debug", description = "Log the detail needed to investigate a problem (default: INFO and above)")
     private boolean debug;
 
@@ -220,6 +224,11 @@ public class NotificationCommand implements Callable<Integer> {
     /** The value of --tenant, or null if not given (the stored one, if any, applies). */
     public String getTenant() {
         return tenant;
+    }
+
+    /** True with --settings: the settings dialog is opened at launch. */
+    public boolean isSettings() {
+        return settingsDialog;
     }
 
     /** True with --print-config: the settings were printed and the application must not start. */
