@@ -6,12 +6,31 @@ import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 import ste.wakemeapp.settings.MemoryPreferences;
 import ste.wakemeapp.settings.Settings;
+import ste.wakemeapp.settings.StoredCalendar;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.BDDAssertions.then;
 
 class NotificationCommandTest {
 
-    private final CommandLine commandLine = new CommandLine(new NotificationCommand());
+    private static final String LINK = "https://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics";
+
+    private final StoredCalendar storedCalendar = emptyStore();
+    private final CommandLine commandLine = new CommandLine(commandWith(storedCalendar));
+
+    /** A stored calendar in a folder of its own, so that a test never reads the user's one. */
+    private static StoredCalendar emptyStore() {
+        try {
+            return new StoredCalendar(Files.createTempDirectory("calendar").resolve("calendar.txt"));
+        } catch (java.io.IOException x) {
+            throw new IllegalStateException(x);
+        }
+    }
+
+    private static NotificationCommand commandWith(StoredCalendar stored) {
+        NotificationCommand command = new NotificationCommand();
+        command.setStoredCalendar(stored);
+        return command;
+    }
 
     @Test
     void should_parse_required_args() {
@@ -276,7 +295,7 @@ class NotificationCommandTest {
     void should_print_the_configuration_and_nothing_else_with_print_config() {
         MemoryPreferences node = new MemoryPreferences();
         node.put("graph.tenant", "99999999-8888-7777-6666-555555555555");
-        NotificationCommand command = new NotificationCommand();
+        NotificationCommand command = commandWith(emptyStore());
         command.setSettings(new Settings(node));
         CommandLine line = new CommandLine(command);
         java.io.StringWriter out = new java.io.StringWriter();
@@ -293,7 +312,7 @@ class NotificationCommandTest {
     @Test
     void should_neither_print_nor_store_the_address_of_a_feed() throws Exception {
         MemoryPreferences node = new MemoryPreferences();
-        NotificationCommand command = new NotificationCommand();
+        NotificationCommand command = commandWith(emptyStore());
         command.setSettings(new Settings(node));
         CommandLine line = new CommandLine(command);
         java.io.StringWriter out = new java.io.StringWriter();
@@ -310,7 +329,7 @@ class NotificationCommandTest {
 
     @Test
     void should_print_the_calendar_of_a_feed_as_its_host_only() throws Exception {
-        NotificationCommand command = new NotificationCommand();
+        NotificationCommand command = commandWith(emptyStore());
         command.setSettings(new Settings(new MemoryPreferences()));
         CommandLine line = new CommandLine(command);
         java.io.StringWriter out = new java.io.StringWriter();
@@ -325,7 +344,7 @@ class NotificationCommandTest {
 
     @Test
     void should_print_a_calendar_file_as_given_and_a_missing_calendar_as_not_set() throws Exception {
-        NotificationCommand command = new NotificationCommand();
+        NotificationCommand command = commandWith(emptyStore());
         command.setSettings(new Settings(new MemoryPreferences()));
         CommandLine line = new CommandLine(command);
         java.io.StringWriter out = new java.io.StringWriter();
@@ -333,7 +352,7 @@ class NotificationCommandTest {
         line.execute("--print-config", "--calendar", "meetings.csv");
         then(out.toString()).contains("meetings.csv");
 
-        NotificationCommand none = new NotificationCommand();
+        NotificationCommand none = commandWith(emptyStore());
         none.setSettings(new Settings(new MemoryPreferences()));
         CommandLine line2 = new CommandLine(none);
         java.io.StringWriter out2 = new java.io.StringWriter();
@@ -396,5 +415,103 @@ class NotificationCommandTest {
         NotificationCommand cmd = commandLine.getCommand();
         then(cmd.getCalendarFile()).isEqualTo(Path.of("meetings.csv"));
         then(cmd.getCalendarAddress()).isNull();
+    }
+
+    @Test
+    void should_use_the_stored_calendar_when_none_is_given() throws Exception {
+        storedCalendar.save(LINK);
+
+        int exitCode = commandLine.execute();
+
+        then(exitCode).isZero();
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarFeed()).isEqualTo(java.net.URI.create(LINK));
+        then(cmd.isTrayOnly()).isFalse();
+    }
+
+    @Test
+    void should_use_a_stored_csv_file_or_graph_address_like_the_command_line_does() throws Exception {
+        storedCalendar.save("meetings.csv");
+        commandLine.execute("--debug");
+        then(commandLine.<NotificationCommand>getCommand().getCalendarFile()).isEqualTo(Path.of("meetings.csv"));
+
+        StoredCalendar graph = emptyStore();
+        graph.save("https://graph.microsoft.com/v1.0/me/calendars/AAMk");
+        CommandLine other = new CommandLine(commandWith(graph));
+        other.execute();
+        then(other.<NotificationCommand>getCommand().getCalendarAddress()).isEqualTo(
+            java.net.URI.create("https://graph.microsoft.com/v1.0/me/calendars/AAMk/calendarView"));
+    }
+
+    @Test
+    void should_prefer_the_command_line_to_the_stored_calendar_and_not_save_it() throws Exception {
+        storedCalendar.save(LINK);
+
+        commandLine.execute("--calendar", "other.csv");
+
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarFile()).isEqualTo(Path.of("other.csv"));
+        then(cmd.getCalendarFeed()).isNull();
+        then(storedCalendar.value()).hasValue(LINK);
+    }
+
+    @Test
+    void should_never_save_the_calendar_given_on_the_command_line() {
+        commandLine.execute("--calendar", LINK);
+
+        then(storedCalendar.value()).isEmpty();
+    }
+
+    @Test
+    void should_not_use_the_stored_calendar_for_a_single_meeting() throws Exception {
+        storedCalendar.save(LINK);
+
+        int exitCode = commandLine.execute("--title", "Team Standup", "--start-date", "2026-11-03T10:00:00");
+
+        then(exitCode).isZero();
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarFeed()).isNull();
+        then(cmd.getTitle()).isEqualTo("Team Standup");
+    }
+
+    @Test
+    void should_ignore_a_stored_calendar_that_is_not_valid() throws Exception {
+        storedCalendar.save("http://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
+
+        int exitCode = commandLine.execute();
+
+        then(exitCode).isZero();
+        NotificationCommand cmd = commandLine.getCommand();
+        then(cmd.getCalendarFeed()).isNull();
+        then(cmd.isTrayOnly()).isTrue();
+    }
+
+    @Test
+    void should_print_the_stored_calendar_masked_with_its_source() throws Exception {
+        storedCalendar.save(LINK);
+        NotificationCommand command = commandWith(storedCalendar);
+        command.setSettings(new Settings(new MemoryPreferences()));
+        CommandLine line = new CommandLine(command);
+        java.io.StringWriter out = new java.io.StringWriter();
+        line.setOut(new java.io.PrintWriter(out, true));
+
+        line.execute("--print-config");
+
+        then(out.toString()).contains("https://outlook.office365.com/\u2026").contains("(stored)")
+            .doesNotContain("abc123").doesNotContain("secret456").doesNotContain("calendar.ics");
+    }
+
+    @Test
+    void should_print_a_command_line_calendar_even_when_one_is_stored() throws Exception {
+        storedCalendar.save(LINK);
+        NotificationCommand command = commandWith(storedCalendar);
+        command.setSettings(new Settings(new MemoryPreferences()));
+        CommandLine line = new CommandLine(command);
+        java.io.StringWriter out = new java.io.StringWriter();
+        line.setOut(new java.io.PrintWriter(out, true));
+
+        line.execute("--print-config", "--calendar", "other.csv");
+
+        then(out.toString()).contains("other.csv").contains("(command line)").doesNotContain("outlook");
     }
 }

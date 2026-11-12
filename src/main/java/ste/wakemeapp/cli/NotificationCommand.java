@@ -8,6 +8,7 @@ import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.settings.ConfigReport;
 import ste.wakemeapp.settings.ConnectionSettings;
 import ste.wakemeapp.settings.Settings;
+import ste.wakemeapp.settings.StoredCalendar;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Model.CommandSpec;
@@ -21,6 +22,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
 
 @Command(name = "notify", description = "Trigger a meeting notification",
          mixinStandardHelpOptions = true, version = "1.0.0")
@@ -81,7 +83,12 @@ public class NotificationCommand implements Callable<Integer> {
     @Spec
     private CommandSpec spec;
 
+    private static final Logger LOG = Logger.getLogger(NotificationCommand.class.getName());
+
     private Settings settings;
+    private StoredCalendar storedCalendar;
+    private boolean storedRead;
+    private String stored;
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;
@@ -94,25 +101,16 @@ public class NotificationCommand implements Callable<Integer> {
             if (printConfig) {
                 PrintWriter out = spec.commandLine().getOut();
                 ConfigReport.lines(clientId, tenant, settings()).forEach(out::println);
-                out.println(String.format("%-16s %s  (%s)", "calendar", calendarShown(),
-                    calendar == null ? "default" : "command line"));
+                out.println(calendarLine());
                 out.flush();
                 return 0;
             }
-            if (IcsAddress.isFeed(calendar)) {
-                IcsAddress.parse(calendar);   // refuses a link that is not https
-                return 0;
-            }
-            if (CalendarAddress.isAddress(calendar)) {
-                CalendarAddress.parse(calendar);   // refuses an address that must not get the token
-                return 0;
-            }
             if (calendar != null) {
-                // the file may be created later: only a directory can never work
-                if (Files.isDirectory(Path.of(calendar))) {
-                    throw new IllegalArgumentException("The calendar file is a directory: " + calendar);
-                }
+                validateCalendar(calendar);
                 return 0;
+            }
+            if (calendarValue() != null) {
+                return 0;   // the stored calendar, already checked (and ignored if not valid)
             }
             if (isTrayOnly()) {
                 return 0;
@@ -210,7 +208,8 @@ public class NotificationCommand implements Callable<Integer> {
     }
 
     public Path getCalendarFile() {
-        return (calendar == null || IcsAddress.isFeed(calendar) || CalendarAddress.isAddress(calendar)) ? null : Path.of(calendar);
+        String value = calendarValue();
+        return (value == null || IcsAddress.isFeed(value) || CalendarAddress.isAddress(value)) ? null : Path.of(value);
     }
 
     /** The value of --client-id, or null if not given (the stored one, if any, applies). */
@@ -228,19 +227,23 @@ public class NotificationCommand implements Callable<Integer> {
         return printConfig;
     }
 
-    /** The --calendar value as it may be shown: a feed link is cut to its host, since the path is a secret. */
-    private String calendarShown() {
-        if (calendar == null) {
-            return "(not set)";
-        }
-        return IcsAddress.isFeed(calendar) ? IcsAddress.redact(calendar) : calendar;
-    }
-
     private Settings settings() {
         if (settings == null) {
             settings = Settings.user();
         }
         return settings;
+    }
+
+    private StoredCalendar storedCalendar() {
+        if (storedCalendar == null) {
+            storedCalendar = StoredCalendar.user();
+        }
+        return storedCalendar;
+    }
+
+    /** For tests: the stored calendar to read instead of the user's. */
+    void setStoredCalendar(StoredCalendar storedCalendar) {
+        this.storedCalendar = storedCalendar;
     }
 
     /** For tests: the settings to read instead of the user's. */
@@ -250,21 +253,73 @@ public class NotificationCommand implements Callable<Integer> {
 
     /** The Graph calendar to poll when --calendar is an address, otherwise null. */
     public java.net.URI getCalendarAddress() {
-        return (!IcsAddress.isFeed(calendar) && CalendarAddress.isAddress(calendar)) ? CalendarAddress.parse(calendar) : null;
+        String value = calendarValue();
+        return (value != null && !IcsAddress.isFeed(value) && CalendarAddress.isAddress(value)) ? CalendarAddress.parse(value) : null;
     }
 
     /** The published calendar (ICS feed) to poll when --calendar is a link to one, otherwise null. */
     public java.net.URI getCalendarFeed() {
-        return IcsAddress.isFeed(calendar) ? IcsAddress.parse(calendar) : null;
+        String value = calendarValue();
+        return value != null && IcsAddress.isFeed(value) ? IcsAddress.parse(value) : null;
     }
 
     /**
-     * True when neither a calendar nor a single meeting was asked for (at most options like
-     * {@code --debug}): the application then lives in the tray.
+     * True when no calendar is configured (neither {@code --calendar} nor a stored one) and no single
+     * meeting was asked for (at most options like {@code --debug}): the application then lives in the tray.
      */
     public boolean isTrayOnly() {
-        return calendar == null && title == null && startDateStr == null && endDateStr == null
+        return noMeetingOptions() && calendarValue() == null;
+    }
+
+    private boolean noMeetingOptions() {
+        return title == null && startDateStr == null && endDateStr == null
             && organizer == null && url == null && description == null && !now;
+    }
+
+    /**
+     * The calendar to use: --calendar, else the one the user saved. A single meeting on the command
+     * line is a request of its own and does not use the saved calendar. A saved value that is not
+     * valid is ignored with a warning, since it cannot be fixed from the command line.
+     */
+    private String calendarValue() {
+        if (calendar != null) {
+            return calendar;
+        }
+        if (!noMeetingOptions()) {
+            return null;
+        }
+        if (!storedRead) {
+            storedRead = true;
+            stored = storedCalendar().value().orElse(null);
+            if (stored != null) {
+                try {
+                    validateCalendar(stored);
+                } catch (IllegalArgumentException x) {
+                    LOG.warning("The saved calendar is ignored: " + x.getMessage());
+                    stored = null;
+                }
+            }
+        }
+        return stored;
+    }
+
+    private static void validateCalendar(String value) {
+        if (IcsAddress.isFeed(value)) {
+            IcsAddress.parse(value);   // refuses a link that is not https
+        } else if (CalendarAddress.isAddress(value)) {
+            CalendarAddress.parse(value);   // refuses an address that must not get the token
+        } else if (Files.isDirectory(Path.of(value))) {
+            // the file may be created later: only a directory can never work
+            throw new IllegalArgumentException("The calendar file is a directory: " + value);
+        }
+    }
+
+    /** The line of --print-config for the calendar: a feed link is cut to its host, since the path is a secret. */
+    private String calendarLine() {
+        String value = calendar != null ? calendar : storedCalendar().value().orElse(null);
+        String source = calendar != null ? "command line" : value != null ? "stored" : "default";
+        String shown = value == null ? "(not set)" : IcsAddress.isFeed(value) ? IcsAddress.redact(value) : value;
+        return String.format("%-16s %s  (%s)", "calendar", shown, source);
     }
 
     public boolean isNow() {

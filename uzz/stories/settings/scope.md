@@ -49,6 +49,7 @@ How the application gets, keeps and shows its configuration.
 
 ## Technical Context & Infrastructure
 * **Development Toolchain**: Maven + JavaFX 25 + Java 25; `java.prefs` module only for the settings storage
+* **UI technology**: the dialog is styled FXML, like the notification overlay (`overlay.fxml`, `overlay.css`): view, controller and stylesheet under `src/main/resources/ste/wakemeapp/settings/`.
 * **Tray integration (technical note)**: use FXTrayIcon (https://github.com/dustinkredmond/FXTrayIcon) for the tray / menu bar icon, its menu ("Settings…", quit) and the exclamation-mark variant of the icon. It is the one new dependency of this domain. The tray is not macOS-specific: FXTrayIcon and JavaFX provide the native integration on macOS, Windows and Linux, so the tray stories are written once for all platforms. Platform quirks (on macOS no Dock icon; on Linux desktops without tray support) are to be verified when the tray story is implemented.
 * **Target Systems/Platforms**: macOS (primary), Windows/Linux (future)
 * **Project Reference Docs**:

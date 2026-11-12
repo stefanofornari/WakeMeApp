@@ -75,7 +75,7 @@ can leave it out and WakeMeApp uses `organizations`.
 
 Started without arguments, the application shows no window: it lives in the tray / menu bar. The icon has an
 exclamation mark, and the tooltip says "WakeMeApp - no calendar configured", while no calendar is configured
-(until the settings dialog exists, only `--calendar` configures one). With `--calendar` the application works as
+(until the settings dialog exists, a calendar is configured with `--calendar`, or by the file `calendar.txt` described below). With `--calendar` the application works as
 described below and shows the icon too. The menu has **Quit**, which cancels the pending reminders and ends the
 application ("Settings…" is there but disabled for now). On a desktop without a system tray the log says so and
 the application keeps running; stop it with Ctrl+C.
@@ -115,7 +115,7 @@ The link is read again at every poll. Things to know:
 
 * If your organisation does not allow publishing, the option is missing: ask your administrator.
 * **Treat the link as a password**: anybody who has it can read your whole calendar. WakeMeApp only
-  shows the host of the link in its messages and never saves it. The link given on the command line stays in
+  shows the host of the link in its messages. The link given on the command line is never saved, but it stays in
   your shell history and is visible in the list of processes of your computer. To revoke it, unpublish the
   calendar in the same place.
 * A feed does not say whether you accepted a meeting, so every meeting is notified except cancelled and
@@ -123,11 +123,22 @@ The link is read again at every poll. Things to know:
 * Recurring meetings are notified one occurrence at a time, also when one was moved or removed. A meeting whose rule or time zone cannot be read is skipped, with a warning, and the others are still notified.
 * The link may be out of date by a few minutes: a meeting moved a moment ago may be notified late.
 
+### The saved calendar
+
+The calendar you save (an ICS link, a Microsoft Graph address or a CSV path) is kept in one file,
+`calendar.txt`, in the application data folder. When you start the application without `--calendar` and
+without a single meeting (`--title`, `--start-date`…), that calendar is used. The file is readable only by you
+(on Windows it is protected by your user account only) and is **not encrypted**: whoever can read your files or a
+backup of them can read the link, so unpublish it (Outlook on the web: **Publish a calendar → Unpublish**) if
+it leaks. A saved value that is not valid (for example a link starting with `http://`) is ignored with a
+warning in the log. `--print-config` shows it as `https://host/…`.
+Until the settings dialog exists the file can only be written by hand.
+
 ## Command line options
 
 | Option | Meaning |
 |---|---|
-| `--calendar <file\|address>` | The Outlook calendar address (`https://graph.microsoft.com/v1.0/me/calendarView`), the link of a published calendar (ICS), or a CSV file of meetings to try the application without an account. |
+| `--calendar <file\|address>` | For this run only (never saved; it wins over the saved calendar). The Outlook calendar address (`https://graph.microsoft.com/v1.0/me/calendarView`), the link of a published calendar (ICS), or a CSV file of meetings to try the application without an account. |
 | `--client-id <uuid>` | The application (client) id of the registration. |
 | `--tenant <id>` | The tenant id, or `organizations` (default). |
 | `--poll-interval <minutes>` | How often the calendar is read (default 5). |
@@ -167,7 +178,7 @@ Where the stored values are, if you want to look at them directly:
 * **macOS**: `defaults read com.apple.java.util.prefs` (the file is
   `~/Library/Preferences/com.apple.java.util.prefs.plist`, but read it through `defaults`, as macOS caches it)
 
-The sign-in (`signin.json`) and the dismissed meetings (`dismissed.json`) are in the application data folder,
+The sign-in (`signin.json`), the saved calendar (`calendar.txt`) and the dismissed meetings (`dismissed.json`) are in the application data folder,
 not in the preferences: `~/Library/Application Support/WakeMeApp` on macOS, `%LOCALAPPDATA%\WakeMeApp` on
 Windows, `~/.local/share/WakeMeApp` on Linux.
 

@@ -40,9 +40,16 @@ public class FileTokenStore implements TokenStore {
     private static final boolean POSIX = FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
 
     private final Path file;
+    private final String what;
 
     public FileTokenStore(Path file) {
+        this(file, "sign-in");
+    }
+
+    /** @param what what the file holds, for the messages ("sign-in", "calendar") */
+    public FileTokenStore(Path file, String what) {
         this.file = file;
+        this.what = what;
     }
 
     /** The file of the application in its data folder, next to the logs. */
@@ -58,7 +65,7 @@ public class FileTokenStore implements TokenStore {
         try {
             return Optional.of(Files.readString(file, StandardCharsets.UTF_8));
         } catch (IOException | RuntimeException x) {
-            LOG.warning("The saved sign-in in " + file + " cannot be read and is ignored: " + x.getMessage());
+            LOG.warning("The saved " + what + " in " + file + " cannot be read and is ignored: " + x.getMessage());
             return Optional.empty();
         }
     }
