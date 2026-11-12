@@ -18,19 +18,21 @@ package ste.wakemeapp.calendar;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.StringReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.DateTimeException;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -42,16 +44,28 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.fortuna.ical4j.data.CalendarBuilder;
+import net.fortuna.ical4j.data.ParserException;
+import net.fortuna.ical4j.model.Component;
+import net.fortuna.ical4j.model.Parameter;
+import net.fortuna.ical4j.model.component.VEvent;
 
 /**
  * Reads the meetings from a published calendar (an ICS feed), such as the one Outlook on the web can
- * publish. The feed is downloaded at every call and read as iCalendar (RFC 5545).
+ * publish. The feed is downloaded at every call and read as iCalendar (RFC 5545) with ical4j, which
+ * also expands the recurring events and knows the time zone names Outlook writes.
  * <p>
- * What is read: id (UID), title, start and end, organizer, description, the join link and the
- * all-day flag; cancelled events are skipped. A feed does not say whether the user accepted: every
- * event is reported as accepted, and what the feed says about the attendees is logged to be able to
- * use it later. Recurring events give one event per occurrence (see {@link Recurrence}); a rule that is
- * not supported leaves the first occurrence only, with a warning.
+ * What is read: id, title, start and end, organizer, description, the join link and the all-day flag;
+ * cancelled events are skipped. A feed does not say whether the user accepted: every event is reported
+ * as accepted, and what the feed says about the attendees is logged to be able to use it later.
+ * <p>
+ * Every event is read on its own, so one that cannot be read (an unknown time zone, a rule that is not
+ * valid) is logged and left out without losing the others. The definitions of time zones in the feed
+ * are not used: ical4j would register a new zone in the Java runtime at every poll, and Outlook uses
+ * names it already knows. An event in a zone it does not know is skipped.
+ * <p>
+ * The id of a recurring event's occurrence is the UID plus the original start of the occurrence in the
+ * zone of the series, so that an occurrence that was moved keeps its id.
  * <p>
  * The address of the feed is its credential: no message made here contains more than its host.
  */
@@ -59,8 +73,10 @@ public class IcsCalendarSource implements CalendarSource {
 
     private static final Logger LOG = Logger.getLogger(IcsCalendarSource.class.getName());
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter ID_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    private static final String CALENDAR_START = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WakeMeApp//EN\r\n";
+    private static final String CALENDAR_END = "END:VCALENDAR\r\n";
+    private static final Pattern SUMMARY = Pattern.compile("(?m)^SUMMARY[^:\\r\\n]*:(.*)$");
     private static final Pattern LINK = Pattern.compile("https://[^\\s<>\"')\\]]+");
     private static final List<String> MEETING_HOSTS = List.of(
         "teams.microsoft.com", "teams.live.com", "zoom.us", "meet.google.com", "webex.com");
@@ -82,12 +98,12 @@ public class IcsCalendarSource implements CalendarSource {
     @Override
     public List<CalendarEvent> meetingsStartingBetween(LocalDateTime from, LocalDateTime to) throws IOException {
         List<CalendarEvent> events = new ArrayList<>();
-        for (List<List<Property>> series : bySeries(vevents(download()))) {
+        for (List<VEvent> series : bySeries(vevents(download()))) {
             for (Occurrence occurrence : occurrences(series, from, to)) {
                 CalendarEvent event = occurrence.event();
                 if (!event.start().isBefore(from) && event.start().isBefore(to)) {
                     events.add(event);
-                    logAttendees(event.title(), occurrence.properties());
+                    logAttendees(event.title(), occurrence.source());
                 }
             }
         }
@@ -96,18 +112,7 @@ public class IcsCalendarSource implements CalendarSource {
         return events;
     }
 
-    private record Occurrence(CalendarEvent event, List<Property> properties) {
-    }
-
-    /** The VEVENTs of the same UID together: a series, with the occurrences that were changed. */
-    private static List<List<List<Property>>> bySeries(List<List<Property>> vevents) {
-        Map<String, List<List<Property>>> series = new LinkedHashMap<>();
-        int anonymous = 0;
-        for (List<Property> vevent : vevents) {
-            String uid = textOf(vevent, "UID");
-            series.computeIfAbsent((uid == null || uid.isBlank()) ? "\0" + anonymous++ : uid, k -> new ArrayList<>()).add(vevent);
-        }
-        return new ArrayList<>(series.values());
+    private record Occurrence(CalendarEvent event, VEvent source) {
     }
 
     // ------------------------------------------------------------------ HTTP
@@ -140,7 +145,7 @@ public class IcsCalendarSource implements CalendarSource {
                 status == 408 || status == 429 || status >= 500);
         }
         String body = response.body() == null ? "" : response.body().stripLeading();
-        if (body.startsWith("\uFEFF")) {
+        if (body.startsWith("﻿")) {
             body = body.substring(1).stripLeading();
         }
         if (!body.regionMatches(true, 0, "BEGIN:VCALENDAR", 0, 15)) {
@@ -149,216 +154,172 @@ public class IcsCalendarSource implements CalendarSource {
         return body;
     }
 
-    // ------------------------------------------------------------------ iCalendar
+    // ------------------------------------------------------------------ reading the feed
 
-    private record Property(String name, Map<String, String> parameters, String value) {
-    }
-
-    /** The properties of every VEVENT (those of a nested VALARM are left out). */
-    private static List<List<Property>> vevents(String calendar) {
-        List<List<Property>> events = new ArrayList<>();
-        List<Property> current = null;
-        int nested = 0;
-        for (String line : unfold(calendar)) {
-            Property p = property(line);
-            if (p == null) {
+    /**
+     * The events of the feed, each read on its own. Whatever is outside the events (the definitions of
+     * time zones above all) is left out.
+     */
+    private static List<VEvent> vevents(String calendar) {
+        List<VEvent> events = new ArrayList<>();
+        StringBuilder block = null;
+        for (String line : calendar.split("\\r?\\n")) {
+            if (block == null) {
+                if (line.strip().equalsIgnoreCase("BEGIN:VEVENT")) {
+                    block = new StringBuilder(line.strip()).append("\r\n");
+                }
                 continue;
             }
-            if (p.name().equals("BEGIN")) {
-                if (current != null) {
-                    nested++;
-                } else if (p.value().equalsIgnoreCase("VEVENT")) {
-                    current = new ArrayList<>();
-                }
-            } else if (p.name().equals("END")) {
-                if (current != null && nested > 0) {
-                    nested--;
-                } else if (current != null && p.value().equalsIgnoreCase("VEVENT")) {
-                    events.add(current);
-                    current = null;
-                }
-            } else if (current != null && nested == 0) {
-                current.add(p);
+            block.append(line).append("\r\n");
+            if (line.strip().equalsIgnoreCase("END:VEVENT")) {
+                events.addAll(read(block.toString()));
+                block = null;
             }
         }
         return events;
     }
 
-    /** A line that starts with a space or a tab continues the previous one. */
-    private static List<String> unfold(String calendar) {
-        List<String> lines = new ArrayList<>();
-        for (String line : calendar.split("\\r?\\n")) {
-            if (!lines.isEmpty() && !line.isEmpty() && (line.charAt(0) == ' ' || line.charAt(0) == '\t')) {
-                int last = lines.size() - 1;
-                lines.set(last, lines.get(last) + line.substring(1));
-            } else {
-                lines.add(line);
-            }
-        }
-        return lines;
-    }
-
-    private static Property property(String line) {
-        boolean quoted = false;
-        int colon = -1;
-        List<Integer> semicolons = new ArrayList<>();
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == '"') {
-                quoted = !quoted;
-            } else if (!quoted && c == ';' && colon < 0) {
-                semicolons.add(i);
-            } else if (!quoted && c == ':' && colon < 0) {
-                colon = i;
-                break;
-            }
-        }
-        if (colon <= 0) {
-            return null;
-        }
-        int nameEnd = semicolons.isEmpty() ? colon : semicolons.get(0);
-        Map<String, String> parameters = new LinkedHashMap<>();
-        for (int i = 0; i < semicolons.size(); i++) {
-            int end = (i + 1 < semicolons.size()) ? semicolons.get(i + 1) : colon;
-            String parameter = line.substring(semicolons.get(i) + 1, end);
-            int eq = parameter.indexOf('=');
-            if (eq > 0) {
-                String value = parameter.substring(eq + 1);
-                if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
-                    value = value.substring(1, value.length() - 1);
+    private static List<VEvent> read(String block) {
+        try {
+            var calendar = new CalendarBuilder().build(new StringReader(CALENDAR_START + block + CALENDAR_END));
+            List<VEvent> events = new ArrayList<>();
+            for (VEvent event : calendar.<VEvent>getComponents(Component.VEVENT)) {
+                if (event.getDateTimeStart() == null) {
+                    LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: it has no start", titleOf(block));
+                } else {
+                    events.add(event);
                 }
-                parameters.put(parameter.substring(0, eq).toUpperCase(Locale.ROOT), value);
             }
+            return events;
+        } catch (IOException | ParserException | RuntimeException x) {
+            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: {1}",
+                new Object[] {titleOf(block), (x.getMessage() == null) ? x.getClass().getSimpleName() : x.getMessage()});
+            return List.of();
         }
-        return new Property(line.substring(0, nameEnd).toUpperCase(Locale.ROOT), parameters, line.substring(colon + 1));
     }
 
-    private static String text(String value) {
-        StringBuilder out = new StringBuilder(value.length());
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c == '\\' && i + 1 < value.length()) {
-                char next = value.charAt(++i);
-                out.append(next == 'n' || next == 'N' ? '\n' : next);
-            } else {
-                out.append(c);
-            }
+    private static String titleOf(String block) {
+        Matcher m = SUMMARY.matcher(block);
+        return (m.find() && !m.group(1).isBlank()) ? m.group(1).strip() : "(no title)";
+    }
+
+    private static String summaryOf(VEvent event) {
+        return (event.getSummary() == null || event.getSummary().getValue().isBlank()) ? "(no title)" : event.getSummary().getValue();
+    }
+
+    /** The events of the same UID together: a series, with the occurrences that were changed. */
+    private static List<List<VEvent>> bySeries(List<VEvent> events) {
+        Map<String, List<VEvent>> series = new LinkedHashMap<>();
+        int anonymous = 0;
+        for (VEvent event : events) {
+            String uid = uidOf(event);
+            series.computeIfAbsent((uid == null || uid.isBlank()) ? "\0" + anonymous++ : uid, k -> new ArrayList<>()).add(event);
         }
-        return out.toString();
+        return new ArrayList<>(series.values());
     }
 
-    private static Property first(List<Property> properties, String name) {
-        return properties.stream().filter(p -> p.name().equals(name)).findFirst().orElse(null);
+    private static String uidOf(VEvent event) {
+        return event.getUid().map(u -> u.getValue()).orElse(null);
     }
 
-    private static String textOf(List<Property> properties, String name) {
-        Property p = first(properties, name);
-        return (p == null) ? null : text(p.value());
+    // ------------------------------------------------------------------ times
+
+    private ZoneId zoneOf(Temporal time) {
+        if (time instanceof ZonedDateTime z) {
+            return z.getZone();
+        }
+        if (time instanceof OffsetDateTime o) {
+            return o.getOffset();
+        }
+        return zone;   // a floating time or a date is in the local zone
+    }
+
+    private Instant instantOf(Temporal time) {
+        if (time instanceof ZonedDateTime z) {
+            return z.toInstant();
+        }
+        if (time instanceof OffsetDateTime o) {
+            return o.toInstant();
+        }
+        if (time instanceof Instant i) {
+            return i;
+        }
+        if (time instanceof LocalDate d) {
+            return d.atStartOfDay(zone).toInstant();
+        }
+        return ((LocalDateTime) time).atZone(zone).toInstant();
+    }
+
+    private LocalDateTime local(Temporal time) {
+        return instantOf(time).atZone(zone).toLocalDateTime();
     }
 
     // ------------------------------------------------------------------ events
 
-    /** The occurrences of a series that may start in the window; what cannot be read is logged and left out. */
-    private List<Occurrence> occurrences(List<List<Property>> series, LocalDateTime from, LocalDateTime to) {
-        List<Property> master = null;
-        List<List<Property>> changed = new ArrayList<>();
-        for (List<Property> vevent : series) {
-            if (first(vevent, "RECURRENCE-ID") != null) {
-                changed.add(vevent);
+    /** The occurrences of a series that may start in the window. */
+    private List<Occurrence> occurrences(List<VEvent> series, LocalDateTime from, LocalDateTime to) {
+        VEvent master = null;
+        List<VEvent> changed = new ArrayList<>();
+        for (VEvent event : series) {
+            if (event.getRecurrenceId() != null) {
+                changed.add(event);
             } else if (master == null) {
-                master = vevent;
+                master = event;
             }
         }
-        String title = titleOf(series.get(0));
         List<Occurrence> result = new ArrayList<>();
         try {
-            Property rule = (master == null) ? null : first(master, "RRULE");
-            if (master != null && rule == null) {
-                add(result, build(master, textOf(master, "UID"), time(first(master, "DTSTART")), master));
+            if (master != null && !repeats(master)) {
+                add(result, single(master, uidOf(master)));
                 return result;
             }
-            ZoneId seriesZone = (master != null) ? zoneOf(first(master, "DTSTART")) : zoneOf(first(changed.get(0), "RECURRENCE-ID"));
+            String uid = uidOf(series.get(0));
+            ZoneId seriesZone = zoneOf((master != null) ? master.getDateTimeStart().getDate()
+                : changed.get(0).getRecurrenceId().getDate());
             Set<Instant> replaced = new HashSet<>();
-            for (List<Property> vevent : changed) {
-                Instant original = zoned(first(vevent, "RECURRENCE-ID")).toInstant();
+            for (VEvent event : changed) {
+                Instant original = instantOf(event.getRecurrenceId().getDate());
                 replaced.add(original);
-                String id = idOf(vevent, original, seriesZone);
-                add(result, build(vevent, id, time(first(vevent, "DTSTART")), vevent));
+                add(result, single(event, idOf(uid, original, seriesZone)));
             }
             if (master != null) {
-                expand(master, rule.value(), from, to, replaced, seriesZone, result);
+                expand(master, from, to, replaced, seriesZone, result);
             }
-        } catch (UnknownZone x) {
-            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: unknown time zone \"{1}\"",
-                new Object[] {title, x.getMessage()});
-            return List.of();
-        } catch (DateTimeParseException | NullPointerException x) {
-            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: its time cannot be read", title);
+        } catch (DateTimeException | UnsupportedOperationException x) {
+            LOG.log(Level.WARNING, "Skipping the event \"{0}\" of the feed: its time cannot be read ({1})",
+                new Object[] {summaryOf(series.get(0)), x.getMessage()});
             return List.of();
         }
         return result;
     }
 
-    private void expand(List<Property> master, String rule, LocalDateTime from, LocalDateTime to,
-                        Set<Instant> replaced, ZoneId seriesZone, List<Occurrence> result) {
-        String status = textOf(master, "STATUS");
-        if (status != null && status.equalsIgnoreCase("CANCELLED")) {
+    private static boolean repeats(VEvent event) {
+        return !event.getProperties("RRULE").isEmpty() || !event.getProperties("RDATE").isEmpty();
+    }
+
+    private void expand(VEvent master, LocalDateTime from, LocalDateTime to, Set<Instant> replaced,
+                        ZoneId seriesZone, List<Occurrence> result) {
+        if (isCancelled(master)) {
             return;
         }
-        Property startProperty = first(master, "DTSTART");
-        ZonedDateTime start = zoned(startProperty);
-        Property endProperty = first(master, "DTEND");
-        java.time.Duration length = (endProperty == null) ? null : java.time.Duration.between(start, zoned(endProperty));
-        Recurrence recurrence;
-        try {
-            recurrence = Recurrence.parse(rule);
-        } catch (Recurrence.Unsupported x) {
-            LOG.log(Level.WARNING, "The event \"{0}\" of the feed repeats in a way that is not supported ({1}): only its first occurrence is used",
-                new Object[] {titleOf(master), x.getMessage()});
-            add(result, build(master, textOf(master, "UID"), start.withZoneSameInstant(zone).toLocalDateTime(), master));
-            return;
-        }
-        Set<Instant> excluded = new HashSet<>();
-        Set<LocalDate> excludedDates = new HashSet<>();
-        for (Property p : master) {
-            if (p.name().equals("EXDATE")) {
-                for (String value : p.value().split(",")) {
-                    Property one = new Property("EXDATE", p.parameters(), value.trim());
-                    if (value.trim().length() == 8) {
-                        excludedDates.add(LocalDate.parse(value.trim(), DATE));
-                    } else {
-                        excluded.add(zoned(one).toInstant());
-                    }
-                }
-            }
-        }
-        Instant notBefore = from.atZone(zone).toInstant();
-        Instant end = to.atZone(zone).toInstant();
-        // an occurrence may last into the window while it started before it: only the start counts
-        for (ZonedDateTime occurrence : recurrence.occurrences(start, notBefore, end)) {
-            Instant instant = occurrence.toInstant();
-            if (replaced.contains(instant) || excluded.contains(instant) || excludedDates.contains(occurrence.toLocalDate())) {
+        boolean hasEnd = master.getDateTimeEnd() != null || master.getDuration() != null;
+        var window = new net.fortuna.ical4j.model.Period<ZonedDateTime>(from.atZone(zone), to.atZone(zone));
+        // ical4j applies RRULE, RDATE and EXDATE, with the zone of the series
+        for (net.fortuna.ical4j.model.Period<Temporal> occurrence : master.<Temporal>calculateRecurrenceSet(window)) {
+            Instant instant = instantOf(occurrence.getStart());
+            if (replaced.contains(instant)) {
                 continue;
             }
-            String id = idOf(master, instant, seriesZone);
-            LocalDateTime localStart = occurrence.withZoneSameInstant(zone).toLocalDateTime();
-            LocalDateTime localEnd = (length == null) ? null : occurrence.plus(length).withZoneSameInstant(zone).toLocalDateTime();
-            CalendarEvent event = build(master, id, localStart, localEnd, "DATE".equalsIgnoreCase(startProperty.parameters().get("VALUE")));
-            add(result, new Occurrence(event, master));
+            LocalDateTime start = local(occurrence.getStart());
+            LocalDateTime end = hasEnd ? local(occurrence.getEnd()) : null;
+            add(result, build(master, idOf(uidOf(master), instant, seriesZone), start, end,
+                occurrence.getStart() instanceof LocalDate));
         }
     }
 
-    private static final DateTimeFormatter ID_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-
     /** UID of the series plus the original start of the occurrence in the zone of the series. */
-    private static String idOf(List<Property> vevent, Instant original, ZoneId seriesZone) {
-        String uid = textOf(vevent, "UID");
+    private static String idOf(String uid, Instant original, ZoneId seriesZone) {
         return uid + "#" + ID_TIME.format(original.atZone(seriesZone));
-    }
-
-    private static String titleOf(List<Property> properties) {
-        String title = textOf(properties, "SUMMARY");
-        return (title == null || title.isBlank()) ? "(no title)" : title;
     }
 
     private static void add(List<Occurrence> result, Occurrence occurrence) {
@@ -367,88 +328,61 @@ public class IcsCalendarSource implements CalendarSource {
         }
     }
 
-    /** A single event (or one changed occurrence): null if it is cancelled. */
-    private Occurrence build(List<Property> properties, String id, LocalDateTime start, List<Property> source) {
-        Property endProperty = first(source, "DTEND");
-        return build0(properties, id, start, endProperty == null ? null : time(endProperty),
-            "DATE".equalsIgnoreCase(first(source, "DTSTART").parameters().get("VALUE")));
+    /** A single event (or one changed occurrence), by its own times: null if it is cancelled. */
+    private Occurrence single(VEvent event, String id) {
+        Temporal start = event.getDateTimeStart().getDate();
+        LocalDateTime end = null;
+        if (event.getDateTimeEnd() != null) {
+            end = local(event.getDateTimeEnd().getDate());
+        } else if (event.getDuration() != null) {
+            end = local(start.plus(event.getDuration().getDuration()));
+        }
+        return build(event, id, local(start), end, start instanceof LocalDate);
     }
 
-    private CalendarEvent build(List<Property> properties, String id, LocalDateTime start, LocalDateTime end, boolean allDay) {
-        return build0(properties, id, start, end, allDay).event();
-    }
-
-    private Occurrence build0(List<Property> properties, String id, LocalDateTime start, LocalDateTime end, boolean allDay) {
-        String status = textOf(properties, "STATUS");
-        if (status != null && status.equalsIgnoreCase("CANCELLED")) {
+    private Occurrence build(VEvent event, String id, LocalDateTime start, LocalDateTime end, boolean allDay) {
+        if (isCancelled(event)) {
             return null;
         }
-        String title = titleOf(properties);
+        String title = summaryOf(event);
+        String description = (event.getDescription() == null) ? null : event.getDescription().getValue();
         return new Occurrence(new CalendarEvent(
             (id == null || id.isBlank()) ? title + "@" + start : id,
-            title, start, end, joinUrl(properties), organizer(properties), textOf(properties, "DESCRIPTION"),
-            ResponseStatus.ACCEPTED, allDay), properties);
+            title, start, end, joinUrl(event), organizer(event), description, ResponseStatus.ACCEPTED, allDay), event);
     }
 
-    private static final class UnknownZone extends RuntimeException {
-        UnknownZone(String zone) {
-            super(zone);
-        }
+    private static boolean isCancelled(VEvent event) {
+        return event.getStatus() != null && "CANCELLED".equalsIgnoreCase(event.getStatus().getValue());
     }
 
-    /** The zone a time is written in: UTC for Z, the TZID, the local zone for a floating time or a date. */
-    private ZoneId zoneOf(Property property) {
-        String value = property.value().trim();
-        if (value.endsWith("Z") || value.endsWith("z")) {
-            return ZoneOffset.UTC;
-        }
-        String tzid = property.parameters().get("TZID");
-        if (tzid == null || "DATE".equalsIgnoreCase(property.parameters().get("VALUE")) || value.length() == 8) {
-            return zone;
-        }
-        ZoneId zoneOfTime = WindowsZones.zoneOf(tzid);
-        if (zoneOfTime == null) {
-            throw new UnknownZone(tzid);
-        }
-        return zoneOfTime;
-    }
-
-    /** A date, a UTC time, a time in a zone or a floating time (taken as local), with its zone. */
-    private ZonedDateTime zoned(Property property) {
-        String value = property.value().trim();
-        if ("DATE".equalsIgnoreCase(property.parameters().get("VALUE")) || value.length() == 8) {
-            return LocalDate.parse(value, DATE).atStartOfDay(zone);
-        }
-        boolean utc = value.endsWith("Z") || value.endsWith("z");
-        LocalDateTime time = LocalDateTime.parse(utc ? value.substring(0, value.length() - 1) : value, DATE_TIME);
-        return time.atZone(zoneOf(property));
-    }
-
-    private LocalDateTime time(Property property) {
-        return zoned(property).withZoneSameInstant(zone).toLocalDateTime();
-    }
-
-    private static String organizer(List<Property> properties) {
-        Property p = first(properties, "ORGANIZER");
-        if (p == null) {
+    private static String organizer(VEvent event) {
+        var organizer = event.getOrganizer();
+        if (organizer == null) {
             return null;
         }
-        String name = p.parameters().get("CN");
-        if (name != null && !name.isBlank()) {
-            return name;
+        var name = organizer.getParameter(Parameter.CN);
+        if (name.isPresent() && !name.get().getValue().isBlank()) {
+            return name.get().getValue();
         }
-        String value = p.value().trim();
+        String value = organizer.getValue().trim();
         return value.regionMatches(true, 0, "mailto:", 0, 7) ? value.substring(7) : value;
     }
 
     /** The first link to an online meeting: the Teams property, then the URL, the location, the description. */
-    private static String joinUrl(List<Property> properties) {
-        for (String name : new String[] {"X-MICROSOFT-SKYPETEAMSMEETINGURL", "URL", "LOCATION", "DESCRIPTION"}) {
-            String value = textOf(properties, name);
-            if (value == null) {
-                continue;
-            }
-            Matcher m = LINK.matcher(value);
+    private static String joinUrl(VEvent event) {
+        List<String> texts = new ArrayList<>();
+        event.getProperty("X-MICROSOFT-SKYPETEAMSMEETINGURL").ifPresent(p -> texts.add(p.getValue()));
+        if (event.getUrl() != null) {
+            texts.add(event.getUrl().getValue());
+        }
+        if (event.getLocation() != null) {
+            texts.add(event.getLocation().getValue());
+        }
+        if (event.getDescription() != null) {
+            texts.add(event.getDescription().getValue());
+        }
+        for (String text : texts) {
+            Matcher m = LINK.matcher(text);
             while (m.find()) {
                 String link = m.group().replaceAll("[.,;]+$", "");
                 if (isMeetingLink(link)) {
@@ -469,10 +403,10 @@ public class IcsCalendarSource implements CalendarSource {
     }
 
     /** What the feed says about the attendees, to know whether the response can be used later. No names. */
-    private static void logAttendees(String title, List<Property> properties) {
+    private static void logAttendees(String title, VEvent event) {
         LOG.fine(() -> {
-            List<String> states = properties.stream().filter(p -> p.name().equals("ATTENDEE"))
-                .map(p -> p.parameters().get("PARTSTAT")).filter(s -> s != null).toList();
+            List<String> states = event.getAttendees().stream()
+                .map(a -> a.getParameter(Parameter.PARTSTAT)).filter(p -> p.isPresent()).map(p -> p.get().getValue()).toList();
             return "\"" + title + "\": " + (states.isEmpty()
                 ? "the feed has no attendee status" : "the feed reports attendee status " + String.join(", ", states));
         });

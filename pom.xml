@@ -36,6 +36,7 @@
         <lazyjava.version>0.0.2</lazyjava.version>
         <msal4j.version>1.26.1</msal4j.version>
         <slf4j.version>1.7.36</slf4j.version>
+        <ical4j.version>4.4.0</ical4j.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
         <javafx.mainClass>ste.wakemeapp.WakeMeApp</javafx.mainClass>
         <logging.config>${project.basedir}/src/main/resources/ste/wakemeapp/log/logging.properties</logging.config>
@@ -90,6 +91,18 @@
             <groupId>com.microsoft.azure</groupId>
             <artifactId>msal4j</artifactId>
             <version>${msal4j.version}</version>
+        </dependency>
+        <!-- iCalendar (ICS feed of a published calendar): parsing, recurrence, time zones; its logging goes to SLF4J too -->
+        <dependency>
+            <groupId>org.mnode.ical4j</groupId>
+            <artifactId>ical4j</artifactId>
+            <version>${ical4j.version}</version>
+        </dependency>
+        <!-- ical4j is built with SLF4J 2, the bridge below is 1.7: only the logging calls are used, so the 1.7 API is kept -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

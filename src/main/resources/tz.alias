@@ -1,0 +1,7 @@
+# Read by ical4j (as a custom alias file) after its own tables, so these win.
+# The Windows names Outlook writes in TZID, where ical4j's table points to a zone whose rules are not the
+# ones of the whole Windows zone: "Pacific Standard Time" is Canada/Pacific there, and British Columbia
+# stopped changing the clocks in 2026, but the Windows zone is the one of Los Angeles.
+Pacific\ Standard\ Time=America/Los_Angeles
+Central\ Standard\ Time=America/Chicago
+GMT\ Standard\ Time=Europe/London
