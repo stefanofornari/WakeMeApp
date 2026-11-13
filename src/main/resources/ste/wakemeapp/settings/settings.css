@@ -66,6 +66,37 @@
     -fx-background-color: #C6FF3D;
 }
 
+.settings-choice {
+    -fx-background-color: #141A2B;
+    -fx-border-color: #232C4A;
+    -fx-border-width: 1;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.settings-choice .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #F4F6FB;
+}
+
+.settings-choice .arrow {
+    -fx-background-color: #A3ACC2;
+}
+
+.settings-choice .list-view,
+.settings-choice .list-view .list-cell {
+    -fx-background-color: #141A2B;
+}
+
+.settings-choice .list-cell:disabled {
+    -fx-opacity: 0.35;
+}
+
+.settings-choice .list-cell:filled:hover,
+.settings-choice .list-cell:filled:selected {
+    -fx-background-color: #232C4A;
+}
+
 .settings-warning {
     -fx-font-size: 13px;
     -fx-text-fill: #FFC53D;

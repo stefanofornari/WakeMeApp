@@ -1,28 +1,28 @@
 package ste.wakemeapp.settings;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-/** How many minutes before a meeting the user is notified: 1 to 1440, 5 unless the user chose otherwise. */
+/** How many minutes before a meeting the user is notified: one of a few choices, 5 unless chosen otherwise. */
 public final class LeadTime {
 
     public static final String KEY = "notify.leadTimeMinutes";
+    public static final List<Integer> CHOICES = List.of(1, 2, 5, 10, 15);
     public static final int DEFAULT_MINUTES = 5;
-    public static final int MIN_MINUTES = 1;
-    public static final int MAX_MINUTES = 1440;
 
     private static final Logger LOG = Logger.getLogger(LeadTime.class.getName());
 
     private LeadTime() {
     }
 
-    /** The stored lead time; a stored value out of range or not a number is ignored with a WARNING. */
+    /** The stored lead time; a stored value that is not one of the choices is ignored with a WARNING. */
     public static Duration read(Settings stored) {
         int minutes = stored.getInt(KEY, DEFAULT_MINUTES);
-        if (!isValid(minutes)) {
-            LOG.warning("The setting " + KEY + " is '" + minutes + "', which is not between " + MIN_MINUTES
-                + " and " + MAX_MINUTES + "; using " + DEFAULT_MINUTES);
+        if (!CHOICES.contains(minutes)) {
+            LOG.warning("The setting " + KEY + " is '" + minutes + "', which is not one of " + CHOICES
+                + "; using " + DEFAULT_MINUTES);
             minutes = DEFAULT_MINUTES;
         }
         return Duration.ofMinutes(minutes);
@@ -32,45 +32,26 @@ public final class LeadTime {
         stored.putInt(KEY, minutes);
     }
 
-    static boolean isValid(int minutes) {
-        return minutes >= MIN_MINUTES && minutes <= MAX_MINUTES;
-    }
-
     static boolean isValid(String text) {
         try {
-            return isValid(Integer.parseInt(text.trim()));
+            return CHOICES.contains(Integer.parseInt(text.trim()));
         } catch (NumberFormatException x) {
             return false;
         }
     }
 
-    /**
-     * @return the minutes typed by the user
-     * @throws IllegalArgumentException with a message for the user if it is not a number between 1 and 1440
-     */
-    public static int parse(String text) {
-        int minutes;
-        try {
-            minutes = Integer.parseInt(text == null ? "" : text.trim());
-        } catch (NumberFormatException x) {
-            throw new IllegalArgumentException("Lead time must be a whole number of minutes");
-        }
-        if (minutes < MIN_MINUTES) {
-            throw new IllegalArgumentException("Lead time must be at least " + MIN_MINUTES + " minute");
-        }
-        if (minutes > MAX_MINUTES) {
-            throw new IllegalArgumentException(
-                "Lead time cannot exceed " + MAX_MINUTES + " minutes (24 hours)");
-        }
-        return minutes;
+    /** The choices that are not shorter than the poll interval: a shorter lead time could make a reminder late. */
+    public static List<Integer> allowed(Duration pollInterval) {
+        return CHOICES.stream().filter(minutes -> minutes >= pollInterval.toMinutes()).toList();
     }
 
-    /** A warning, not an error: with a poll interval longer than the lead time a notification may be late. */
-    public static Optional<String> pollWarning(int leadMinutes, Duration pollInterval) {
-        if (pollInterval.toMinutes() > leadMinutes) {
-            return Optional.of("Poll interval (" + pollInterval.toMinutes() + " min) exceeds lead time ("
-                + leadMinutes + " min). Notifications may be delayed.");
+    /** Why some choices are not allowed, for a tooltip; empty if all are. */
+    public static Optional<String> tooltip(Duration pollInterval) {
+        if (allowed(pollInterval).size() == CHOICES.size()) {
+            return Optional.empty();
         }
-        return Optional.empty();
+        return Optional.of("The poll interval is " + pollInterval.toMinutes()
+            + " min: a shorter lead time could make a reminder late. "
+            + "Start with a shorter --poll-interval to allow it.");
     }
 }

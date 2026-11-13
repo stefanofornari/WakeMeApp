@@ -279,30 +279,37 @@ class SettingsDialogTest {
 
     // ---- settings/US-000015
 
-    private void typeLeadTime(String text) {
-        robot.interact(() -> form.getLeadTimeField().setText(text));
+    private void choose(Integer minutes) {
+        robot.interact(() -> form.getLeadTimeBox().setValue(minutes));
+    }
+
+    @Test
+    void should_offer_only_the_choices() {
+        open();
+
+        then(form.getLeadTimeBox().getItems()).containsExactly(1, 2, 5, 10, 15);
     }
 
     @Test
     void should_show_the_default_lead_time() {
         open();
 
-        then(form.getLeadTimeField().getText()).isEqualTo("5");
+        then(form.getLeadTimeBox().getValue()).isEqualTo(5);
     }
 
     @Test
     void should_show_the_saved_lead_time() {
-        LeadTime.save(settings, 12);
+        LeadTime.save(settings, 10);
 
         open();
 
-        then(form.getLeadTimeField().getText()).isEqualTo("12");
+        then(form.getLeadTimeBox().getValue()).isEqualTo(10);
     }
 
     @Test
     void should_save_a_lead_time_report_it_and_close() {
         open();
-        typeLeadTime("10");
+        choose(10);
 
         save();
 
@@ -321,7 +328,7 @@ class SettingsDialogTest {
             throw new IllegalStateException(x);
         }
         open();
-        typeLeadTime("10");
+        choose(10);
         type(csv.toString());
 
         save();
@@ -332,46 +339,9 @@ class SettingsDialogTest {
     }
 
     @Test
-    void should_refuse_a_lead_time_below_the_minimum_and_put_back_the_minimum() {
-        open();
-        typeLeadTime("0");
-
-        save();
-
-        then(form.getLeadTimeErrorLabel().getText()).isEqualTo("Lead time must be at least 1 minute");
-        then(form.getLeadTimeField().getText()).isEqualTo("1");
-        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
-        then(leadTimes).isEmpty();
-        then(dialog.isShowing()).isTrue();
-    }
-
-    @Test
-    void should_refuse_a_lead_time_above_the_maximum_and_put_back_the_maximum() {
-        open();
-        typeLeadTime("2000");
-
-        save();
-
-        then(form.getLeadTimeErrorLabel().getText()).isEqualTo("Lead time cannot exceed 1440 minutes (24 hours)");
-        then(form.getLeadTimeField().getText()).isEqualTo("1440");
-        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
-    }
-
-    @Test
-    void should_refuse_a_lead_time_that_is_not_a_number_and_keep_what_was_typed() {
-        open();
-        typeLeadTime("soon");
-
-        save();
-
-        then(form.getLeadTimeErrorLabel().getText()).isEqualTo("Lead time must be a whole number of minutes");
-        then(form.getLeadTimeField().getText()).isEqualTo("soon");
-    }
-
-    @Test
     void should_save_nothing_when_the_calendar_is_wrong_even_if_the_lead_time_is_right() {
         open();
-        typeLeadTime("10");
+        choose(10);
         type("hello");
 
         save();
@@ -383,27 +353,52 @@ class SettingsDialogTest {
     }
 
     @Test
-    void should_warn_but_save_when_the_poll_interval_is_longer_than_the_lead_time() {
+    void should_report_nothing_when_the_lead_time_is_left_as_it_was() {
+        open();
+
+        save();
+
+        then(leadTimes).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_not_offer_lead_times_shorter_than_the_poll_interval_and_say_why() {
+        pollInterval = Duration.ofMinutes(10);
+        robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
+        form = dialog.getController();
+
+        open();
+
+        then(form.getLeadTimeBox().getItems()).containsExactly(1, 2, 5, 10, 15);   // all shown...
+        then(form.allowedLeadTimes()).containsExactly(10, 15);                      // ...the short ones disabled
+        then(form.getLeadTimeBox().getTooltip().getText())
+            .isEqualTo("The poll interval is 10 min: a shorter lead time could make a reminder late. "
+                + "Start with a shorter --poll-interval to allow it.");
+    }
+
+    @Test
+    void should_have_no_tooltip_when_every_lead_time_is_allowed() {
+        open();
+
+        then(form.getLeadTimeBox().getTooltip()).isNull();
+        then(form.allowedLeadTimes()).containsExactly(1, 2, 5, 10, 15);
+    }
+
+    @Test
+    void should_not_save_a_lead_time_the_poll_interval_does_not_allow() {
         pollInterval = Duration.ofMinutes(10);
         robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
         form = dialog.getController();
         open();
-        typeLeadTime("5");   // the default: nothing changes, so no warning
-        save();
-        then(dialog.isShowing()).isFalse();
+        choose(2);   // set from code: the list would not let the user
 
-        open();
-        typeLeadTime("6");
         save();
 
-        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(6));
-        then(leadTimes).containsExactly(Duration.ofMinutes(6));
-        then(form.getLeadTimeWarningLabel().getText())
-            .isEqualTo("Poll interval (10 min) exceeds lead time (6 min). Notifications may be delayed.");
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
+        then(leadTimes).isEmpty();
+        then(form.getLeadTimeBox().getValue()).isEqualTo(2);
         then(dialog.isShowing()).isTrue();
-
-        save();   // nothing changed since: it closes
-        then(dialog.isShowing()).isFalse();
     }
 
     // ---- settings/US-000017
@@ -479,7 +474,7 @@ class SettingsDialogTest {
     void should_not_switch_when_another_setting_is_wrong() {
         open();
         tick(false);
-        typeLeadTime("0");
+        type("hello");
 
         save();
 
@@ -492,7 +487,7 @@ class SettingsDialogTest {
     @Test
     void should_ask_for_a_test_notification_without_closing_or_saving() {
         open();
-        typeLeadTime("10");
+        choose(10);
 
         robot.interact(form::handleTestNotification);
 

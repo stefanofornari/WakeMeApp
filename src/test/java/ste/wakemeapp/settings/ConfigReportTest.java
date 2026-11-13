@@ -84,10 +84,10 @@ class ConfigReportTest {
 
     @Test
     void a_stored_lead_time_out_of_range_is_shown_as_ignored() {
-        node.put("notify.leadTimeMinutes", "5000");
+        node.put("notify.leadTimeMinutes", "12");
 
         then(lineOf(ConfigReport.lines(null, null, stored), "notify.leadTimeMinutes"))
-            .contains("(default)").contains("stored value '5000' ignored");
+            .contains("(default)").contains("stored value '12' ignored");
     }
 
     @Test
