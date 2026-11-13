@@ -70,7 +70,7 @@ class ConfigReportTest {
         List<String> lines = ConfigReport.lines(null, null, stored);
 
         then(lines.stream().filter(l -> l.startsWith("graph.tenant ")).count()).isEqualTo(1L);
-        then(lines).hasSize(3);
+        then(lines).hasSize(4);
     }
 
     @Test
@@ -94,6 +94,16 @@ class ConfigReportTest {
     void the_lead_time_is_not_listed_as_an_unknown_key() {
         stored.putInt("notify.leadTimeMinutes", 10);
 
+        then(ConfigReport.lines(null, null, stored).stream().filter(l -> l.contains("unknown key")).count()).isZero();
+    }
+
+    @Test
+    void the_notifications_switch_shows_its_default_and_its_stored_value() {
+        then(lineOf(ConfigReport.lines(null, null, stored), "notify.enabled")).contains("true").contains("(default)");
+
+        stored.putBoolean("notify.enabled", false);
+
+        then(lineOf(ConfigReport.lines(null, null, stored), "notify.enabled")).contains("false").contains("(stored)");
         then(ConfigReport.lines(null, null, stored).stream().filter(l -> l.contains("unknown key")).count()).isZero();
     }
 }

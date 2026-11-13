@@ -25,9 +25,11 @@ class SettingsDialogTest {
     private final FxRobot robot = new FxRobot();
     private final List<String> saved = new ArrayList<>();
     private final List<Duration> leadTimes = new ArrayList<>();
+    private final List<Boolean> switches = new ArrayList<>();
     private final SettingsListener listener = new SettingsListener() {
         @Override public void calendarSaved(String value) { saved.add(value); }
         @Override public void leadTimeSaved(Duration leadTime) { leadTimes.add(leadTime); }
+        @Override public void notificationsSwitched(boolean on) { switches.add(on); }
     };
     private Settings settings;
     private Duration pollInterval;
@@ -39,6 +41,7 @@ class SettingsDialogTest {
     private void start(Stage stage) throws IOException {
         saved.clear();
         leadTimes.clear();
+        switches.clear();
         settings = new Settings(new MemoryPreferences());
         pollInterval = Duration.ofMinutes(5);
         stored = new StoredCalendar(Files.createTempDirectory("settings").resolve("calendar.txt"));
@@ -398,5 +401,86 @@ class SettingsDialogTest {
 
         save();   // nothing changed since: it closes
         then(dialog.isShowing()).isFalse();
+    }
+
+    // ---- settings/US-000017
+
+    private void tick(boolean selected) {
+        robot.interact(() -> form.getNotificationsCheck().setSelected(selected));
+    }
+
+    @Test
+    void should_show_the_notifications_on_by_default() {
+        open();
+
+        then(form.getNotificationsCheck().isSelected()).isTrue();
+    }
+
+    @Test
+    void should_switch_the_notifications_off_save_it_and_report_it() {
+        open();
+        tick(false);
+
+        save();
+
+        then(NotificationsEnabled.read(settings)).isFalse();
+        then(switches).containsExactly(false);
+        then(saved).isEmpty();
+        then(leadTimes).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_show_the_saved_state_when_opened_again() {
+        NotificationsEnabled.save(settings, false);
+
+        open();
+
+        then(form.getNotificationsCheck().isSelected()).isFalse();
+    }
+
+    @Test
+    void should_switch_the_notifications_back_on() {
+        NotificationsEnabled.save(settings, false);
+        open();
+        tick(true);
+
+        save();
+
+        then(NotificationsEnabled.read(settings)).isTrue();
+        then(switches).containsExactly(true);
+    }
+
+    @Test
+    void should_report_nothing_when_the_switch_is_left_as_it_was() {
+        open();
+        tick(true);
+
+        save();
+
+        then(switches).isEmpty();
+    }
+
+    @Test
+    void should_not_switch_when_cancelled() {
+        open();
+        tick(false);
+
+        robot.interact(form::handleCancel);
+
+        then(NotificationsEnabled.read(settings)).isTrue();
+        then(switches).isEmpty();
+    }
+
+    @Test
+    void should_not_switch_when_another_setting_is_wrong() {
+        open();
+        tick(false);
+        typeLeadTime("0");
+
+        save();
+
+        then(NotificationsEnabled.read(settings)).isTrue();
+        then(switches).isEmpty();
     }
 }

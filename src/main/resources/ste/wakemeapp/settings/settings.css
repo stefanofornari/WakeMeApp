@@ -50,6 +50,22 @@
     -fx-text-fill: #FF5C5C;
 }
 
+.settings-check {
+    -fx-text-fill: #F4F6FB;
+    -fx-font-size: 14px;
+}
+
+.settings-check .box {
+    -fx-background-color: #141A2B;
+    -fx-border-color: #232C4A;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.settings-check:selected .mark {
+    -fx-background-color: #C6FF3D;
+}
+
 .settings-warning {
     -fx-font-size: 13px;
     -fx-text-fill: #FFC53D;

@@ -10,4 +10,7 @@ public interface SettingsListener {
 
     /** The lead time was saved and the calendar was not changed. */
     void leadTimeSaved(Duration leadTime);
+
+    /** The notifications were switched on ({@code true}) or off; the state is already saved. */
+    void notificationsSwitched(boolean on);
 }

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 
@@ -23,6 +24,7 @@ public final class SettingsController {
     @FXML private TextField leadTimeField;
     @FXML private Label leadTimeErrorLabel;
     @FXML private Label leadTimeWarningLabel;
+    @FXML private CheckBox notificationsCheck;
     @FXML private Button saveButton;
     @FXML private Button cancelButton;
 
@@ -33,6 +35,7 @@ public final class SettingsController {
     private Runnable onClose = () -> { };
     private String shownAtLoad = "";   // how the saved calendar was shown
     private String leadAtLoad = "";    // the saved lead time, in minutes
+    private boolean onAtLoad = true;   // whether the notifications are on
 
     @FXML
     private void initialize() {
@@ -65,6 +68,8 @@ public final class SettingsController {
         calendarField.setText(shownAtLoad);
         leadAtLoad = Long.toString(LeadTime.read(settings).toMinutes());
         leadTimeField.setText(leadAtLoad);
+        onAtLoad = NotificationsEnabled.read(settings);
+        notificationsCheck.setSelected(onAtLoad);
         clearError();
         clearLeadTimeMessages();
         showKind(shownAtLoad);
@@ -76,7 +81,8 @@ public final class SettingsController {
         String leadText = leadTimeField.getText() == null ? "" : leadTimeField.getText().strip();
         boolean calendarChanged = !calendarText.equals(shownAtLoad);
         boolean leadChanged = !leadText.equals(leadAtLoad);
-        if (!calendarChanged && !leadChanged) {
+        boolean switched = notificationsCheck.isSelected() != onAtLoad;
+        if (!calendarChanged && !leadChanged && !switched) {
             onClose.run();   // untouched, also when the calendar is the masked form of a saved link
             return;
         }
@@ -114,6 +120,9 @@ public final class SettingsController {
             if (leadChanged) {
                 LeadTime.save(settings, minutes);
             }
+            if (switched) {
+                NotificationsEnabled.save(settings, notificationsCheck.isSelected());
+            }
             if (calendarChanged) {
                 stored.save(calendarText);
             }
@@ -121,9 +130,12 @@ public final class SettingsController {
             showError("The calendar could not be saved: " + x.getMessage());
             return;
         }
+        if (switched) {
+            listener.notificationsSwitched(notificationsCheck.isSelected());
+        }
         if (calendarChanged) {
             listener.calendarSaved(savedCalendar);
-        } else {
+        } else if (leadChanged) {
             listener.leadTimeSaved(Duration.ofMinutes(minutes));
         }
         String warning = leadChanged ? LeadTime.pollWarning(minutes, pollInterval).orElse(null) : null;
@@ -223,6 +235,10 @@ public final class SettingsController {
 
     Label getLeadTimeWarningLabel() {
         return leadTimeWarningLabel;
+    }
+
+    CheckBox getNotificationsCheck() {
+        return notificationsCheck;
     }
 
     Button getSaveButton() {

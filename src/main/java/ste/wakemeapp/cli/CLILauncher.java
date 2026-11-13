@@ -18,6 +18,7 @@ import ste.wakemeapp.calendar.IcsAddress;
 import ste.wakemeapp.calendar.IcsCalendarSource;
 import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
+import ste.wakemeapp.notify.NotificationSwitch;
 import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
@@ -34,6 +35,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.function.Consumer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -50,6 +52,7 @@ public class CLILauncher extends Application {
     private CalendarPoller poller;
     private Tray tray;
     private SettingsDialog settingsDialog;
+    private final NotificationSwitch notifications = NotificationSwitch.of(Settings.user());
     private Runnable repoll;   // starts polling the current calendar again, with the settings as they are now
     private boolean calendarMode;
     private final ApplicationShutdown shutdown = new ApplicationShutdown(code -> {
@@ -163,6 +166,11 @@ public class CLILauncher extends Application {
                     @Override public void leadTimeSaved(Duration leadTime) {
                         leadTimeChanged(leadTime);
                     }
+
+                    @Override public void notificationsSwitched(boolean on) {
+                        notifications.follow(on);
+                        LOG.info(on ? "Meeting notifications are on" : "Meeting notifications are off");
+                    }
                 });
         }
         settingsDialog.show();
@@ -221,7 +229,10 @@ public class CLILauncher extends Application {
     }
 
     private NotificationScheduler newScheduler() {
-        return new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered),
+        // a single meeting given on the command line is asked for explicitly: only a calendar can be switched off
+        Consumer<MeetingNotification> trigger = calendarMode
+            ? notifications.guard(this::onNotificationTriggered) : this::onNotificationTriggered;
+        return new NotificationScheduler(NotificationScheduler.onFxThread(trigger),
             LeadTime.read(Settings.user()), Clock.systemDefaultZone());
     }
 
