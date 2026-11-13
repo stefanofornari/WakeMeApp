@@ -34,13 +34,13 @@
     <CheckBox fx:id="notificationsCheck" text="Show meeting reminders" styleClass="settings-check"/>
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Label text="Notify me" styleClass="settings-help"/>
-        <ComboBox fx:id="leadTimeBox" styleClass="settings-choice" prefWidth="110"/>
+        <ComboBox fx:id="leadTimeBox" styleClass="settings-choice" prefWidth="150" minWidth="150"/>
         <Label text="before a meeting starts" styleClass="settings-help"/>
     </HBox>
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Label text="Sound" styleClass="settings-help" minWidth="60"/>
-        <ComboBox fx:id="soundBox" styleClass="settings-choice" prefWidth="200"/>
-        <Button fx:id="previewButton" text="Preview" styleClass="settings-button" onAction="#handlePreview"/>
+        <ComboBox fx:id="soundBox" styleClass="settings-choice" prefWidth="200" minWidth="200"/>
+        <Button fx:id="previewButton" text="Preview" minWidth="110" prefWidth="110" styleClass="settings-button" onAction="#handlePreview"/>
     </HBox>
     <Label fx:id="soundErrorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
     <Label fx:id="soundWarningLabel" styleClass="settings-warning" wrapText="true" visible="false" managed="false"/>
@@ -51,7 +51,7 @@
         <Label fx:id="volumeLabel" text="80 %" styleClass="settings-help" minWidth="48"/>
     </HBox>
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <Button fx:id="testButton" text="Test Notification" styleClass="settings-button" onAction="#handleTestNotification"/>
+        <Button fx:id="testButton" text="Test Notification" minWidth="190" prefWidth="190" styleClass="settings-button" onAction="#handleTestNotification"/>
         <Label text="Shows a test meeting like a real reminder, whatever the settings above." styleClass="settings-help" wrapText="true"/>
     </HBox>
 
