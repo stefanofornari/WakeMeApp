@@ -93,7 +93,7 @@ removes the calendar. **Notify me … before a meeting starts** sets the lead ti
 applies at once, also to the meetings already scheduled. Lead times shorter than the poll interval
 (`--poll-interval`, 5 by default) are greyed out, since the reminder could be late; hover the list to see why, or
 start with a shorter poll interval. The window the calendar is read with grows to poll interval + lead time when
-`--window` is shorter. A **sound** plays with every reminder (the bundled chime at 80 % volume, once; reminders less than a second apart share it; dismissing or snoozing stops it; if it cannot be played the system beep is used and the log says why). **Show meeting reminders** switches all reminders off or on, for example during focused work: it applies at
+`--window` is shorter. A **sound** plays with every reminder (once, at the chosen volume, 80 % by default; chosen in the dialog: Chime, Pop, Ping, Bell, None (Silent) or a custom WAV/AIFF file picked with *Custom file…*, a file that is not audio is refused; **Preview** plays the selection without saving; if the custom file goes missing the chime plays and the dialog warns; reminders less than a second apart share it; dismissing or snoozing stops it; if it cannot be played the system beep is used and the log says why). **Show meeting reminders** switches all reminders off or on, for example during focused work: it applies at
 once and is kept across restarts. While it is off the calendar is still polled but nothing is shown, and the log says
 "Notification suppressed (globally disabled)"; a snoozed meeting is held back too. A meeting given with `--title`
 is not affected. **Test Notification** shows a test meeting ("Test Meeting", starting in 5 minutes, joining
@@ -186,7 +186,8 @@ that it reads when an option is missing, lives in the Java user preferences, nod
 |---|---|---|
 | `graph.clientId` | Application (client) id | none |
 | `graph.tenant` | Tenant id or `organizations` | `organizations` |
-| `notify.sound` | The notification sound: `chime`, `pop`, `ping` or `bell` | `chime` |
+| `notify.sound` | The notification sound: `chime`, `pop`, `ping`, `bell`, `none` or `custom` (set in the settings dialog) | `chime` |
+| `notify.soundFile` | Absolute path of the custom sound (WAV/AIFF), used when `notify.sound` is `custom` | none |
 | `notify.soundVolume` | Volume of the notification sound, 0 to 100 (0 is silent) | 80 |
 | `notify.enabled` | Whether meeting reminders are shown (`true`/`false`; set in the settings dialog) | `true` |
 | `notify.leadTimeMinutes` | Minutes before a meeting starts that the reminder appears (1, 2, 5, 10 or 15; set in the settings dialog) | 5 |

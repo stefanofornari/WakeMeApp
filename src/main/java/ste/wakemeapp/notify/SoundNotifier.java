@@ -6,6 +6,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.logging.Logger;
 import ste.wakemeapp.settings.Settings;
+import ste.wakemeapp.settings.SoundChoice;
+import ste.wakemeapp.settings.SoundFile;
 import ste.wakemeapp.settings.SoundSetting;
 
 /**
@@ -33,7 +35,10 @@ public final class SoundNotifier {
     /** Loads the chosen sound, so that the first notification has no delay. A failure is only logged. */
     public void prepare() {
         try {
-            output.prepare(uriOf(SoundSetting.sound(settings)));
+            URI sound = uriOf(SoundSetting.choice(settings));
+            if (sound != null) {
+                output.prepare(sound);
+            }
         } catch (RuntimeException x) {
             LOG.warning("The notification sound cannot be loaded: " + x.getMessage());
         }
@@ -46,17 +51,32 @@ public final class SoundNotifier {
             LOG.fine("A sound was just played: this notification shares it");
             return;
         }
-        int volume = SoundSetting.volume(settings);
-        if (volume == 0) {
-            return;   // silent on purpose: no beep either
+        if (start(SoundSetting.choice(settings), SoundSetting.volume(settings))) {
+            lastPlayed = now;
         }
-        lastPlayed = now;
+    }
+
+    /**
+     * Plays a sound to be heard, as the settings dialog does: the given choice at the given volume,
+     * whatever is stored, and not held back by a sound just played.
+     */
+    public synchronized void preview(SoundChoice choice, int volumePercent) {
+        output.stop();
+        start(choice, volumePercent);
+    }
+
+    /** @return whether a sound was started (or the beep was used) */
+    private boolean start(SoundChoice choice, int volumePercent) {
+        if (volumePercent == 0 || choice.kind() == SoundChoice.Kind.NONE) {
+            return false;   // silent on purpose: no beep either
+        }
         try {
-            output.play(uriOf(SoundSetting.sound(settings)), volume / 100.0);
+            output.play(uriOf(choice), volumePercent / 100.0);
         } catch (RuntimeException x) {
             LOG.warning("The notification sound cannot be played, using the system beep: " + x.getMessage());
             output.beep();
         }
+        return true;
     }
 
     /** Stops the sound, for example when the user dismisses or snoozes the notification. */
@@ -64,7 +84,22 @@ public final class SoundNotifier {
         output.stop();
     }
 
-    private static URI uriOf(String name) {
+    /** The sound to play; a custom file that is gone or unusable is replaced by the default, with a warning. */
+    private static URI uriOf(SoundChoice choice) {
+        return switch (choice.kind()) {
+            case NONE -> null;
+            case BUNDLED -> bundledUri(choice.value());
+            case CUSTOM -> {
+                if (SoundFile.isUsable(choice.value())) {
+                    yield java.nio.file.Path.of(choice.value()).toUri();
+                }
+                LOG.warning("The custom sound " + choice.value() + " cannot be used: the default sound plays instead");
+                yield bundledUri(SoundSetting.DEFAULT_SOUND);
+            }
+        };
+    }
+
+    private static URI bundledUri(String name) {
         var resource = SoundNotifier.class.getResource(SoundSetting.resourceOf(name));
         if (resource == null) {
             throw new IllegalStateException("the sound '" + name + "' is not in the application");

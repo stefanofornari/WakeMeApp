@@ -3,7 +3,7 @@ package ste.wakemeapp.settings;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.BDDAssertions.then;
 
-/** Which bundled sound plays and how loud (notify/US-000008). */
+/** Which sound plays and how loud (notify/US-000008, settings/US-000016). */
 class SoundSettingTest {
 
     private final MemoryPreferences node = new MemoryPreferences();
@@ -15,18 +15,43 @@ class SoundSettingTest {
     }
 
     @Test
-    void the_default_sound_is_the_chime_at_80_percent() {
-        then(SoundSetting.sound(settings)).isEqualTo("chime");
+    void the_default_is_the_chime_at_80_percent() {
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.bundled("chime"));
         then(SoundSetting.volume(settings)).isEqualTo(80);
     }
 
     @Test
-    void a_saved_sound_and_volume_are_read_back() {
-        settings.putString(SoundSetting.SOUND_KEY, "ping");
-        settings.putInt(SoundSetting.VOLUME_KEY, 35);
+    void a_saved_bundled_sound_and_volume_are_read_back() {
+        SoundSetting.save(settings, SoundChoice.bundled("ping"), 35);
 
-        then(SoundSetting.sound(settings)).isEqualTo("ping");
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.bundled("ping"));
         then(SoundSetting.volume(settings)).isEqualTo(35);
+    }
+
+    @Test
+    void silent_is_saved_and_read_back() {
+        SoundSetting.save(settings, SoundChoice.none(), 80);
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.none());
+        then(node.get(SoundSetting.SOUND_KEY, null)).isEqualTo("none");
+    }
+
+    @Test
+    void a_custom_file_is_saved_with_its_path_and_read_back() {
+        SoundSetting.save(settings, SoundChoice.custom("/home/ste/sounds/ding.wav"), 80);
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.custom("/home/ste/sounds/ding.wav"));
+        then(node.get(SoundSetting.SOUND_KEY, null)).isEqualTo("custom");
+        then(node.get(SoundSetting.FILE_KEY, null)).isEqualTo("/home/ste/sounds/ding.wav");
+    }
+
+    @Test
+    void choosing_a_bundled_sound_after_a_custom_one_forgets_the_file() {
+        SoundSetting.save(settings, SoundChoice.custom("/home/ste/sounds/ding.wav"), 80);
+
+        SoundSetting.save(settings, SoundChoice.bundled("bell"), 80);
+
+        then(node.get(SoundSetting.FILE_KEY, null)).isNull();
     }
 
     @Test
@@ -48,10 +73,17 @@ class SoundSettingTest {
     }
 
     @Test
-    void a_sound_that_is_not_bundled_is_ignored() {
+    void a_sound_that_is_not_known_is_ignored() {
         node.put(SoundSetting.SOUND_KEY, "dubstep");
 
-        then(SoundSetting.sound(settings)).isEqualTo("chime");
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.bundled("chime"));
+    }
+
+    @Test
+    void a_custom_choice_without_a_file_is_ignored() {
+        node.put(SoundSetting.SOUND_KEY, "custom");
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.bundled("chime"));
     }
 
     @Test

@@ -31,6 +31,7 @@ import ste.wakemeapp.settings.LeadTime;
 import ste.wakemeapp.settings.Settings;
 import ste.wakemeapp.settings.SettingsDialog;
 import ste.wakemeapp.settings.SettingsListener;
+import ste.wakemeapp.settings.SoundChoice;
 import ste.wakemeapp.settings.StoredCalendar;
 import ste.wakemeapp.tray.Tray;
 import java.nio.file.Path;
@@ -174,6 +175,14 @@ public class CLILauncher extends Application {
 
                     @Override public void leadTimeSaved(Duration leadTime) {
                         leadTimeChanged(leadTime);
+                    }
+
+                    @Override public void previewSound(SoundChoice choice, int volumePercent) {
+                        sound.preview(choice, volumePercent);
+                    }
+
+                    @Override public void soundSaved() {
+                        sound.prepare();
                     }
 
                     @Override public void testNotificationRequested() {

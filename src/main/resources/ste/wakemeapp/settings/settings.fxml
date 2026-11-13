@@ -5,6 +5,7 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
@@ -35,6 +36,19 @@
         <Label text="Notify me" styleClass="settings-help"/>
         <ComboBox fx:id="leadTimeBox" styleClass="settings-choice" prefWidth="110"/>
         <Label text="before a meeting starts" styleClass="settings-help"/>
+    </HBox>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Sound" styleClass="settings-help" minWidth="60"/>
+        <ComboBox fx:id="soundBox" styleClass="settings-choice" prefWidth="200"/>
+        <Button fx:id="previewButton" text="Preview" styleClass="settings-button" onAction="#handlePreview"/>
+    </HBox>
+    <Label fx:id="soundErrorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
+    <Label fx:id="soundWarningLabel" styleClass="settings-warning" wrapText="true" visible="false" managed="false"/>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Volume" styleClass="settings-help" minWidth="60"/>
+        <Slider fx:id="volumeSlider" min="0" max="100" value="80" majorTickUnit="25" minorTickCount="4"
+                blockIncrement="5" prefWidth="260" styleClass="settings-slider"/>
+        <Label fx:id="volumeLabel" text="80 %" styleClass="settings-help" minWidth="48"/>
     </HBox>
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Button fx:id="testButton" text="Test Notification" styleClass="settings-button" onAction="#handleTestNotification"/>

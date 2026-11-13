@@ -16,4 +16,10 @@ public interface SettingsListener {
 
     /** The user asked for a test notification; it works whatever the other settings are. */
     void testNotificationRequested();
+
+    /** The user asked to hear {@code choice} at {@code volumePercent}, whatever is saved. */
+    void previewSound(SoundChoice choice, int volumePercent);
+
+    /** The sound or its volume was saved. */
+    void soundSaved();
 }

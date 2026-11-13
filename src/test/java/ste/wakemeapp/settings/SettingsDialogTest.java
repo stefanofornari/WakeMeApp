@@ -1,5 +1,6 @@
 package ste.wakemeapp.settings;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,11 +27,15 @@ class SettingsDialogTest {
     private final List<String> saved = new ArrayList<>();
     private final List<Duration> leadTimes = new ArrayList<>();
     private final List<Boolean> switches = new ArrayList<>();
+    private final List<String> previews = new ArrayList<>();
+    private int soundsSaved;
     private int tests;
     private final SettingsListener listener = new SettingsListener() {
         @Override public void calendarSaved(String value) { saved.add(value); }
         @Override public void leadTimeSaved(Duration leadTime) { leadTimes.add(leadTime); }
         @Override public void notificationsSwitched(boolean on) { switches.add(on); }
+        @Override public void previewSound(SoundChoice choice, int volume) { previews.add(choice.kind() + ":" + choice.value() + "@" + volume); }
+        @Override public void soundSaved() { soundsSaved++; }
         @Override public void testNotificationRequested() { tests++; }
     };
     private Settings settings;
@@ -45,6 +50,8 @@ class SettingsDialogTest {
         leadTimes.clear();
         switches.clear();
         tests = 0;
+        previews.clear();
+        soundsSaved = 0;
         settings = new Settings(new MemoryPreferences());
         pollInterval = Duration.ofMinutes(5);
         stored = new StoredCalendar(Files.createTempDirectory("settings").resolve("calendar.txt"));
@@ -512,5 +519,157 @@ class SettingsDialogTest {
     @Test
     void should_have_a_test_button_in_the_dialog() {
         then(form.getTestButton().getText()).isEqualTo("Test Notification");
+    }
+
+    // ---- US-16
+
+    private void pick(SettingsController.SoundOption option) {
+        robot.interact(() -> form.getSoundBox().setValue(option));
+    }
+
+    private Path audio(String name, byte[] content) throws IOException {
+        Path file = Files.createTempDirectory("snd").resolve(name);
+        Files.write(file, content);
+        return file;
+    }
+
+    private Path wav() throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(8000, 16, 1, true, false);
+        byte[] data = new byte[1600];
+        try (javax.sound.sampled.AudioInputStream in = new javax.sound.sampled.AudioInputStream(
+                new java.io.ByteArrayInputStream(data), format, 800)) {
+            javax.sound.sampled.AudioSystem.write(in, javax.sound.sampled.AudioFileFormat.Type.WAVE, out);
+        }
+        return audio("ding.wav", out.toByteArray());
+    }
+
+    private SettingsController.SoundOption bundled(String name) {
+        return SettingsController.SoundOption.of(SoundChoice.bundled(name));
+    }
+
+    @Test
+    void should_list_the_bundled_sounds_silent_and_custom_file_with_chime_at_80_by_default() {
+        open();
+
+        then(form.getSoundBox().getItems()).extracting(SettingsController.SoundOption::label)
+            .containsExactly("Chime", "Pop", "Ping", "Bell", "None (Silent)", "Custom file\u2026");
+        then(form.getSoundBox().getValue().label()).isEqualTo("Chime");
+        then(form.getVolumeSlider().getValue()).isEqualTo(80.0);
+        then(form.getVolumeLabel().getText()).isEqualTo("80 %");
+    }
+
+    @Test
+    void should_preview_the_selected_sound_at_the_slider_volume_without_saving() {
+        open();
+        pick(bundled("bell"));
+        robot.interact(() -> form.getVolumeSlider().setValue(30));
+
+        robot.interact(form::handlePreview);
+
+        then(previews).containsExactly("BUNDLED:bell@30");
+        then(settings.get(SoundSetting.SOUND_KEY)).isNull();
+        then(form.getVolumeLabel().getText()).isEqualTo("30 %");
+    }
+
+    @Test
+    void should_save_the_sound_and_volume_and_tell_the_listener() {
+        open();
+        pick(bundled("ping"));
+        robot.interact(() -> form.getVolumeSlider().setValue(40));
+
+        save();
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.bundled("ping"));
+        then(SoundSetting.volume(settings)).isEqualTo(40);
+        then(soundsSaved).isEqualTo(1);
+    }
+
+    @Test
+    void should_save_none_as_silent() {
+        open();
+        pick(SettingsController.SoundOption.NONE);
+
+        save();
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.none());
+        then(soundsSaved).isEqualTo(1);
+    }
+
+    @Test
+    void should_not_tell_the_listener_when_the_sound_did_not_change() {
+        open();
+        robot.interact(() -> form.getNotificationsCheck().setSelected(false));
+
+        save();
+
+        then(soundsSaved).isZero();
+    }
+
+    @Test
+    void should_select_a_custom_file_show_its_name_and_save_its_path() throws IOException {
+        Path file = wav();
+        form.setFilePicker(() -> file.toFile());
+        open();
+
+        pick(SettingsController.SoundOption.PICK);
+        save();
+
+        then(form.getSoundBox().getValue().label()).isEqualTo("ding.wav");
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.custom(file.toAbsolutePath().toString()));
+    }
+
+    @Test
+    void should_go_back_to_the_previous_sound_when_the_file_picker_is_cancelled() {
+        form.setFilePicker(() -> null);
+        open();
+        pick(bundled("pop"));
+
+        pick(SettingsController.SoundOption.PICK);
+
+        then(form.getSoundBox().getValue().label()).isEqualTo("Pop");
+    }
+
+    @Test
+    void should_refuse_a_file_that_is_not_audio_and_clear_the_custom_selection() throws IOException {
+        Path text = audio("notes.txt", "hello".getBytes());
+        form.setFilePicker(() -> text.toFile());
+        open();
+
+        pick(SettingsController.SoundOption.PICK);
+
+        then(form.getSoundErrorLabel().isVisible()).isTrue();
+        then(form.getSoundErrorLabel().getText()).isEqualTo("Selected file is not a valid audio format (WAV or AIFF)");
+        then(form.getSoundBox().getValue().label()).isEqualTo("Chime");
+        then(form.getSoundBox().getItems()).extracting(SettingsController.SoundOption::label).doesNotContain("notes.txt");
+    }
+
+    @Test
+    void should_warn_when_the_stored_custom_file_is_missing() {
+        SoundSetting.save(settings, SoundChoice.custom("/nowhere/gone.wav"), 80);
+
+        open();
+
+        then(form.getSoundWarningLabel().isVisible()).isTrue();
+        then(form.getSoundBox().getValue().label()).isEqualTo("gone.wav");
+    }
+
+    @Test
+    void should_not_warn_when_the_stored_custom_file_is_usable() throws IOException {
+        SoundSetting.save(settings, SoundChoice.custom(wav().toAbsolutePath().toString()), 80);
+
+        open();
+
+        then(form.getSoundWarningLabel().isVisible()).isFalse();
+    }
+
+    @Test
+    void should_show_the_stored_sound_and_volume() {
+        SoundSetting.save(settings, SoundChoice.none(), 25);
+
+        open();
+
+        then(form.getSoundBox().getValue().label()).isEqualTo("None (Silent)");
+        then(form.getVolumeSlider().getValue()).isEqualTo(25.0);
     }
 }

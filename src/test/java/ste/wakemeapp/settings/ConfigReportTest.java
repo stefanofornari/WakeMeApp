@@ -70,7 +70,7 @@ class ConfigReportTest {
         List<String> lines = ConfigReport.lines(null, null, stored);
 
         then(lines.stream().filter(l -> l.startsWith("graph.tenant ")).count()).isEqualTo(1L);
-        then(lines).hasSize(6);
+        then(lines).hasSize(7);
     }
 
     @Test
@@ -131,5 +131,24 @@ class ConfigReportTest {
 
         then(lineOf(lines, "notify.sound")).contains("chime").contains("stored value 'dubstep' ignored");
         then(lineOf(lines, "notify.soundVolume")).contains("80").contains("stored value '101' ignored");
+    }
+
+    @Test
+    void a_custom_sound_shows_its_file() {
+        stored.putString("notify.sound", "custom");
+        stored.putString("notify.soundFile", "/home/ste/ding.wav");
+
+        List<String> lines = ConfigReport.lines(null, null, stored);
+
+        then(lineOf(lines, "notify.sound")).contains("custom").contains("(stored)");
+        then(lineOf(lines, "notify.soundFile")).contains("/home/ste/ding.wav").contains("(stored)");
+        then(lines.stream().filter(l -> l.contains("unknown key")).count()).isZero();
+    }
+
+    @Test
+    void silent_is_a_valid_sound() {
+        stored.putString("notify.sound", "none");
+
+        then(lineOf(ConfigReport.lines(null, null, stored), "notify.sound")).contains("none").contains("(stored)");
     }
 }

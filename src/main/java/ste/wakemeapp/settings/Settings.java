@@ -63,6 +63,11 @@ public class Settings {
         return defaultValue;
     }
 
+    /** Forgets the stored value of a key. */
+    public void remove(String key) {
+        node.remove(key);
+    }
+
     /** The keys that have a stored value; empty (with a WARNING) if the store cannot be read. */
     public Set<String> keys() {
         try {

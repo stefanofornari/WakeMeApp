@@ -97,6 +97,18 @@
     -fx-background-color: #232C4A;
 }
 
+.settings-slider .track {
+    -fx-background-color: #232C4A;
+    -fx-background-radius: 0;
+}
+
+.settings-slider .thumb {
+    -fx-background-color: #C6FF3D;
+    -fx-background-radius: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 7 5 7 5;
+}
+
 .settings-warning {
     -fx-font-size: 13px;
     -fx-text-fill: #FFC53D;
