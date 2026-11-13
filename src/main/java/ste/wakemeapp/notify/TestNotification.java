@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 
 /**
- * A fake meeting shown through the real overlay, to check that the display (and later the sound) work.
+ * A fake meeting shown through the real overlay, to check that the display and the sound work.
  * It has a scheduler and an overlay manager of its own, so a snooze brings it back and nothing of it
  * touches the calendar being polled or the application's own scheduler. It does not look at the
  * switch of the notifications. Use on the JavaFX Application Thread.
@@ -20,8 +20,15 @@ public final class TestNotification {
 
     private final NotificationScheduler scheduler;
     private final OverlayManager manager;
+    private final Runnable sound;
 
     public TestNotification() {
+        this(() -> { });
+    }
+
+    /** @param sound played with each showing of the test meeting, also when a snooze brings it back */
+    public TestNotification(Runnable sound) {
+        this.sound = sound;
         // a snooze fires again through the same overlay
         scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::show));
         manager = new OverlayManager(scheduler);
@@ -40,6 +47,7 @@ public final class TestNotification {
     }
 
     private void show(MeetingNotification notification) {
+        sound.run();
         manager.showNotification(notification);
     }
 

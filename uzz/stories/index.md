@@ -30,7 +30,7 @@
 | notify/US-000005 | Full-Screen Overlay Window | DONE |
 | notify/US-000006 | Countdown Timer | DONE |
 | notify/US-000007 | One-Click Join Button | DONE |
-| notify/US-000008 | Configurable Sound Notification | TODO |
+| notify/US-000008 | Configurable Sound Notification | DONE |
 | notify/US-000009 | Snooze Options | DONE |
 | notify/US-000010 | Dismiss Action | DONE |
 | notify/US-000022 | Command-Line Trigger for Meeting Notification | DONE |

@@ -55,4 +55,15 @@ class TestNotificationTest {
 
         then(test.manager().getOverlayCount()).isZero();
     }
+
+    @Test
+    void should_play_the_sound_with_the_overlay(FxRobot robot) {
+        int[] played = {0};
+        TestNotification withSound = new TestNotification(() -> played[0]++);
+
+        robot.interact(withSound::show);
+
+        then(played[0]).isEqualTo(1);
+        then(withSound.manager().getOverlayCount()).isGreaterThanOrEqualTo(1);
+    }
 }

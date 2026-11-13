@@ -18,8 +18,10 @@ import ste.wakemeapp.calendar.IcsAddress;
 import ste.wakemeapp.calendar.IcsCalendarSource;
 import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
+import ste.wakemeapp.notify.AudioClipOutput;
 import ste.wakemeapp.notify.NotificationSwitch;
 import ste.wakemeapp.notify.OverlayManager;
+import ste.wakemeapp.notify.SoundNotifier;
 import ste.wakemeapp.notify.TestNotification;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
@@ -54,6 +56,7 @@ public class CLILauncher extends Application {
     private Tray tray;
     private SettingsDialog settingsDialog;
     private final NotificationSwitch notifications = NotificationSwitch.of(Settings.user());
+    private final SoundNotifier sound = new SoundNotifier(Settings.user(), new AudioClipOutput(), Clock.systemUTC());
     private TestNotification testNotification;
     private Runnable repoll;   // starts polling the current calendar again, with the settings as they are now
     private boolean calendarMode;
@@ -76,6 +79,7 @@ public class CLILauncher extends Application {
         
         // Hide the primary stage
         primaryStage.hide();
+        sound.prepare();   // the first notification then plays without delay
 
         List<String> rawArgs = getParameters().getRaw();
         String[] args = normalizeArgs(rawArgs);
@@ -174,7 +178,7 @@ public class CLILauncher extends Application {
 
                     @Override public void testNotificationRequested() {
                         if (testNotification == null) {
-                            testNotification = new TestNotification();
+                            testNotification = new TestNotification(sound::play);
                         }
                         testNotification.show();
                         LOG.info("Showing the test notification");
@@ -484,12 +488,22 @@ public class CLILauncher extends Application {
             scheduler = newScheduler();
         }
         overlayManager = new OverlayManager(scheduler);
-        // Track snoozes scheduled from this overlay
-        overlayManager.setOnSnoozeScheduled(() -> pendingNotifications.incrementAndGet());
-        if (poller != null) {
-            overlayManager.setOnDismissed(poller::dismiss);
-            overlayManager.setOnDismissUndone(poller::undoDismiss);
+        // Track snoozes scheduled from this overlay; a snooze or a dismissal also ends the sound
+        overlayManager.setOnSnoozeScheduled(() -> {
+            sound.stop();
+            pendingNotifications.incrementAndGet();
+        });
+        CalendarPoller current = poller;
+        overlayManager.setOnDismissed(meeting -> {
+            sound.stop();
+            if (current != null) {
+                current.dismiss(meeting);
+            }
+        });
+        if (current != null) {
+            overlayManager.setOnDismissUndone(current::undoDismiss);
         }
+        sound.play();   // with the overlay
         overlayManager.showNotification(notification);
 
         LOG.info(() -> "Showing notification \"" + notification.title() + "\"");

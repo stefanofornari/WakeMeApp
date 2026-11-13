@@ -93,7 +93,7 @@ removes the calendar. **Notify me … before a meeting starts** sets the lead ti
 applies at once, also to the meetings already scheduled. Lead times shorter than the poll interval
 (`--poll-interval`, 5 by default) are greyed out, since the reminder could be late; hover the list to see why, or
 start with a shorter poll interval. The window the calendar is read with grows to poll interval + lead time when
-`--window` is shorter. **Show meeting reminders** switches all reminders off or on, for example during focused work: it applies at
+`--window` is shorter. A **sound** plays with every reminder (the bundled chime at 80 % volume, once; reminders less than a second apart share it; dismissing or snoozing stops it; if it cannot be played the system beep is used and the log says why). **Show meeting reminders** switches all reminders off or on, for example during focused work: it applies at
 once and is kept across restarts. While it is off the calendar is still polled but nothing is shown, and the log says
 "Notification suppressed (globally disabled)"; a snoozed meeting is held back too. A meeting given with `--title`
 is not affected. **Test Notification** shows a test meeting ("Test Meeting", starting in 5 minutes, joining
@@ -186,6 +186,8 @@ that it reads when an option is missing, lives in the Java user preferences, nod
 |---|---|---|
 | `graph.clientId` | Application (client) id | none |
 | `graph.tenant` | Tenant id or `organizations` | `organizations` |
+| `notify.sound` | The notification sound: `chime`, `pop`, `ping` or `bell` | `chime` |
+| `notify.soundVolume` | Volume of the notification sound, 0 to 100 (0 is silent) | 80 |
 | `notify.enabled` | Whether meeting reminders are shown (`true`/`false`; set in the settings dialog) | `true` |
 | `notify.leadTimeMinutes` | Minutes before a meeting starts that the reminder appears (1, 2, 5, 10 or 15; set in the settings dialog) | 5 |
 

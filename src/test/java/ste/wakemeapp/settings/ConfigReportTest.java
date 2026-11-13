@@ -70,7 +70,7 @@ class ConfigReportTest {
         List<String> lines = ConfigReport.lines(null, null, stored);
 
         then(lines.stream().filter(l -> l.startsWith("graph.tenant ")).count()).isEqualTo(1L);
-        then(lines).hasSize(4);
+        then(lines).hasSize(6);
     }
 
     @Test
@@ -105,5 +105,31 @@ class ConfigReportTest {
 
         then(lineOf(ConfigReport.lines(null, null, stored), "notify.enabled")).contains("false").contains("(stored)");
         then(ConfigReport.lines(null, null, stored).stream().filter(l -> l.contains("unknown key")).count()).isZero();
+    }
+
+    @Test
+    void the_sound_and_its_volume_show_their_defaults_and_stored_values() {
+        List<String> lines = ConfigReport.lines(null, null, stored);
+        then(lineOf(lines, "notify.sound")).contains("chime").contains("(default)");
+        then(lineOf(lines, "notify.soundVolume")).contains("80").contains("(default)");
+
+        stored.putString("notify.sound", "ping");
+        stored.putInt("notify.soundVolume", 35);
+
+        lines = ConfigReport.lines(null, null, stored);
+        then(lineOf(lines, "notify.sound")).contains("ping").contains("(stored)");
+        then(lineOf(lines, "notify.soundVolume")).contains("35").contains("(stored)");
+        then(lines.stream().filter(l -> l.contains("unknown key")).count()).isZero();
+    }
+
+    @Test
+    void a_stored_sound_that_is_not_bundled_or_a_volume_out_of_range_is_shown_as_ignored() {
+        node.put("notify.sound", "dubstep");
+        node.put("notify.soundVolume", "101");
+
+        List<String> lines = ConfigReport.lines(null, null, stored);
+
+        then(lineOf(lines, "notify.sound")).contains("chime").contains("stored value 'dubstep' ignored");
+        then(lineOf(lines, "notify.soundVolume")).contains("80").contains("stored value '101' ignored");
     }
 }
