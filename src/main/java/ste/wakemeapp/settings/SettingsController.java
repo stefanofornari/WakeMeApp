@@ -25,6 +25,7 @@ public final class SettingsController {
     @FXML private Label leadTimeErrorLabel;
     @FXML private Label leadTimeWarningLabel;
     @FXML private CheckBox notificationsCheck;
+    @FXML private Button testButton;
     @FXML private Button saveButton;
     @FXML private Button cancelButton;
 
@@ -147,6 +148,12 @@ public final class SettingsController {
         }
     }
 
+    /** Shows a test notification; it does not save anything and does not close the dialog. */
+    @FXML
+    void handleTestNotification() {
+        listener.testNotificationRequested();
+    }
+
     @FXML
     void handleCancel() {
         onClose.run();
@@ -239,6 +246,10 @@ public final class SettingsController {
 
     CheckBox getNotificationsCheck() {
         return notificationsCheck;
+    }
+
+    Button getTestButton() {
+        return testButton;
     }
 
     Button getSaveButton() {

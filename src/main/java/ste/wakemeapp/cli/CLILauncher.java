@@ -20,6 +20,7 @@ import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.NotificationSwitch;
 import ste.wakemeapp.notify.OverlayManager;
+import ste.wakemeapp.notify.TestNotification;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
 import ste.wakemeapp.settings.ConnectionSettings;
@@ -53,6 +54,7 @@ public class CLILauncher extends Application {
     private Tray tray;
     private SettingsDialog settingsDialog;
     private final NotificationSwitch notifications = NotificationSwitch.of(Settings.user());
+    private TestNotification testNotification;
     private Runnable repoll;   // starts polling the current calendar again, with the settings as they are now
     private boolean calendarMode;
     private final ApplicationShutdown shutdown = new ApplicationShutdown(code -> {
@@ -114,6 +116,9 @@ public class CLILauncher extends Application {
             if (overlayManager != null) {
                 overlayManager.hideAll();
             }
+            if (testNotification != null) {
+                testNotification.close();
+            }
         });
         try {
             registerShutdownHook();
@@ -165,6 +170,14 @@ public class CLILauncher extends Application {
 
                     @Override public void leadTimeSaved(Duration leadTime) {
                         leadTimeChanged(leadTime);
+                    }
+
+                    @Override public void testNotificationRequested() {
+                        if (testNotification == null) {
+                            testNotification = new TestNotification();
+                        }
+                        testNotification.show();
+                        LOG.info("Showing the test notification");
                     }
 
                     @Override public void notificationsSwitched(boolean on) {

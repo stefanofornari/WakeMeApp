@@ -26,10 +26,12 @@ class SettingsDialogTest {
     private final List<String> saved = new ArrayList<>();
     private final List<Duration> leadTimes = new ArrayList<>();
     private final List<Boolean> switches = new ArrayList<>();
+    private int tests;
     private final SettingsListener listener = new SettingsListener() {
         @Override public void calendarSaved(String value) { saved.add(value); }
         @Override public void leadTimeSaved(Duration leadTime) { leadTimes.add(leadTime); }
         @Override public void notificationsSwitched(boolean on) { switches.add(on); }
+        @Override public void testNotificationRequested() { tests++; }
     };
     private Settings settings;
     private Duration pollInterval;
@@ -42,6 +44,7 @@ class SettingsDialogTest {
         saved.clear();
         leadTimes.clear();
         switches.clear();
+        tests = 0;
         settings = new Settings(new MemoryPreferences());
         pollInterval = Duration.ofMinutes(5);
         stored = new StoredCalendar(Files.createTempDirectory("settings").resolve("calendar.txt"));
@@ -482,5 +485,37 @@ class SettingsDialogTest {
 
         then(NotificationsEnabled.read(settings)).isTrue();
         then(switches).isEmpty();
+    }
+
+    // ---- settings/US-000018
+
+    @Test
+    void should_ask_for_a_test_notification_without_closing_or_saving() {
+        open();
+        typeLeadTime("10");
+
+        robot.interact(form::handleTestNotification);
+
+        then(tests).isEqualTo(1);
+        then(dialog.isShowing()).isTrue();
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));   // edits are not saved by a test
+        then(leadTimes).isEmpty();
+    }
+
+    @Test
+    void should_ask_for_a_test_notification_also_when_the_notifications_are_switched_off() {
+        NotificationsEnabled.save(settings, false);
+        open();
+
+        robot.interact(form::handleTestNotification);
+
+        then(tests).isEqualTo(1);
+        then(NotificationsEnabled.read(settings)).isFalse();   // the switch is unaffected
+        then(switches).isEmpty();
+    }
+
+    @Test
+    void should_have_a_test_button_in_the_dialog() {
+        then(form.getTestButton().getText()).isEqualTo("Test Notification");
     }
 }

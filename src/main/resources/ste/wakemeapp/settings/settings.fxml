@@ -35,6 +35,10 @@
         <TextField fx:id="leadTimeField" styleClass="settings-field" prefWidth="80" maxWidth="80"/>
         <Label text="minutes before a meeting starts (1 to 1440)" styleClass="settings-help"/>
     </HBox>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button fx:id="testButton" text="Test Notification" styleClass="settings-button" onAction="#handleTestNotification"/>
+        <Label text="Shows a test meeting like a real reminder, whatever the settings above." styleClass="settings-help" wrapText="true"/>
+    </HBox>
     <Label fx:id="leadTimeErrorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
     <Label fx:id="leadTimeWarningLabel" styleClass="settings-warning" wrapText="true" visible="false" managed="false"/>
 

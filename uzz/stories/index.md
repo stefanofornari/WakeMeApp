@@ -56,7 +56,7 @@
 | settings/US-000015 | Default Lead Time Setting | DONE |
 | settings/US-000016 | Sound Selection | TODO |
 | settings/US-000017 | Enable/Disable Notifications | DONE |
-| settings/US-000018 | Test Notification Button | TODO |
+| settings/US-000018 | Test Notification Button | DONE |
 | settings/US-000044 | Document How to Inspect the Stored Settings | TODO |
 | settings/US-000045 | Store Settings in Java Preferences | DONE |
 | settings/US-000046 | Overrule Settings from the Command Line | DONE |

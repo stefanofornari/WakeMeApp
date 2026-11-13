@@ -94,7 +94,10 @@ applies at once, also to the meetings already scheduled. If the poll interval (`
 longer than the lead time the dialog warns that a reminder may be late, and saves anyway. **Show meeting reminders** switches all reminders off or on, for example during focused work: it applies at
 once and is kept across restarts. While it is off the calendar is still polled but nothing is shown, and the log says
 "Notification suppressed (globally disabled)"; a snoozed meeting is held back too. A meeting given with `--title`
-is not affected. The window the calendar is
+is not affected. **Test Notification** shows a test meeting ("Test Meeting", starting in 5 minutes, joining
+`https://example.com`) exactly like a real reminder, with countdown, join, snooze and dismiss; it closes by itself
+after 10 seconds without interaction, works whatever the other settings are (also with the reminders switched
+off), saves nothing and leaves the dialog open. The window the calendar is
 read with grows to poll interval + lead time when `--window` is shorter. A Microsoft Graph address also needs a client id and a tenant (`--client-id`, `--tenant`; the
 dialog will ask for them in a later version).
 

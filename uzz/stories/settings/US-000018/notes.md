@@ -1,0 +1,8 @@
+# Notes — settings/US-000018
+
+* `TestNotification` (notify package) builds the fake meeting (title "Test Meeting", start now + 5 min, join link https://example.com, organiser "WakeMeApp", no event id) and shows it through the real `OverlayManager`, so countdown, join, snooze and dismiss are the real ones. It owns a scheduler and a manager: a snooze brings the test back through the same overlay, and nothing touches the calendar being polled, its dismissals or the application's scheduler. In particular it does not go through `CLILauncher.showOverlay`, whose single-meeting mode exits the process when the overlays are gone (that would end the tray application).
+* It does not look at `NotificationSwitch`, so it works while the notifications are off (scenario 2). The overlay auto-closes after 10 s: `OverlayManager.setAutoClose` is new and applies to the overlays shown afterwards (default unchanged, 90 s).
+* The button is in the Notifications section of the dialog; it asks the listener (`testNotificationRequested`), does not save the edits and does not close the dialog. The overlay is always on top, so it appears above the dialog.
+* Sound: nothing plays yet, because notify/US-000008 (sound) is not built. The scenario "respects sound selection" and the dependency on notify/US-000008 are for when it is; the test notification then needs no change if the sound is played by the overlay/manager path, otherwise `TestNotification.show` must call the same playback code.
+* Closed with the application: `CLILauncher`'s shutdown closes the test overlays and cancels a pending test snooze.
+* Not verified here: `TestNotificationTest`, `OverlayManagerTest` and `SettingsDialogTest` (TestFX) and the launcher need `mvn test`; only the shape of the fake meeting was run.

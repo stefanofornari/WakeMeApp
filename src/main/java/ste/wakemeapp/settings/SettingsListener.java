@@ -13,4 +13,7 @@ public interface SettingsListener {
 
     /** The notifications were switched on ({@code true}) or off; the state is already saved. */
     void notificationsSwitched(boolean on);
+
+    /** The user asked for a test notification; it works whatever the other settings are. */
+    void testNotificationRequested();
 }

@@ -24,6 +24,7 @@ public final class OverlayManager {
     private java.util.function.Consumer<MeetingNotification> onDismissUndone;
     private java.time.Duration undoTime = java.time.Duration.ofSeconds(5);
     private DismissToast undoToast;
+    private java.time.Duration autoClose;   // null: the overlay's own default
 
     public OverlayManager() {
         // Default constructor for backward compatibility
@@ -31,6 +32,11 @@ public final class OverlayManager {
 
     public OverlayManager(NotificationScheduler scheduler) {
         this.scheduler = scheduler;
+    }
+
+    /** How long the overlays shown from now on stay up before closing by themselves (the default if never set). */
+    public void setAutoClose(java.time.Duration autoClose) {
+        this.autoClose = autoClose;
     }
 
     public void setScheduler(NotificationScheduler scheduler) {
@@ -77,6 +83,9 @@ public final class OverlayManager {
         // Create overlay for each screen
         for (Screen screen : Screen.getScreens()) {
             OverlayWindow overlay = new OverlayWindow();
+            if (autoClose != null) {
+                overlay.setAutoClose(autoClose);
+            }
             overlay.setNotification(notification);
             configureForScreen(overlay, screen);
             overlay.getStage().setOnHidden(e -> overlays.remove(overlay));

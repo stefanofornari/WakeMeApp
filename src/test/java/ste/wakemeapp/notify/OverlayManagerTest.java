@@ -255,4 +255,18 @@ class OverlayManagerTest {
     void should_use_five_seconds_for_the_undo_offer_by_default() {
         then(manager.getUndoTime()).isEqualTo(java.time.Duration.ofSeconds(5));
     }
+
+    @Test
+    void should_close_the_overlays_after_the_auto_close_period_when_one_is_set(FxRobot robot) {
+        manager.setAutoClose(java.time.Duration.ofSeconds(1));
+        MeetingNotification notification = new MeetingNotification(
+            "Test Meeting", java.time.LocalDateTime.now().plusMinutes(5), "https://example.com");
+
+        robot.interact(() -> manager.showNotification(notification));
+        then(manager.getOverlayCount()).isGreaterThanOrEqualTo(1);
+
+        robot.sleep(3000);
+
+        then(manager.getOverlayCount()).isZero();
+    }
 }
