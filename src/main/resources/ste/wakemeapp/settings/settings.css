@@ -50,6 +50,11 @@
     -fx-text-fill: #FF5C5C;
 }
 
+.settings-warning {
+    -fx-font-size: 13px;
+    -fx-text-fill: #FFC53D;
+}
+
 .settings-button {
     -fx-background-color: #141A2B;
     -fx-border-color: #232C4A;

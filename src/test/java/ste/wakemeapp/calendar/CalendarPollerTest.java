@@ -583,4 +583,16 @@ class CalendarPollerTest {
 
         then(poller.scheduled()).isEmpty();
     }
+
+    @Test
+    void the_window_grows_to_cover_poll_interval_plus_lead_time() {
+        then(CalendarPoller.effectiveWindow(Duration.ofMinutes(15), Duration.ofMinutes(5), Duration.ofMinutes(30)))
+            .isEqualTo(Duration.ofMinutes(35));
+    }
+
+    @Test
+    void a_window_that_is_long_enough_is_left_alone() {
+        then(CalendarPoller.effectiveWindow(Duration.ofMinutes(15), Duration.ofMinutes(5), Duration.ofMinutes(5)))
+            .isEqualTo(Duration.ofMinutes(15));
+    }
 }

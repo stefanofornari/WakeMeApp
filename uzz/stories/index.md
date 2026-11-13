@@ -53,7 +53,7 @@
 | ID | Title | Status |
 |----|-------|--------|
 | settings/US-000014 | Microsoft Graph Configuration | TODO |
-| settings/US-000015 | Default Lead Time Setting | TODO |
+| settings/US-000015 | Default Lead Time Setting | DONE |
 | settings/US-000016 | Sound Selection | TODO |
 | settings/US-000017 | Enable/Disable Notifications | TODO |
 | settings/US-000018 | Test Notification Button | TODO |

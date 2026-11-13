@@ -328,7 +328,7 @@ public class NotificationCommand implements Callable<Integer> {
         String value = calendar != null ? calendar : storedCalendar().value().orElse(null);
         String source = calendar != null ? "command line" : value != null ? "stored" : "default";
         String shown = value == null ? "(not set)" : IcsAddress.isFeed(value) ? IcsAddress.redact(value) : value;
-        return String.format("%-16s %s  (%s)", "calendar", shown, source);
+        return String.format("%-22s %s  (%s)", "calendar", shown, source);
     }
 
     public boolean isNow() {

@@ -26,8 +26,10 @@ public final class ConfigReport {
         lines.add(line(ConnectionSettings.CLIENT_ID_KEY, cliClientId, stored, null, ConnectionSettings::isClientId));
         lines.add(line(ConnectionSettings.TENANT_KEY, cliTenant, stored,
             ConnectionSettings.DEFAULT_TENANT, ConnectionSettings::isTenant));
+        lines.add(line(LeadTime.KEY, null, stored, Integer.toString(LeadTime.DEFAULT_MINUTES), LeadTime::isValid));
         for (String key : new TreeSet<>(stored.keys())) {
-            if (!key.equals(ConnectionSettings.CLIENT_ID_KEY) && !key.equals(ConnectionSettings.TENANT_KEY)) {
+            if (!key.equals(ConnectionSettings.CLIENT_ID_KEY) && !key.equals(ConnectionSettings.TENANT_KEY)
+                && !key.equals(LeadTime.KEY)) {
                 lines.add(format(key, stored.getString(key, ""), "stored, unknown key", null));
             }
         }
@@ -48,7 +50,7 @@ public final class ConfigReport {
     }
 
     private static String format(String key, String value, String source, String note) {
-        String line = String.format("%-16s %s  (%s)", key, value, source);
+        String line = String.format("%-22s %s  (%s)", key, value, source);
         return note == null ? line : line + " - " + note;
     }
 }

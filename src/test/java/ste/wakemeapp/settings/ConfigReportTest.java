@@ -70,6 +70,30 @@ class ConfigReportTest {
         List<String> lines = ConfigReport.lines(null, null, stored);
 
         then(lines.stream().filter(l -> l.startsWith("graph.tenant ")).count()).isEqualTo(1L);
-        then(lines).hasSize(2);
+        then(lines).hasSize(3);
+    }
+
+    @Test
+    void the_lead_time_shows_its_default_and_its_stored_value() {
+        then(lineOf(ConfigReport.lines(null, null, stored), "notify.leadTimeMinutes")).contains("5").contains("(default)");
+
+        stored.putInt("notify.leadTimeMinutes", 10);
+
+        then(lineOf(ConfigReport.lines(null, null, stored), "notify.leadTimeMinutes")).contains("10").contains("(stored)");
+    }
+
+    @Test
+    void a_stored_lead_time_out_of_range_is_shown_as_ignored() {
+        node.put("notify.leadTimeMinutes", "5000");
+
+        then(lineOf(ConfigReport.lines(null, null, stored), "notify.leadTimeMinutes"))
+            .contains("(default)").contains("stored value '5000' ignored");
+    }
+
+    @Test
+    void the_lead_time_is_not_listed_as_an_unknown_key() {
+        stored.putInt("notify.leadTimeMinutes", 10);
+
+        then(ConfigReport.lines(null, null, stored).stream().filter(l -> l.contains("unknown key")).count()).isZero();
     }
 }

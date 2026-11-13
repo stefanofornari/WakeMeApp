@@ -3,6 +3,7 @@ package ste.wakemeapp.settings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.stage.Modality;
@@ -23,6 +24,13 @@ class SettingsDialogTest {
 
     private final FxRobot robot = new FxRobot();
     private final List<String> saved = new ArrayList<>();
+    private final List<Duration> leadTimes = new ArrayList<>();
+    private final SettingsListener listener = new SettingsListener() {
+        @Override public void calendarSaved(String value) { saved.add(value); }
+        @Override public void leadTimeSaved(Duration leadTime) { leadTimes.add(leadTime); }
+    };
+    private Settings settings;
+    private Duration pollInterval;
     private StoredCalendar stored;
     private SettingsDialog dialog;
     private SettingsController form;
@@ -30,8 +38,11 @@ class SettingsDialogTest {
     @Start
     private void start(Stage stage) throws IOException {
         saved.clear();
+        leadTimes.clear();
+        settings = new Settings(new MemoryPreferences());
+        pollInterval = Duration.ofMinutes(5);
         stored = new StoredCalendar(Files.createTempDirectory("settings").resolve("calendar.txt"));
-        dialog = new SettingsDialog(stored, saved::add);
+        dialog = new SettingsDialog(stored, settings, pollInterval, listener);
         form = dialog.getController();
     }
 
@@ -248,7 +259,7 @@ class SettingsDialogTest {
         Path blocked = Files.createTempDirectory("settings").resolve("calendar.txt");
         Files.createDirectories(blocked.resolve("inner"));   // a non-empty directory where the file should go
         stored = new StoredCalendar(blocked);
-        robot.interact(() -> dialog = new SettingsDialog(stored, saved::add));
+        robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
         form = dialog.getController();
         open();
         type(LINK);
@@ -258,5 +269,134 @@ class SettingsDialogTest {
         then(form.getErrorLabel().getText()).startsWith("The calendar could not be saved").doesNotContain("secret456");
         then(saved).isEmpty();
         then(dialog.isShowing()).isTrue();
+    }
+
+    // ---- settings/US-000015
+
+    private void typeLeadTime(String text) {
+        robot.interact(() -> form.getLeadTimeField().setText(text));
+    }
+
+    @Test
+    void should_show_the_default_lead_time() {
+        open();
+
+        then(form.getLeadTimeField().getText()).isEqualTo("5");
+    }
+
+    @Test
+    void should_show_the_saved_lead_time() {
+        LeadTime.save(settings, 12);
+
+        open();
+
+        then(form.getLeadTimeField().getText()).isEqualTo("12");
+    }
+
+    @Test
+    void should_save_a_lead_time_report_it_and_close() {
+        open();
+        typeLeadTime("10");
+
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(10));
+        then(leadTimes).containsExactly(Duration.ofMinutes(10));
+        then(saved).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_report_the_calendar_only_when_both_are_changed() {
+        Path csv;
+        try {
+            csv = Files.writeString(Files.createTempDirectory("m").resolve("meetings.csv"), "x\n");
+        } catch (IOException x) {
+            throw new IllegalStateException(x);
+        }
+        open();
+        typeLeadTime("10");
+        type(csv.toString());
+
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(10));
+        then(saved).containsExactly(csv.toString());
+        then(leadTimes).isEmpty();   // the new calendar is polled with the new lead time anyway
+    }
+
+    @Test
+    void should_refuse_a_lead_time_below_the_minimum_and_put_back_the_minimum() {
+        open();
+        typeLeadTime("0");
+
+        save();
+
+        then(form.getLeadTimeErrorLabel().getText()).isEqualTo("Lead time must be at least 1 minute");
+        then(form.getLeadTimeField().getText()).isEqualTo("1");
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
+        then(leadTimes).isEmpty();
+        then(dialog.isShowing()).isTrue();
+    }
+
+    @Test
+    void should_refuse_a_lead_time_above_the_maximum_and_put_back_the_maximum() {
+        open();
+        typeLeadTime("2000");
+
+        save();
+
+        then(form.getLeadTimeErrorLabel().getText()).isEqualTo("Lead time cannot exceed 1440 minutes (24 hours)");
+        then(form.getLeadTimeField().getText()).isEqualTo("1440");
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
+    }
+
+    @Test
+    void should_refuse_a_lead_time_that_is_not_a_number_and_keep_what_was_typed() {
+        open();
+        typeLeadTime("soon");
+
+        save();
+
+        then(form.getLeadTimeErrorLabel().getText()).isEqualTo("Lead time must be a whole number of minutes");
+        then(form.getLeadTimeField().getText()).isEqualTo("soon");
+    }
+
+    @Test
+    void should_save_nothing_when_the_calendar_is_wrong_even_if_the_lead_time_is_right() {
+        open();
+        typeLeadTime("10");
+        type("hello");
+
+        save();
+
+        then(form.getErrorLabel().isVisible()).isTrue();
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
+        then(leadTimes).isEmpty();
+        then(dialog.isShowing()).isTrue();
+    }
+
+    @Test
+    void should_warn_but_save_when_the_poll_interval_is_longer_than_the_lead_time() {
+        pollInterval = Duration.ofMinutes(10);
+        robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
+        form = dialog.getController();
+        open();
+        typeLeadTime("5");   // the default: nothing changes, so no warning
+        save();
+        then(dialog.isShowing()).isFalse();
+
+        open();
+        typeLeadTime("6");
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(6));
+        then(leadTimes).containsExactly(Duration.ofMinutes(6));
+        then(form.getLeadTimeWarningLabel().getText())
+            .isEqualTo("Poll interval (10 min) exceeds lead time (6 min). Notifications may be delayed.");
+        then(dialog.isShowing()).isTrue();
+
+        save();   // nothing changed since: it closes
+        then(dialog.isShowing()).isFalse();
     }
 }

@@ -23,8 +23,10 @@ import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.scheduler.ScheduledNotification;
 import ste.wakemeapp.settings.ConnectionSettings;
 import ste.wakemeapp.settings.CalendarInput;
+import ste.wakemeapp.settings.LeadTime;
 import ste.wakemeapp.settings.Settings;
 import ste.wakemeapp.settings.SettingsDialog;
+import ste.wakemeapp.settings.SettingsListener;
 import ste.wakemeapp.settings.StoredCalendar;
 import ste.wakemeapp.tray.Tray;
 import java.nio.file.Path;
@@ -48,6 +50,7 @@ public class CLILauncher extends Application {
     private CalendarPoller poller;
     private Tray tray;
     private SettingsDialog settingsDialog;
+    private Runnable repoll;   // starts polling the current calendar again, with the settings as they are now
     private boolean calendarMode;
     private final ApplicationShutdown shutdown = new ApplicationShutdown(code -> {
         Platform.exit();
@@ -151,7 +154,16 @@ public class CLILauncher extends Application {
     /** Opens the settings dialog, or brings the open one to the front. FX thread only. */
     private void showSettings() {
         if (settingsDialog == null) {
-            settingsDialog = new SettingsDialog(StoredCalendar.user(), this::calendarChanged);
+            settingsDialog = new SettingsDialog(StoredCalendar.user(), Settings.user(), parsedCommand.getPollInterval(),
+                new SettingsListener() {
+                    @Override public void calendarSaved(String value) {
+                        calendarChanged(value);
+                    }
+
+                    @Override public void leadTimeSaved(Duration leadTime) {
+                        leadTimeChanged(leadTime);
+                    }
+                });
         }
         settingsDialog.show();
     }
@@ -187,7 +199,40 @@ public class CLILauncher extends Application {
         }
     }
 
+    /**
+     * The lead time was saved: the calendar being polled is polled again with it, so that what is already
+     * scheduled is scheduled again for the new time. FX thread only.
+     */
+    private void leadTimeChanged(Duration leadTime) {
+        LOG.info("Lead time is now " + leadTime.toMinutes() + " min");
+        Runnable again = repoll;
+        if (again == null) {
+            return;   // no calendar is being polled
+        }
+        stopPolling();
+        try {
+            again.run();
+        } catch (RuntimeException x) {
+            LOG.severe("The calendar cannot be polled again: " + x.getMessage());
+            if (tray != null) {
+                tray.setConfigured(false);
+            }
+        }
+    }
+
+    private NotificationScheduler newScheduler() {
+        return new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered),
+            LeadTime.read(Settings.user()), Clock.systemDefaultZone());
+    }
+
+    /** The window to poll with: the one asked for, longer if the lead time needs it. */
+    private Duration window() {
+        return CalendarPoller.effectiveWindow(parsedCommand.getWindow(), parsedCommand.getPollInterval(),
+            LeadTime.read(Settings.user()));
+    }
+
     private void stopPolling() {
+        repoll = null;
         if (poller != null) {
             poller.close();
             poller = null;
@@ -281,7 +326,7 @@ public class CLILauncher extends Application {
      * (the JavaFX runtime keeps running) and shows the overlay, then exits once it is dismissed.
      */
     private void schedule(MeetingNotification notification) {
-        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        scheduler = newScheduler();
         pendingNotifications.incrementAndGet();
         ScheduledNotification scheduled = scheduler.schedule(notification);
 
@@ -294,14 +339,15 @@ public class CLILauncher extends Application {
      * it is stopped, since meetings may appear in the file at any time.
      */
     private void pollCalendar(Path calendarFile) {
+        repoll = () -> pollCalendar(calendarFile);
         calendarMode = true;
-        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        scheduler = newScheduler();
         poller = new CalendarPoller(new CsvCalendarSource(calendarFile), scheduler,
-            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone(),
+            parsedCommand.getPollInterval(), window(), Clock.systemDefaultZone(),
             new DismissedMeetings(DismissedMeetings.defaultFile()));
         poller.start();
         LOG.info(() -> "Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
-            + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
+            + " min for meetings starting in the next " + window().toMinutes() + " min");
         LOG.info("Press Ctrl+C to stop");
     }
 
@@ -312,15 +358,16 @@ public class CLILauncher extends Application {
     private void pollIcsFeed(java.net.URI feed) {
         CalendarSource calendar = new IcsCalendarSource(
             java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL), feed);
+        repoll = () -> pollIcsFeed(feed);
         calendarMode = true;
-        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        scheduler = newScheduler();
         poller = new CalendarPoller(calendar, scheduler,
-            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone(),
+            parsedCommand.getPollInterval(), window(), Clock.systemDefaultZone(),
             new DismissedMeetings(DismissedMeetings.defaultFile()));
         poller.start();
         LOG.info(() -> "Polling the calendar feed on " + IcsAddress.hostOf(feed) + " every "
             + parsedCommand.getPollInterval().toMinutes() + " min for meetings starting in the next "
-            + parsedCommand.getWindow().toMinutes() + " min");
+            + window().toMinutes() + " min");
         LOG.info("Press Ctrl+C to stop");
     }
 
@@ -344,14 +391,15 @@ public class CLILauncher extends Application {
         CalendarSource calendar = new SignedInCalendarSource(
             new GraphCalendarSource(java.net.http.HttpClient.newBuilder(), signIn.accessTokenSupplier(), address),
             signIn::isSignedIn);
+        repoll = () -> pollGraphCalendar(address);
         calendarMode = true;
-        scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+        scheduler = newScheduler();
         poller = new CalendarPoller(calendar, scheduler,
-            parsedCommand.getPollInterval(), parsedCommand.getWindow(), Clock.systemDefaultZone(),
+            parsedCommand.getPollInterval(), window(), Clock.systemDefaultZone(),
             new DismissedMeetings(DismissedMeetings.defaultFile()));
         poller.start();
         LOG.info(() -> "Polling " + address + " every " + parsedCommand.getPollInterval().toMinutes()
-            + " min for meetings starting in the next " + parsedCommand.getWindow().toMinutes() + " min");
+            + " min for meetings starting in the next " + window().toMinutes() + " min");
         LOG.info("Press Ctrl+C to stop");
     }
 
@@ -409,7 +457,7 @@ public class CLILauncher extends Application {
     private void showOverlay(MeetingNotification notification) {
         if (scheduler == null) {
             // --now: still needs a scheduler so that a snooze can bring the overlay back
-            scheduler = new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered));
+            scheduler = newScheduler();
         }
         overlayManager = new OverlayManager(scheduler);
         // Track snoozes scheduled from this overlay

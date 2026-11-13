@@ -27,6 +27,15 @@
            text="This calendar needs a Microsoft account: a client id and a tenant (--client-id, --tenant)."/>
     <Label fx:id="errorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
 
+    <Label text="Notifications" styleClass="settings-heading"/>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Notify me" styleClass="settings-help"/>
+        <TextField fx:id="leadTimeField" styleClass="settings-field" prefWidth="80" maxWidth="80"/>
+        <Label text="minutes before a meeting starts (1 to 1440)" styleClass="settings-help"/>
+    </HBox>
+    <Label fx:id="leadTimeErrorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
+    <Label fx:id="leadTimeWarningLabel" styleClass="settings-warning" wrapText="true" visible="false" managed="false"/>
+
     <Region VBox.vgrow="ALWAYS" minHeight="6"/>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">

@@ -100,6 +100,15 @@ public final class CalendarPoller implements AutoCloseable {
         }
     }
 
+    /**
+     * The window to poll with: the one asked for, or poll interval + lead time if that is longer, so that
+     * a long lead time still sees its meetings in time.
+     */
+    public static Duration effectiveWindow(Duration window, Duration pollInterval, Duration leadTime) {
+        Duration minimum = pollInterval.plus(leadTime);
+        return window.compareTo(minimum) < 0 ? minimum : window;
+    }
+
     /** Polls now and then every poll interval. */
     public void start() {
         executor.scheduleAtFixedRate(this::pollOnce, 0, pollInterval.toMillis(), TimeUnit.MILLISECONDS);

@@ -89,7 +89,10 @@ dialog tells which kind it recognised and refuses what cannot work: a link that 
 `webcal://`, a file that cannot be read, anything else. **Save** stores it, starts polling it at once and clears the
 exclamation mark of the tray icon, with no restart; **Cancel** changes nothing. A saved link is shown as
 `https://host/…` when you open the dialog again: type the whole link to change it. Emptying the field and saving
-removes the calendar. A Microsoft Graph address also needs a client id and a tenant (`--client-id`, `--tenant`; the
+removes the calendar. **Notify me … minutes before a meeting starts** sets the lead time (1 to 1440, default 5): it
+applies at once, also to the meetings already scheduled. If the poll interval (`--poll-interval`, 5 by default) is
+longer than the lead time the dialog warns that a reminder may be late, and saves anyway. The window the calendar is
+read with grows to poll interval + lead time when `--window` is shorter. A Microsoft Graph address also needs a client id and a tenant (`--client-id`, `--tenant`; the
 dialog will ask for them in a later version).
 
 ### The first time: signing in
@@ -176,6 +179,7 @@ that it reads when an option is missing, lives in the Java user preferences, nod
 |---|---|---|
 | `graph.clientId` | Application (client) id | none |
 | `graph.tenant` | Tenant id or `organizations` | `organizations` |
+| `notify.leadTimeMinutes` | Minutes before a meeting starts that the reminder appears (1 to 1440; set in the settings dialog) | 5 |
 
 The order is: command line, then stored value, then default. To see what is in effect, and where each value
 comes from, on any platform:
