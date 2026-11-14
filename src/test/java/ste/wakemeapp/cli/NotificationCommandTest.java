@@ -372,7 +372,7 @@ class NotificationCommandTest {
         line.execute("--print-config", "--calendar",
             "webcal://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
 
-        then(out.toString()).contains("calendar").contains("https://outlook.office365.com/\u2026")
+        then(out.toString()).contains("calendar").contains("https://outlook.office365.com/\u2026/calendar.ics")
             .contains("(command line)");
     }
 
@@ -531,7 +531,7 @@ class NotificationCommandTest {
 
         line.execute("--print-config");
 
-        then(out.toString()).contains("https://outlook.office365.com/\u2026").contains("(stored)")
+        then(out.toString()).contains("https://outlook.office365.com/\u2026/calendar.ics").contains("(stored)")
             .doesNotContain("abc123").doesNotContain("secret456").doesNotContain("calendar.ics");
     }
 

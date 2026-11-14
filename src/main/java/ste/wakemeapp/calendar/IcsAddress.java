@@ -26,6 +26,8 @@ import java.util.Locale;
  */
 public final class IcsAddress {
 
+    private static final java.util.regex.Pattern PLAIN_FILE_NAME = java.util.regex.Pattern.compile("[A-Za-z]{1,20}\\.ics");
+
     private IcsAddress() {
     }
 
@@ -81,8 +83,10 @@ public final class IcsAddress {
     }
 
     /**
-     * The address of a feed as it may be shown: scheme and host, the rest replaced by an ellipsis. Nothing
-     * of the path, the query or the user info is kept. {@code webcal} is shown as {@code https}.
+     * The address of a feed as it may be shown: scheme and host, the path replaced by an ellipsis, except a
+     * last segment that is a plain file name of letters ending in {@code .ics} (such as {@code calendar.ics}),
+     * which carries no secret and is kept: {@code https://host/…/calendar.ics}. Nothing else of the path,
+     * the query or the user info is kept. {@code webcal} is shown as {@code https}.
      */
     public static String redact(String value) {
         String v = value.trim();
@@ -92,6 +96,7 @@ public final class IcsAddress {
         }
         String scheme = v.substring(0, sep).toLowerCase(Locale.ROOT);
         String authority = v.substring(sep + 3);
+        String name = fileName(authority);
         for (char c : new char[] {'/', '?', '#'}) {
             int i = authority.indexOf(c);
             if (i >= 0) {
@@ -102,7 +107,24 @@ public final class IcsAddress {
         if (!authority.startsWith("[") && authority.indexOf(':') >= 0) {
             authority = authority.substring(0, authority.indexOf(':'));
         }
-        return ("webcal".equals(scheme) ? "https" : scheme) + "://" + authority + "/\u2026";
+        return ("webcal".equals(scheme) ? "https" : scheme) + "://" + authority + "/\u2026" + name;
+    }
+
+    /** "/calendar.ics" when the last path segment is a plain file name of letters, else nothing. */
+    private static String fileName(String authorityAndPath) {
+        String path = authorityAndPath;
+        for (char c : new char[] {'?', '#'}) {
+            int i = path.indexOf(c);
+            if (i >= 0) {
+                path = path.substring(0, i);
+            }
+        }
+        int slash = path.lastIndexOf('/');
+        if (slash < 0) {
+            return "";
+        }
+        String last = path.substring(slash + 1);
+        return PLAIN_FILE_NAME.matcher(last).matches() ? "/" + last : "";
     }
 
     /** The only part of the address that may be shown. */

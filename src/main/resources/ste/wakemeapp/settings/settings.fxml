@@ -6,6 +6,8 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
@@ -43,7 +45,11 @@
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Label text="Sound" styleClass="settings-help" minWidth="60"/>
         <ComboBox fx:id="soundBox" styleClass="settings-choice" prefWidth="200" minWidth="200"/>
-        <Button fx:id="previewButton" text="Preview" minWidth="110" prefWidth="110" styleClass="settings-button" onAction="#handlePreview"/>
+        <Button fx:id="previewButton" styleClass="settings-button, settings-icon-button" onAction="#handlePreview"
+                accessibleText="Play the selected sound">
+            <graphic><SVGPath content="M0,0 L11,6 L0,12 Z" styleClass="settings-play-icon"/></graphic>
+            <tooltip><Tooltip text="Play the selected sound at this volume"/></tooltip>
+        </Button>
     </HBox>
     <Label fx:id="soundErrorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
     <Label fx:id="soundWarningLabel" styleClass="settings-warning" wrapText="true" visible="false" managed="false"/>

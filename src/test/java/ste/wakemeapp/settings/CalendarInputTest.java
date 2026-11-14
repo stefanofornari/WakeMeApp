@@ -93,9 +93,20 @@ class CalendarInputTest {
     }
 
     @Test
-    void a_link_is_shown_as_its_host_only_and_the_other_kinds_as_they_are() {
-        then(CalendarInput.shown(LINK)).isEqualTo("https://outlook.office365.com/\u2026");
-        then(CalendarInput.shown("webcal://outlook.office365.com/x/y.ics")).isEqualTo("https://outlook.office365.com/\u2026");
+    void should_keep_the_file_name_of_a_link_only_when_it_is_a_plain_name_ending_in_ics() {
+        then(CalendarInput.shown("https://host/a/secret456/basic.ics")).isEqualTo("https://host/\u2026/basic.ics");
+        then(CalendarInput.shown("https://host/a/secret456/Calendar.ics?x=1#y")).isEqualTo("https://host/\u2026/Calendar.ics");
+        then(CalendarInput.shown("https://host/a/secret456/s3cr3t.ics")).isEqualTo("https://host/\u2026");
+        then(CalendarInput.shown("https://host/a/secret456.ics")).isEqualTo("https://host/\u2026");
+        then(CalendarInput.shown("https://host/a/secret456")).isEqualTo("https://host/\u2026");
+        then(CalendarInput.shown("https://host/a/b?token=secret456")).isEqualTo("https://host/\u2026");
+        then(CalendarInput.shown("https://host")).isEqualTo("https://host/\u2026");
+    }
+
+    @Test
+    void a_link_is_shown_without_its_secret_and_the_other_kinds_as_they_are() {
+        then(CalendarInput.shown(LINK)).isEqualTo("https://outlook.office365.com/\u2026/calendar.ics");
+        then(CalendarInput.shown("webcal://outlook.office365.com/x/y.ics")).isEqualTo("https://outlook.office365.com/\u2026/y.ics");
         then(CalendarInput.shown(GRAPH)).isEqualTo(GRAPH);
         then(CalendarInput.shown("meetings.csv")).isEqualTo("meetings.csv");
         then(CalendarInput.shown(null)).isEmpty();

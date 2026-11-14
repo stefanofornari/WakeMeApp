@@ -108,23 +108,23 @@ class CLILauncherTest {
     void should_hide_the_path_of_a_feed_address_in_the_arguments_that_are_logged() {
         List<String> shown = CLILauncher.redact(List.of("--calendar", LINK, "--debug"));
 
-        then(shown).containsExactly("--calendar", "https://outlook.office365.com/\u2026", "--debug");
+        then(shown).containsExactly("--calendar", "https://outlook.office365.com/\u2026/calendar.ics", "--debug");
     }
 
     @Test
     void should_hide_the_path_of_a_feed_address_given_with_an_equals_sign_or_as_webcal() {
         then(CLILauncher.redact(List.of("--calendar=" + LINK)))
-            .containsExactly("--calendar=https://outlook.office365.com/\u2026");
+            .containsExactly("--calendar=https://outlook.office365.com/\u2026/calendar.ics");
         then(CLILauncher.redact(List.of("--calendar", "webcal://outlook.office365.com/x/y/c.ics")))
-            .containsExactly("--calendar", "https://outlook.office365.com/\u2026");
+            .containsExactly("--calendar", "https://outlook.office365.com/\u2026/c.ics");
         then(CLILauncher.redact(List.of("--calendar=\"" + LINK + "\"")))
-            .containsExactly("--calendar=https://outlook.office365.com/\u2026");
+            .containsExactly("--calendar=https://outlook.office365.com/\u2026/calendar.ics");
     }
 
     @Test
     void should_hide_a_feed_address_that_is_not_https_without_showing_it() {
         then(CLILauncher.redact(List.of("--calendar", "http://outlook.office365.com/x/secret456/c.ics")))
-            .containsExactly("--calendar", "http://outlook.office365.com/\u2026");
+            .containsExactly("--calendar", "http://outlook.office365.com/\u2026/c.ics");
     }
 
     @Test
@@ -138,6 +138,6 @@ class CLILauncherTest {
     @Test
     void should_hide_the_link_when_the_option_value_is_in_the_next_argument_after_other_options() {
         then(CLILauncher.redact(List.of("--debug", "--calendar", LINK, "--poll-interval", "5")))
-            .containsExactly("--debug", "--calendar", "https://outlook.office365.com/\u2026", "--poll-interval", "5");
+            .containsExactly("--debug", "--calendar", "https://outlook.office365.com/\u2026/calendar.ics", "--poll-interval", "5");
     }
 }
