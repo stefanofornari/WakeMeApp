@@ -208,25 +208,12 @@
                 <configuration>
                     <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
+                    <!-- JavaFX is on the class path (an unnamed module): exports and opens to javafx.* modules
+                         would only print "Unknown module" warnings, and are not needed -->
                     <useModulePath>false</useModulePath>
                     <argLine>
                         -Djava.util.logging.config.file=${logging.config}
-                        --enable-native-access=javafx.graphics
-                        --add-exports javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
-                        --add-exports javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED
-                        --add-exports javafx.graphics/com.sun.javafx.util=ALL-UNNAMED
-                        --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
-                        --add-exports javafx.graphics/com.sun.prism=ALL-UNNAMED
-                        --add-exports javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
-                        --add-exports javafx.graphics/com.sun.glass.events=ALL-UNNAMED
-                        --add-exports javafx.base/com.sun.javafx.logging=ALL-UNNAMED
-                        --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
-                        --add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
-                        --add-opens javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED
-                        --add-opens javafx.graphics/com.sun.javafx.util=ALL-UNNAMED
-                        --add-opens javafx.base/com.sun.javafx.event=ALL-UNNAMED
-                        --add-opens javafx.base/com.sun.javafx.binding=ALL-UNNAMED
-                        --add-opens javafx.base/com.sun.javafx.logging=ALL-UNNAMED
+                        --enable-native-access=ALL-UNNAMED
                     </argLine>
                     <systemPropertyVariables>
                         <testfx.headless>${testfx.headless}</testfx.headless>
