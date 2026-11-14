@@ -1,0 +1,40 @@
+#!/bin/sh
+
+#
+# Runs another script of bin/ with the JVM waiting for a debugger:
+#
+#   dbg wakemeapp.sh [options of the application]
+#
+# The JVM listens on localhost:1044 (DEBUG_PORT changes the port) and does not start until a debugger is
+# attached (DEBUG_SUSPEND=n starts it at once).
+#
+
+if [ $# -lt 1 ]
+then
+  echo "SYNTAX: dbg <script of bin/> [arguments]"
+  echo "  e.g.: dbg wakemeapp.sh --settings"
+  exit 1
+fi
+
+# resolving links, as the other scripts do
+prg="$0"
+while [ -h "$prg" ]
+do
+  target=$(readlink "$prg")
+  case "$target" in
+    /*) prg="$target" ;;
+    *)  prg="$(dirname "$prg")/$target" ;;
+  esac
+done
+
+scriptdir=$(cd "$(dirname "$prg")" && pwd)
+
+port="${DEBUG_PORT:-1044}"
+suspend="${DEBUG_SUSPEND:-y}"
+
+export JAVA_OPTS="$JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=$suspend,address=$port"
+command="$1"
+shift
+
+# the working directory is not changed: a relative path in an option is relative to where the user is
+exec "$scriptdir/$command" "$@"

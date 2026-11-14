@@ -241,6 +241,7 @@ Unpack the archive in the directory where you want to install it; it contains on
 ```
 /installation/dir/WakeMeApp/
     bin/wakemeapp.sh      starts the application (any option of the command line is passed on)
+    bin/dbg               runs a script of bin/ waiting for a debugger on localhost:1044
     conf/logging.properties   the logging configuration
     lib/                  the application and its libraries
     lib/modules/          JavaFX
@@ -250,6 +251,9 @@ Unpack the archive in the directory where you want to install it; it contains on
 /installation/dir/WakeMeApp/bin/wakemeapp.sh                 # starts in the tray
 /installation/dir/WakeMeApp/bin/wakemeapp.sh --settings      # and opens the settings dialog
 ```
+
+To debug, `bin/dbg wakemeapp.sh [options]` starts the JVM suspended until a debugger attaches to `localhost:1044`
+(`DEBUG_PORT` changes the port, `DEBUG_SUSPEND=n` does not wait).
 
 It needs Java 21 or later: `JAVA_HOME` is used if it is set, else the `java` in the path. `JAVA_OPTS` adds options
 for the JVM, and `conf/wakemeapp.conf`, if you create it, is read before starting (it can set `JAVA_OPTS` or
