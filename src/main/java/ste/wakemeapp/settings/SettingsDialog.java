@@ -10,6 +10,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import ste.wakemeapp.ui.WindowDrag;
 
 /**
  * The settings dialog: one window, opened from the tray or with --settings. Showing it again brings
@@ -45,8 +47,10 @@ public final class SettingsDialog {
             throw new UncheckedIOException("Cannot load the settings dialog", x);
         }
         stage.setTitle("WakeMeApp Settings");
+        stage.initStyle(StageStyle.UNDECORATED);   // no title bar: it is moved by dragging the window
         stage.initModality(Modality.NONE);
         stage.setResizable(false);
+        WindowDrag.enable(stage.getScene().getRoot(), stage);
         controller.bind(stored, settings, listener, stage::hide);
     }
 

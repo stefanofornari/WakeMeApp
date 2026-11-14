@@ -59,6 +59,14 @@ class AboutDialogTest {
     }
 
     @Test
+    void should_have_no_window_decoration_and_not_be_resizable() {
+        open();
+
+        then(dialog.getStage().getStyle()).isEqualTo(javafx.stage.StageStyle.UNDECORATED);
+        then(dialog.getStage().isResizable()).isFalse();
+    }
+
+    @Test
     void should_open_only_one_dialog_and_bring_it_to_the_front() {
         open();
         Stage first = dialog.getStage();

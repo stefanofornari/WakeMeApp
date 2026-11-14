@@ -81,6 +81,14 @@ class SettingsDialogTest {
     }
 
     @Test
+    void should_have_no_window_decoration_and_not_be_resizable() {
+        open();
+
+        then(dialog.getStage().getStyle()).isEqualTo(javafx.stage.StageStyle.UNDECORATED);
+        then(dialog.getStage().isResizable()).isFalse();
+    }
+
+    @Test
     void should_not_be_open_before_it_is_asked_for() {
         then(dialog.isShowing()).isFalse();
     }

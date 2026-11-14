@@ -11,6 +11,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import ste.wakemeapp.ui.WindowDrag;
 
 /**
  * The About dialog: one window, opened from the tray. Showing it again brings the open one to the
@@ -45,8 +47,10 @@ public final class AboutDialog {
             throw new UncheckedIOException("Cannot load the About dialog", x);
         }
         stage.setTitle("About " + AppInfo.NAME);
+        stage.initStyle(StageStyle.UNDECORATED);   // no title bar: it is moved by dragging the window
         stage.initModality(Modality.NONE);
         stage.setResizable(false);
+        WindowDrag.enable(stage.getScene().getRoot(), stage);
         controller.bind(version, opener, stage::hide);
     }
 
