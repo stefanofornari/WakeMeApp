@@ -1,0 +1,46 @@
+/* About dialog - same flat dark look as the settings dialog, lime accent */
+
+.about-root {
+    -fx-background-color: #0B0F1A;
+    -fx-text-background-color: #F4F6FB;
+    -fx-font-family: 'Inter', 'Segoe UI', 'System';
+    -fx-font-size: 14px;
+}
+
+.about-name {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #C6FF3D;
+}
+
+.about-version {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #A3ACC2;
+}
+
+.about-text {
+    -fx-font-size: 14px;
+    -fx-text-fill: #F4F6FB;
+}
+
+.about-link {
+    -fx-text-fill: #C6FF3D;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.about-link:visited {
+    -fx-text-fill: #C6FF3D;
+}
+
+.about-button {
+    -fx-background-color: #C6FF3D;
+    -fx-border-color: #C6FF3D;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-text-fill: #0B0F1A;
+    -fx-font-weight: bold;
+    -fx-padding: 9 22 9 22;
+    -fx-cursor: hand;
+}

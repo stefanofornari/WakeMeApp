@@ -159,6 +159,23 @@
     </dependencies>
 
     <build>
+        <resources>
+            <!-- the version of the build, shown by the About dialog (settings/US-000058) -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>ste/wakemeapp/about/app.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>ste/wakemeapp/about/app.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

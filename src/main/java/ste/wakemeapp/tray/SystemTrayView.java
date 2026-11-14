@@ -8,7 +8,7 @@ import javafx.application.Platform;
 
 /**
  * The native tray icon, through dorkbox SystemTray (AppIndicator, GtkStatusIcon or Swing on Linux,
- * the native icon on Windows and macOS). Menu: "Settings…" and "Quit". The menu actions run on the
+ * the native icon on Windows and macOS). Menu: "Settings…", "About WakeMeApp" and "Quit". The menu actions run on the
  * library's own thread, so they hand over to the JavaFX Application Thread where needed.
  */
 final class SystemTrayView implements TrayView {
@@ -19,17 +19,18 @@ final class SystemTrayView implements TrayView {
     private final URL normal = resource("tray.png");
     private final URL alert = resource("tray-alert.png");
 
-    private SystemTrayView(SystemTray tray, Runnable onSettings, Runnable onQuit) {
+    private SystemTrayView(SystemTray tray, Runnable onSettings, Runnable onAbout, Runnable onQuit) {
         this.tray = tray;
         tray.getMenu().add(new MenuItem("Settings…", e -> Platform.runLater(onSettings)));
+        tray.getMenu().add(new MenuItem("About WakeMeApp", e -> Platform.runLater(onAbout)));
         tray.getMenu().add(new MenuItem("Quit", e -> onQuit.run()));
     }
 
     /** The view, or null where this desktop has no system tray. */
-    static SystemTrayView create(Runnable onSettings, Runnable onQuit) {
+    static SystemTrayView create(Runnable onSettings, Runnable onAbout, Runnable onQuit) {
         try {
             SystemTray tray = SystemTray.get();
-            return tray == null ? null : new SystemTrayView(tray, onSettings, onQuit);
+            return tray == null ? null : new SystemTrayView(tray, onSettings, onAbout, onQuit);
         } catch (RuntimeException | LinkageError x) {
             LOG.warning("The system tray cannot be started: " + x);
             return null;

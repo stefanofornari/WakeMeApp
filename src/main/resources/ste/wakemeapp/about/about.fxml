@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="root" xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ste.wakemeapp.about.AboutController"
+      styleClass="about-root" spacing="10" prefWidth="420">
+    <padding>
+        <Insets top="28" right="28" bottom="24" left="28"/>
+    </padding>
+
+    <Label fx:id="nameLabel" styleClass="about-name"/>
+    <Label fx:id="versionLabel" styleClass="about-version"/>
+    <Label fx:id="descriptionLabel" styleClass="about-text" wrapText="true"/>
+    <Hyperlink fx:id="linkLink" styleClass="about-link" onAction="#handleOpenLink"/>
+    <Label fx:id="licenceLabel" styleClass="about-text"/>
+
+    <HBox alignment="CENTER_RIGHT">
+        <padding>
+            <Insets top="10"/>
+        </padding>
+        <Button fx:id="closeButton" text="Close" styleClass="about-button" defaultButton="true" onAction="#handleClose"/>
+    </HBox>
+</VBox>

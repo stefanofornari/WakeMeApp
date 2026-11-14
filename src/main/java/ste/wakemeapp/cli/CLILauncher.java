@@ -4,10 +4,14 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import picocli.CommandLine;
+import ste.wakemeapp.about.AboutDialog;
+import ste.wakemeapp.about.AppInfo;
 import ste.wakemeapp.auth.DeviceCodeSignIn;
 import ste.wakemeapp.auth.FileTokenStore;
 import ste.wakemeapp.auth.WebViewPresenter;
 import ste.wakemeapp.auth.SignedInCalendarSource;
+import ste.wakemeapp.about.AboutDialog;
+import ste.wakemeapp.about.AppInfo;
 import ste.wakemeapp.calendar.CalendarAddress;
 import ste.wakemeapp.calendar.CalendarPoller;
 import ste.wakemeapp.calendar.CalendarSource;
@@ -55,6 +59,7 @@ public class CLILauncher extends Application {
     private CalendarPoller poller;
     private Tray tray;
     private SettingsDialog settingsDialog;
+    private AboutDialog aboutDialog;
     private final SoundNotifier sound = new SoundNotifier(Settings.user(), new AudioClipOutput(), Clock.systemUTC());
     private TestNotification testNotification;
     private Runnable repoll;   // starts polling the current calendar again, with the settings as they are now
@@ -127,7 +132,7 @@ public class CLILauncher extends Application {
             registerShutdownHook();
             boolean configured = hasCalendar();
             if (configured || parsedCommand.isTrayOnly()) {
-                tray = Tray.create(this::showSettings, this::shutdown);
+                tray = Tray.create(this::showSettings, this::showAbout, this::shutdown);
                 tray.start(configured);
             }
             if (parsedCommand.isSettings()) {
@@ -160,6 +165,14 @@ public class CLILauncher extends Application {
             Platform.exit();
             System.exit(1);
         }
+    }
+
+    /** Opens the About dialog, or brings the open one to the front. FX thread only. */
+    private void showAbout() {
+        if (aboutDialog == null) {
+            aboutDialog = new AboutDialog(AppInfo.version(), url -> getHostServices().showDocument(url));
+        }
+        aboutDialog.show();
     }
 
     /** Opens the settings dialog, or brings the open one to the front. FX thread only. */

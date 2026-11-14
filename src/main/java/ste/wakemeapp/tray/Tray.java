@@ -25,12 +25,12 @@ public final class Tray {
     }
 
     /**
-     * Creates the tray for this platform; the menu has "Settings…", which runs {@code onSettings} on
-     * the JavaFX Application Thread, and "Quit", which runs {@code onQuit}. Call on the JavaFX
+     * Creates the tray for this platform; the menu has "Settings…" and "About WakeMeApp", which run {@code onSettings} and
+     * {@code onAbout} on the JavaFX Application Thread, and "Quit", which runs {@code onQuit}. Call on the JavaFX
      * Application Thread.
      */
-    public static Tray create(Runnable onSettings, Runnable onQuit) {
-        SystemTrayView view = SystemTrayView.create(onSettings, onQuit);
+    public static Tray create(Runnable onSettings, Runnable onAbout, Runnable onQuit) {
+        SystemTrayView view = SystemTrayView.create(onSettings, onAbout, onQuit);
         return new Tray(view, () -> view != null);
     }
 

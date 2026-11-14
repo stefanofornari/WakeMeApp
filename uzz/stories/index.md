@@ -64,7 +64,7 @@
 | settings/US-000055 | Keep the Calendar Value in an Owner-Only File | DONE |
 | settings/US-000056 | Open the Settings Dialog | DONE |
 | settings/US-000057 | Set the Calendar in the Settings Dialog | DONE |
-| settings/US-000058 | Show an About Dialog from the Tray Menu | TODO |
+| settings/US-000058 | Show an About Dialog from the Tray Menu | DONE |
 | settings/US-000059 | Poll Interval Setting | DONE |
 
 ## logging
