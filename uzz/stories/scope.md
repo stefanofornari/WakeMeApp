@@ -33,11 +33,9 @@ global lead-time configuration.
   - [ ] Sound selection (bundled sounds + custom file)
   - [ ] Enable/disable notifications
   - [ ] Test notification button
-* **Platform Packaging & Integration (macOS MVP)**
-  - [ ] macOS: jpackage .dmg + Launch Agent plist + NSStatusItem menu bar integration
-  - [ ] macOS: Sleep/wake detection for notification rescheduling
-  - [ ] Windows: jpackage .msi + Registry Run key + SystemTray integration
-  - [ ] Linux: jpackage .deb/.AppImage + systemd user service / autostart .desktop
+* **Packaging**
+  - [ ] One archive per platform with `bin/wakemeapp.sh` (Linux, macOS) and `bin/wakemeapp.cmd` (Windows), built with the assembly plugin (packaging/US-000019)
+  - [ ] Auto-start at login (scheduler/US-000013); installers with a bundled JRE, signing and notarization are future work
 
 ## Detailed Scopes
 * Calendar synchronisation (polling policy, eligibility, scheduler reconciliation, ICS feed): `calendar/scope.md`

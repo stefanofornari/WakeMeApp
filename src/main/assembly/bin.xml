@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  The distribution: WakeMeApp/ with bin/wakemeapp.sh, conf/, lib/ and lib/modules/ (the JavaFX modules).
+  The distribution: WakeMeApp/ with bin/wakemeapp.sh (Linux, macOS) and bin/wakemeapp.cmd (Windows), conf/, lib/
+  and lib/modules/ (the JavaFX modules).
   Built by `mvn package` into target/wakemeapp-<version>/WakeMeApp (directory) and
   target/wakemeapp-<version>.tar.gz (to unpack in the installation directory).
   The JavaFX jars are the ones of the platform that builds the package, so a package is for that platform.
@@ -38,9 +39,24 @@
 
     <fileSets>
         <fileSet>
+            <!-- the shell scripts (Linux, macOS) -->
             <directory>src/main/dist/bin</directory>
             <outputDirectory>bin</outputDirectory>
+            <excludes>
+                <exclude>*.cmd</exclude>
+            </excludes>
             <lineEnding>unix</lineEnding>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+        <fileSet>
+            <!-- the command scripts (Windows) -->
+            <directory>src/main/dist/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <includes>
+                <include>*.cmd</include>
+            </includes>
+            <lineEnding>dos</lineEnding>
             <fileMode>0755</fileMode>
             <directoryMode>0755</directoryMode>
         </fileSet>

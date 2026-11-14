@@ -76,21 +76,11 @@
 | logging/US-000037 | Log the Main Flows at the Right Level | DONE |
 | logging/US-000039 | Log Calendar Access Failures at the Right Level | DONE |
 
-## packaging.macos
+## packaging
 | ID | Title | Status |
 |----|-------|--------|
-| packaging.macos/US-000019 | macOS App Packaging with Launch Agent | TODO |
-
-## packaging.windows
-| ID | Title | Status |
-|----|-------|--------|
-| packaging.windows/US-000020 | Windows App Packaging with Auto-Start | TODO |
-
-## packaging.linux
-| ID | Title | Status |
-|----|-------|--------|
-| packaging.linux/US-000021 | Linux App Packaging with systemd User Service | TODO |
+| packaging/US-000019 | Distribution Package for Linux, macOS and Windows | WIP |
 
 ---
 
-**Total Stories:** 51
+**Total Stories:** 53

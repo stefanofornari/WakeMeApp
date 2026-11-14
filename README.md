@@ -240,8 +240,9 @@ Unpack the archive in the directory where you want to install it; it contains on
 
 ```
 /installation/dir/WakeMeApp/
-    bin/wakemeapp.sh      starts the application (any option of the command line is passed on)
-    bin/dbg               runs a script of bin/ waiting for a debugger on localhost:1044
+    bin/wakemeapp.sh      starts the application on Linux and macOS (any option of the command line is passed on)
+    bin/wakemeapp.cmd     the same for Windows
+    bin/dbg, bin/dbg.cmd  run one of them waiting for a debugger on localhost:1044
     conf/logging.properties   the logging configuration
     lib/                  the application and its libraries
     lib/modules/          JavaFX
@@ -252,14 +253,16 @@ Unpack the archive in the directory where you want to install it; it contains on
 /installation/dir/WakeMeApp/bin/wakemeapp.sh --settings      # and opens the settings dialog
 ```
 
-To debug, `bin/dbg wakemeapp.sh [options]` starts the JVM suspended until a debugger attaches to `localhost:1044`
+On Windows: `C:\installation\dir\WakeMeApp\bin\wakemeapp.cmd`.
+
+To debug, `bin/dbg wakemeapp.sh [options]` (`bin\dbg.cmd wakemeapp.cmd [options]` on Windows) starts the JVM suspended until a debugger attaches to `localhost:1044`
 (`DEBUG_PORT` changes the port, `DEBUG_SUSPEND=n` does not wait).
 
 It needs Java 21 or later: `JAVA_HOME` is used if it is set, else the `java` in the path. `JAVA_OPTS` adds options
-for the JVM, and `conf/wakemeapp.conf`, if you create it, is read before starting (it can set `JAVA_OPTS` or
-`JAVA_HOME`). The script can be started through a symbolic link, from any directory, and a relative path in an
+for the JVM, and `conf/wakemeapp.conf` (`conf\wakemeapp.cmd` on Windows), if you create it, is read before starting (it can set
+`JAVA_OPTS` or `JAVA_HOME`). The script can be started through a symbolic link, from any directory, and a relative path in an
 option (`--calendar meetings.csv`) is relative to where you are. The JavaFX jars in the package are those of the platform that built it
-(`mvn package` on Linux gives a Linux package, on macOS a macOS one). The single-jar build is `target/wakemeapp-<version>-shaded.jar`.
+(`mvn package` on Linux gives a Linux package, on macOS a macOS one, on Windows a Windows one). The single-jar build is `target/wakemeapp-<version>-shaded.jar`.
 
 The user stories and their notes are under [`uzz/stories`](uzz/stories/index.md); the scope is in
 [`uzz/stories/scope.md`](uzz/stories/scope.md).
