@@ -2,7 +2,6 @@ package ste.wakemeapp.settings;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 
 /** How many minutes before a meeting the user is notified: one of a few choices, 5 unless chosen otherwise. */
@@ -38,20 +37,5 @@ public final class LeadTime {
         } catch (NumberFormatException x) {
             return false;
         }
-    }
-
-    /** The choices that are not shorter than the poll interval: a shorter lead time could make a reminder late. */
-    public static List<Integer> allowed(Duration pollInterval) {
-        return CHOICES.stream().filter(minutes -> minutes >= pollInterval.toMinutes()).toList();
-    }
-
-    /** Why some choices are not allowed, for a tooltip; empty if all are. */
-    public static Optional<String> tooltip(Duration pollInterval) {
-        if (allowed(pollInterval).size() == CHOICES.size()) {
-            return Optional.empty();
-        }
-        return Optional.of("The poll interval is " + pollInterval.toMinutes()
-            + " min: a shorter lead time could make a reminder late. "
-            + "Start with a shorter --poll-interval to allow it.");
     }
 }

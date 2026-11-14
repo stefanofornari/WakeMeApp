@@ -30,7 +30,7 @@ How the application gets, keeps and shows its configuration.
   - [ ] One calendar field: the kind (ICS link, Graph address, CSV file) is detected as for `--calendar`, validated per kind, and shown to the user
   - [ ] The stored calendar value is kept in an owner-only file, never in Preferences, never logged; an ICS link is shown as host only and masked after saving
   - [ ] Microsoft account section (client ID, tenant) with validation, used only for a Graph address
-  - [ ] Lead time, sound, enable/disable and test notification, as in settings/US-000015 to US-000018
+  - [ ] Lead time, poll interval, sound and test notification, as in settings/US-000015, US-000016, US-000018 and US-000059; pausing notifications is done from the tray (scheduler/US-000012), not by a setting
 * **Overrides**:
   - [ ] `--client-id` and `--tenant` overrule the stored values for one run and are never saved
 * **Inspection**:

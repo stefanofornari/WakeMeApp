@@ -55,7 +55,6 @@
 | settings/US-000014 | Microsoft Graph Configuration | TODO |
 | settings/US-000015 | Default Lead Time Setting | DONE |
 | settings/US-000016 | Sound Selection | DONE |
-| settings/US-000017 | Enable/Disable Notifications | DONE |
 | settings/US-000018 | Test Notification Button | DONE |
 | settings/US-000044 | Document How to Inspect the Stored Settings | TODO |
 | settings/US-000045 | Store Settings in Java Preferences | DONE |
@@ -66,6 +65,7 @@
 | settings/US-000056 | Open the Settings Dialog | DONE |
 | settings/US-000057 | Set the Calendar in the Settings Dialog | DONE |
 | settings/US-000058 | Show an About Dialog from the Tray Menu | TODO |
+| settings/US-000059 | Poll Interval Setting | DONE |
 
 ## logging
 | ID | Title | Status |

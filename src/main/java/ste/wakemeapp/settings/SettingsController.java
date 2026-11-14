@@ -7,11 +7,9 @@ import java.util.List;
 import java.util.function.Supplier;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.Slider;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.FileChooser;
@@ -31,7 +29,7 @@ public final class SettingsController {
     @FXML private Label hintLabel;
     @FXML private Label errorLabel;
     @FXML private ComboBox<Integer> leadTimeBox;
-    @FXML private CheckBox notificationsCheck;
+    @FXML private ComboBox<Integer> pollBox;
     @FXML private ComboBox<SoundOption> soundBox;
     @FXML private Button previewButton;
     @FXML private Label soundErrorLabel;
@@ -44,12 +42,11 @@ public final class SettingsController {
 
     private StoredCalendar stored;
     private Settings settings;
-    private Duration pollInterval = Duration.ofMinutes(5);
     private SettingsListener listener;
     private Runnable onClose = () -> { };
     private String shownAtLoad = "";   // how the saved calendar was shown
     private Integer leadAtLoad = LeadTime.DEFAULT_MINUTES;   // the saved lead time, in minutes
-    private boolean onAtLoad = true;   // whether the notifications are on
+    private Integer pollAtLoad = PollInterval.DEFAULT_MINUTES;   // the saved poll interval, in minutes
     private SoundChoice soundAtLoad = SoundChoice.bundled(SoundSetting.DEFAULT_SOUND);
     private int volumeAtLoad = SoundSetting.DEFAULT_VOLUME;
     private SoundOption previousSound;     // what was selected before the user picked "Custom file..."
@@ -63,9 +60,11 @@ public final class SettingsController {
             clearError();
         });
         leadTimeBox.getItems().setAll(LeadTime.CHOICES);
-        // the choices shorter than the poll interval stay in the list but cannot be picked (see bind)
-        leadTimeBox.setCellFactory(list -> new LeadTimeCell(true));
-        leadTimeBox.setButtonCell(new LeadTimeCell(false));
+        leadTimeBox.setCellFactory(list -> new MinutesCell());
+        leadTimeBox.setButtonCell(new MinutesCell());
+        pollBox.getItems().setAll(PollInterval.CHOICES);
+        pollBox.setCellFactory(list -> new MinutesCell());
+        pollBox.setButtonCell(new MinutesCell());
 
         soundBox.setConverter(new StringConverter<>() {
             @Override public String toString(SoundOption option) { return option == null ? "" : option.label(); }
@@ -171,44 +170,26 @@ public final class SettingsController {
         }
     }
 
-    /** A choice of the list: "5 minutes", greyed out and not selectable if the poll interval does not allow it. */
-    private final class LeadTimeCell extends ListCell<Integer> {
-        private final boolean inList;
-
-        LeadTimeCell(boolean inList) {
-            this.inList = inList;
-        }
-
+    /** A choice of a list of minutes: "5 minutes". */
+    private static final class MinutesCell extends ListCell<Integer> {
         @Override
         protected void updateItem(Integer minutes, boolean empty) {
             super.updateItem(minutes, empty);
             setText(empty || minutes == null ? null : minutes + (minutes == 1 ? " minute" : " minutes"));
-            // only in the list: the shown choice stays readable even if the poll interval rules it out
-            setDisable(inList && !empty && minutes != null && !allowedLeadTimes().contains(minutes));
         }
     }
 
     /**
      * @param stored       where the calendar is kept
      * @param settings     where the other settings are kept
-     * @param pollInterval how often the calendar is polled, to warn about a lead time shorter than it
      * @param listener     told what was saved
      * @param onClose      closes the window
      */
-    void bind(StoredCalendar stored, Settings settings, Duration pollInterval, SettingsListener listener,
-              Runnable onClose) {
+    void bind(StoredCalendar stored, Settings settings, SettingsListener listener, Runnable onClose) {
         this.stored = stored;
         this.settings = settings;
-        this.pollInterval = pollInterval;
         this.listener = listener;
         this.onClose = onClose;
-        // a visible but not intrusive reason, when the poll interval rules some choices out
-        leadTimeBox.setTooltip(LeadTime.tooltip(pollInterval).map(Tooltip::new).orElse(null));
-    }
-
-    /** The lead times the user may pick: not shorter than the poll interval. */
-    List<Integer> allowedLeadTimes() {
-        return LeadTime.allowed(pollInterval);
     }
 
     /** Shows what is saved (a link masked) and clears any message. */
@@ -217,6 +198,8 @@ public final class SettingsController {
         calendarField.setText(shownAtLoad);
         leadAtLoad = (int) LeadTime.read(settings).toMinutes();
         leadTimeBox.setValue(leadAtLoad);
+        pollAtLoad = (int) PollInterval.read(settings).toMinutes();
+        pollBox.setValue(pollAtLoad);
         soundAtLoad = SoundSetting.choice(settings);
         volumeAtLoad = SoundSetting.volume(settings);
         SoundOption stored = SoundOption.of(soundAtLoad);
@@ -236,8 +219,6 @@ public final class SettingsController {
         } else {
             hide(soundWarningLabel);
         }
-        onAtLoad = NotificationsEnabled.read(settings);
-        notificationsCheck.setSelected(onAtLoad);
         clearError();
         showKind(shownAtLoad);
     }
@@ -248,9 +229,10 @@ public final class SettingsController {
         Integer minutes = leadTimeBox.getValue();
         boolean calendarChanged = !calendarText.equals(shownAtLoad);
         boolean leadChanged = minutes != null && !minutes.equals(leadAtLoad);
-        boolean switched = notificationsCheck.isSelected() != onAtLoad;
+        Integer poll = pollBox.getValue();
+        boolean pollChanged = poll != null && !poll.equals(pollAtLoad);
         boolean soundChanged = !selectedSound().equals(soundAtLoad) || selectedVolume() != volumeAtLoad;
-        if (!calendarChanged && !leadChanged && !switched && !soundChanged) {
+        if (!calendarChanged && !leadChanged && !pollChanged && !soundChanged) {
             onClose.run();   // untouched, also when the calendar is the masked form of a saved link
             return;
         }
@@ -264,9 +246,6 @@ public final class SettingsController {
                 valid = false;
             }
         }
-        if (leadChanged && !allowedLeadTimes().contains(minutes)) {
-            valid = false;   // the list does not offer it; the tooltip of the list says why
-        }
         if (!valid) {
             return;
         }
@@ -276,8 +255,8 @@ public final class SettingsController {
             if (leadChanged) {
                 LeadTime.save(settings, minutes);
             }
-            if (switched) {
-                NotificationsEnabled.save(settings, notificationsCheck.isSelected());
+            if (pollChanged) {
+                PollInterval.save(settings, poll);
             }
             if (soundChanged) {
                 SoundSetting.save(settings, selectedSound(), selectedVolume());
@@ -289,15 +268,15 @@ public final class SettingsController {
             showError("The calendar could not be saved: " + x.getMessage());
             return;
         }
-        if (switched) {
-            listener.notificationsSwitched(notificationsCheck.isSelected());
+        if (pollChanged) {
+            listener.pollIntervalSaved(Duration.ofMinutes(poll));
         }
         if (soundChanged) {
             listener.soundSaved();
         }
         if (calendarChanged) {
             listener.calendarSaved(savedCalendar);
-        } else if (leadChanged) {
+        } else if (leadChanged && !pollChanged) {   // a new poll interval already polls again with the lead time
             listener.leadTimeSaved(Duration.ofMinutes(minutes));
         }
         onClose.run();
@@ -396,8 +375,8 @@ public final class SettingsController {
         return previewButton;
     }
 
-    CheckBox getNotificationsCheck() {
-        return notificationsCheck;
+    ComboBox<Integer> getPollBox() {
+        return pollBox;
     }
 
     Button getTestButton() {

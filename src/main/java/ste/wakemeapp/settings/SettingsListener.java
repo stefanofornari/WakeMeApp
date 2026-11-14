@@ -11,8 +11,9 @@ public interface SettingsListener {
     /** The lead time was saved and the calendar was not changed. */
     void leadTimeSaved(Duration leadTime);
 
-    /** The notifications were switched on ({@code true}) or off; the state is already saved. */
-    void notificationsSwitched(boolean on);
+    /** The poll interval was saved (it applies at once, to the calendar being polled). */
+    void pollIntervalSaved(Duration pollInterval);
+
 
     /** The user asked for a test notification; it works whatever the other settings are. */
     void testNotificationRequested();

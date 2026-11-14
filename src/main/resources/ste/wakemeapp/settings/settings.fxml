@@ -31,7 +31,10 @@
     <Label fx:id="errorLabel" styleClass="settings-error" wrapText="true" visible="false" managed="false"/>
 
     <Label text="Notifications" styleClass="settings-heading"/>
-    <CheckBox fx:id="notificationsCheck" text="Show meeting reminders" styleClass="settings-check"/>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Check the calendar every" styleClass="settings-help"/>
+        <ComboBox fx:id="pollBox" styleClass="settings-choice" prefWidth="150" minWidth="150"/>
+    </HBox>
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Label text="Notify me" styleClass="settings-help"/>
         <ComboBox fx:id="leadTimeBox" styleClass="settings-choice" prefWidth="150" minWidth="150"/>

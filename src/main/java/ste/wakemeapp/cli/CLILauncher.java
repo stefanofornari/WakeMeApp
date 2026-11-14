@@ -19,7 +19,6 @@ import ste.wakemeapp.calendar.IcsCalendarSource;
 import ste.wakemeapp.log.LogSetup;
 import ste.wakemeapp.notify.MeetingNotification;
 import ste.wakemeapp.notify.AudioClipOutput;
-import ste.wakemeapp.notify.NotificationSwitch;
 import ste.wakemeapp.notify.OverlayManager;
 import ste.wakemeapp.notify.SoundNotifier;
 import ste.wakemeapp.notify.TestNotification;
@@ -56,7 +55,6 @@ public class CLILauncher extends Application {
     private CalendarPoller poller;
     private Tray tray;
     private SettingsDialog settingsDialog;
-    private final NotificationSwitch notifications = NotificationSwitch.of(Settings.user());
     private final SoundNotifier sound = new SoundNotifier(Settings.user(), new AudioClipOutput(), Clock.systemUTC());
     private TestNotification testNotification;
     private Runnable repoll;   // starts polling the current calendar again, with the settings as they are now
@@ -167,7 +165,7 @@ public class CLILauncher extends Application {
     /** Opens the settings dialog, or brings the open one to the front. FX thread only. */
     private void showSettings() {
         if (settingsDialog == null) {
-            settingsDialog = new SettingsDialog(StoredCalendar.user(), Settings.user(), parsedCommand.getPollInterval(),
+            settingsDialog = new SettingsDialog(StoredCalendar.user(), Settings.user(),
                 new SettingsListener() {
                     @Override public void calendarSaved(String value) {
                         calendarChanged(value);
@@ -175,6 +173,10 @@ public class CLILauncher extends Application {
 
                     @Override public void leadTimeSaved(Duration leadTime) {
                         leadTimeChanged(leadTime);
+                    }
+
+                    @Override public void pollIntervalSaved(Duration pollInterval) {
+                        pollIntervalChanged(pollInterval);
                     }
 
                     @Override public void previewSound(SoundChoice choice, int volumePercent) {
@@ -193,10 +195,6 @@ public class CLILauncher extends Application {
                         LOG.info("Showing the test notification");
                     }
 
-                    @Override public void notificationsSwitched(boolean on) {
-                        notifications.follow(on);
-                        LOG.info(on ? "Meeting notifications are on" : "Meeting notifications are off");
-                    }
                 });
         }
         settingsDialog.show();
@@ -239,6 +237,17 @@ public class CLILauncher extends Application {
      */
     private void leadTimeChanged(Duration leadTime) {
         LOG.info("Lead time is now " + leadTime.toMinutes() + " min");
+        pollAgain();
+    }
+
+    /** The poll interval was saved: it replaces {@code --poll-interval} and the calendar is polled again with it. FX thread only. */
+    private void pollIntervalChanged(Duration pollInterval) {
+        parsedCommand.forgetPollIntervalOption();
+        LOG.info("Poll interval is now " + pollInterval.toMinutes() + " min");
+        pollAgain();
+    }
+
+    private void pollAgain() {
         Runnable again = repoll;
         if (again == null) {
             return;   // no calendar is being polled
@@ -255,10 +264,7 @@ public class CLILauncher extends Application {
     }
 
     private NotificationScheduler newScheduler() {
-        // a single meeting given on the command line is asked for explicitly: only a calendar can be switched off
-        Consumer<MeetingNotification> trigger = calendarMode
-            ? notifications.guard(this::onNotificationTriggered) : this::onNotificationTriggered;
-        return new NotificationScheduler(NotificationScheduler.onFxThread(trigger),
+        return new NotificationScheduler(NotificationScheduler.onFxThread(this::onNotificationTriggered),
             LeadTime.read(Settings.user()), Clock.systemDefaultZone());
     }
 

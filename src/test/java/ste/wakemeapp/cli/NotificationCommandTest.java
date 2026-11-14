@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 import ste.wakemeapp.settings.MemoryPreferences;
+import ste.wakemeapp.settings.PollInterval;
 import ste.wakemeapp.settings.Settings;
 import ste.wakemeapp.settings.StoredCalendar;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class NotificationCommandTest {
     private static NotificationCommand commandWith(StoredCalendar stored) {
         NotificationCommand command = new NotificationCommand();
         command.setStoredCalendar(stored);
+        command.setSettings(new Settings(new MemoryPreferences()));
         return command;
     }
 
@@ -223,6 +225,38 @@ class NotificationCommandTest {
         then(exitCode).isEqualTo(0);
         then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(2));
         then(command().getWindow()).isEqualTo(java.time.Duration.ofMinutes(12));
+    }
+
+    @Test
+    void should_poll_with_the_interval_stored_by_the_dialog_when_none_is_given() {
+        Settings stored = new Settings(new MemoryPreferences());
+        PollInterval.save(stored, 15);
+        command().setSettings(stored);
+
+        then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(15));
+    }
+
+    @Test
+    void should_prefer_the_option_to_the_stored_interval_until_the_dialog_saves_another() {
+        Settings stored = new Settings(new MemoryPreferences());
+        PollInterval.save(stored, 15);
+        command().setSettings(stored);
+        executeWithCalendarFile("--poll-interval", "2", "--window", "12");
+
+        then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(2));
+
+        command().forgetPollIntervalOption();
+
+        then(command().getPollInterval()).isEqualTo(java.time.Duration.ofMinutes(15));
+    }
+
+    @Test
+    void should_not_reject_the_default_window_because_of_a_long_stored_interval() {
+        Settings stored = new Settings(new MemoryPreferences());
+        PollInterval.save(stored, 30);
+        command().setSettings(stored);
+
+        then(executeWithCalendarFile()).isEqualTo(0);
     }
 
     @Test

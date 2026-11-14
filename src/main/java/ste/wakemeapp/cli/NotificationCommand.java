@@ -7,6 +7,7 @@ import ste.wakemeapp.calendar.IcsAddress;
 import ste.wakemeapp.scheduler.NotificationScheduler;
 import ste.wakemeapp.settings.ConfigReport;
 import ste.wakemeapp.settings.ConnectionSettings;
+import ste.wakemeapp.settings.PollInterval;
 import ste.wakemeapp.settings.Settings;
 import ste.wakemeapp.settings.StoredCalendar;
 import picocli.CommandLine.Command;
@@ -58,8 +59,8 @@ public class NotificationCommand implements Callable<Integer> {
     private String calendar;
 
     @Option(names = "--poll-interval", paramLabel = "<minutes>",
-            description = "How often the calendar file is polled (default: 5)")
-    private int pollIntervalMinutes = (int) CalendarPoller.DEFAULT_POLL_INTERVAL.toMinutes();
+            description = "How often the calendar is polled, for this run (default: the one set in the settings dialog, else 5)")
+    private Integer pollIntervalMinutes;
 
     @Option(names = "--window", paramLabel = "<minutes>",
             description = "How far ahead each poll looks for meetings; at least poll interval + lead time (default: 15)")
@@ -148,13 +149,15 @@ public class NotificationCommand implements Callable<Integer> {
     }
 
     private void validatePolling() {
-        if (pollIntervalMinutes <= 0) {
+        if (pollIntervalMinutes != null && pollIntervalMinutes <= 0) {
             throw new IllegalArgumentException("--poll-interval must be a positive number of minutes");
         }
         if (windowMinutes <= 0) {
             throw new IllegalArgumentException("--window must be a positive number of minutes");
         }
-        CalendarPoller.requireValidWindow(getPollInterval(), getWindow(), NotificationScheduler.DEFAULT_LEAD_TIME);
+        // only what was typed is checked: a stored poll interval makes the window longer instead (see CalendarPoller.effectiveWindow)
+        Duration typed = pollIntervalMinutes != null ? Duration.ofMinutes(pollIntervalMinutes) : CalendarPoller.DEFAULT_POLL_INTERVAL;
+        CalendarPoller.requireValidWindow(typed, getWindow(), NotificationScheduler.DEFAULT_LEAD_TIME);
     }
 
     private void validateAndParseDates() {
@@ -203,8 +206,14 @@ public class NotificationCommand implements Callable<Integer> {
         return debug;
     }
 
+    /** {@code --poll-interval} if given (this run), else the one stored by the settings dialog, else 5 minutes. */
     public Duration getPollInterval() {
-        return Duration.ofMinutes(pollIntervalMinutes);
+        return pollIntervalMinutes != null ? Duration.ofMinutes(pollIntervalMinutes) : PollInterval.read(settings());
+    }
+
+    /** The user chose a poll interval in the dialog: it wins over {@code --poll-interval} from now on. */
+    void forgetPollIntervalOption() {
+        pollIntervalMinutes = null;
     }
 
     public Duration getWindow() {

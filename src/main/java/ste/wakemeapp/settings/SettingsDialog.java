@@ -3,7 +3,6 @@ package ste.wakemeapp.settings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.time.Duration;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -25,10 +24,9 @@ public final class SettingsDialog {
     /**
      * @param stored       where the calendar is kept
      * @param settings     where the other settings are kept
-     * @param pollInterval how often the calendar is polled
      * @param listener     told what was saved
      */
-    public SettingsDialog(StoredCalendar stored, Settings settings, Duration pollInterval, SettingsListener listener) {
+    public SettingsDialog(StoredCalendar stored, Settings settings, SettingsListener listener) {
         loadFont("Inter-Regular.ttf");
         loadFont("Inter-Bold.ttf");
         try {
@@ -49,7 +47,7 @@ public final class SettingsDialog {
         stage.setTitle("WakeMeApp Settings");
         stage.initModality(Modality.NONE);
         stage.setResizable(false);
-        controller.bind(stored, settings, pollInterval, listener, stage::hide);
+        controller.bind(stored, settings, listener, stage::hide);
     }
 
     /** Opens the dialog with what is saved, or brings the open one to the front (its edits are kept). */

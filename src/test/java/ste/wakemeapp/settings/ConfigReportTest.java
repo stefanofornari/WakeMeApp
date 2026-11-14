@@ -98,12 +98,12 @@ class ConfigReportTest {
     }
 
     @Test
-    void the_notifications_switch_shows_its_default_and_its_stored_value() {
-        then(lineOf(ConfigReport.lines(null, null, stored), "notify.enabled")).contains("true").contains("(default)");
+    void the_poll_interval_shows_its_default_and_its_stored_value() {
+        then(lineOf(ConfigReport.lines(null, null, stored), "poll.intervalMinutes")).contains("5").contains("(default)");
 
-        stored.putBoolean("notify.enabled", false);
+        stored.putInt("poll.intervalMinutes", 15);
 
-        then(lineOf(ConfigReport.lines(null, null, stored), "notify.enabled")).contains("false").contains("(stored)");
+        then(lineOf(ConfigReport.lines(null, null, stored), "poll.intervalMinutes")).contains("15").contains("(stored)");
         then(ConfigReport.lines(null, null, stored).stream().filter(l -> l.contains("unknown key")).count()).isZero();
     }
 

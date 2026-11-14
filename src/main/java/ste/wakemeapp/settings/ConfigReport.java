@@ -12,7 +12,6 @@ import java.util.TreeSet;
 public final class ConfigReport {
 
     private static final String NOT_SET = "(not set)";
-    private static final String NOTIFICATIONS_KEY = NotificationsEnabled.KEY;
 
     private ConfigReport() {
     }
@@ -28,14 +27,14 @@ public final class ConfigReport {
         lines.add(line(ConnectionSettings.TENANT_KEY, cliTenant, stored,
             ConnectionSettings.DEFAULT_TENANT, ConnectionSettings::isTenant));
         lines.add(line(LeadTime.KEY, null, stored, Integer.toString(LeadTime.DEFAULT_MINUTES), LeadTime::isValid));
-        lines.add(line(NOTIFICATIONS_KEY, null, stored, "true", v -> v.equals("true") || v.equals("false")));
+        lines.add(line(PollInterval.KEY, null, stored, Integer.toString(PollInterval.DEFAULT_MINUTES), PollInterval::isValid));
         lines.add(line(SoundSetting.SOUND_KEY, null, stored, SoundSetting.DEFAULT_SOUND, SoundSetting::isValidChoice));
         lines.add(line(SoundSetting.FILE_KEY, null, stored, null, v -> true));
         lines.add(line(SoundSetting.VOLUME_KEY, null, stored, Integer.toString(SoundSetting.DEFAULT_VOLUME),
             SoundSetting::isValidVolume));
         for (String key : new TreeSet<>(stored.keys())) {
             if (!key.equals(ConnectionSettings.CLIENT_ID_KEY) && !key.equals(ConnectionSettings.TENANT_KEY)
-                && !key.equals(LeadTime.KEY) && !key.equals(NOTIFICATIONS_KEY)
+                && !key.equals(LeadTime.KEY) && !key.equals(PollInterval.KEY)
                 && !key.equals(SoundSetting.SOUND_KEY) && !key.equals(SoundSetting.FILE_KEY)
                 && !key.equals(SoundSetting.VOLUME_KEY)) {
                 lines.add(format(key, stored.getString(key, ""), "stored, unknown key", null));

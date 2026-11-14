@@ -7,3 +7,5 @@
 * The poll interval is a command-line option only, so the dialog compares with the one of this run.
 * Dependency changed from the canceled scheduler/US-000011 to scheduler/US-000023 (scheduler core and lead time).
 * Not verified here: `SettingsDialogTest` and the launcher (JavaFX, TestFX, picocli) need `mvn test`; `LeadTimeTest`, `ConfigReportTest` and `CalendarPollerTest` were run.
+
+* Superseded in part by settings/US-000059: the rule that disabled the choices shorter than the poll interval (cells greyed out, tooltip, `LeadTime.allowed`/`tooltip`) was removed. A short lead time with a longer poll interval is fine.

@@ -1,0 +1,6 @@
+# Notes — settings/US-000059
+
+* `PollInterval` (key `poll.intervalMinutes`, choices 1, 2, 5, 10, 15, 30) mirrors `LeadTime`. `NotificationCommand.getPollInterval()` is the option if given, else the stored value; the option is now an optional `Integer`, so only a typed value is checked against `--window`. A long stored interval does not make the default window invalid: the launcher uses `CalendarPoller.effectiveWindow`, which grows the window.
+* When the dialog saves an interval, the launcher calls `NotificationCommand.forgetPollIntervalOption()` so that the choice wins over `--poll-interval` for the rest of the run, then polls again. If the calendar is also changed in the same save, the calendar is polled again by that path too (twice, rare, harmless). With a lead-time change in the same save, only the poll-interval path polls again.
+* Replaces the rule of settings/US-000015 that greyed out lead times shorter than the poll interval: it was wrong, a 1-minute lead time works with a 5-minute poll since the meetings are scheduled ahead.
+* Not verified here: `SettingsDialogTest` (TestFX), `NotificationCommandTest` and the launcher need `mvn test`; `PollInterval`, `LeadTime` and `ConfigReport` tests were run.

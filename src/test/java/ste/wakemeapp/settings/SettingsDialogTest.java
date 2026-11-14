@@ -26,20 +26,19 @@ class SettingsDialogTest {
     private final FxRobot robot = new FxRobot();
     private final List<String> saved = new ArrayList<>();
     private final List<Duration> leadTimes = new ArrayList<>();
-    private final List<Boolean> switches = new ArrayList<>();
+    private final List<Duration> polls = new ArrayList<>();
     private final List<String> previews = new ArrayList<>();
     private int soundsSaved;
     private int tests;
     private final SettingsListener listener = new SettingsListener() {
         @Override public void calendarSaved(String value) { saved.add(value); }
         @Override public void leadTimeSaved(Duration leadTime) { leadTimes.add(leadTime); }
-        @Override public void notificationsSwitched(boolean on) { switches.add(on); }
+        @Override public void pollIntervalSaved(Duration pollInterval) { polls.add(pollInterval); }
         @Override public void previewSound(SoundChoice choice, int volume) { previews.add(choice.kind() + ":" + choice.value() + "@" + volume); }
         @Override public void soundSaved() { soundsSaved++; }
         @Override public void testNotificationRequested() { tests++; }
     };
     private Settings settings;
-    private Duration pollInterval;
     private StoredCalendar stored;
     private SettingsDialog dialog;
     private SettingsController form;
@@ -48,14 +47,13 @@ class SettingsDialogTest {
     private void start(Stage stage) throws IOException {
         saved.clear();
         leadTimes.clear();
-        switches.clear();
+        polls.clear();
         tests = 0;
         previews.clear();
         soundsSaved = 0;
         settings = new Settings(new MemoryPreferences());
-        pollInterval = Duration.ofMinutes(5);
         stored = new StoredCalendar(Files.createTempDirectory("settings").resolve("calendar.txt"));
-        dialog = new SettingsDialog(stored, settings, pollInterval, listener);
+        dialog = new SettingsDialog(stored, settings, listener);
         form = dialog.getController();
     }
 
@@ -272,7 +270,7 @@ class SettingsDialogTest {
         Path blocked = Files.createTempDirectory("settings").resolve("calendar.txt");
         Files.createDirectories(blocked.resolve("inner"));   // a non-empty directory where the file should go
         stored = new StoredCalendar(blocked);
-        robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
+        robot.interact(() -> dialog = new SettingsDialog(stored, settings, listener));
         form = dialog.getController();
         open();
         type(LINK);
@@ -369,124 +367,85 @@ class SettingsDialogTest {
         then(dialog.isShowing()).isFalse();
     }
 
-    @Test
-    void should_not_offer_lead_times_shorter_than_the_poll_interval_and_say_why() {
-        pollInterval = Duration.ofMinutes(10);
-        robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
-        form = dialog.getController();
+    // ---- poll interval
 
-        open();
-
-        then(form.getLeadTimeBox().getItems()).containsExactly(1, 2, 5, 10, 15);   // all shown...
-        then(form.allowedLeadTimes()).containsExactly(10, 15);                      // ...the short ones disabled
-        then(form.getLeadTimeBox().getTooltip().getText())
-            .isEqualTo("The poll interval is 10 min: a shorter lead time could make a reminder late. "
-                + "Start with a shorter --poll-interval to allow it.");
+    private void choosePoll(int minutes) {
+        robot.interact(() -> form.getPollBox().setValue(minutes));
     }
 
     @Test
-    void should_have_no_tooltip_when_every_lead_time_is_allowed() {
+    void should_offer_every_poll_interval_and_every_lead_time_with_5_minutes_selected() {
         open();
 
-        then(form.getLeadTimeBox().getTooltip()).isNull();
-        then(form.allowedLeadTimes()).containsExactly(1, 2, 5, 10, 15);
+        then(form.getPollBox().getItems()).containsExactly(1, 2, 5, 10, 15, 30);
+        then(form.getPollBox().getValue()).isEqualTo(5);
+        then(form.getLeadTimeBox().getItems()).containsExactly(1, 2, 5, 10, 15);   // none is ruled out by the poll interval
     }
 
     @Test
-    void should_not_save_a_lead_time_the_poll_interval_does_not_allow() {
-        pollInterval = Duration.ofMinutes(10);
-        robot.interact(() -> dialog = new SettingsDialog(stored, settings, pollInterval, listener));
-        form = dialog.getController();
+    void should_save_the_poll_interval_and_report_it() {
         open();
-        choose(2);   // set from code: the list would not let the user
+        choosePoll(15);
 
         save();
 
-        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
-        then(leadTimes).isEmpty();
-        then(form.getLeadTimeBox().getValue()).isEqualTo(2);
-        then(dialog.isShowing()).isTrue();
-    }
-
-    // ---- settings/US-000017
-
-    private void tick(boolean selected) {
-        robot.interact(() -> form.getNotificationsCheck().setSelected(selected));
-    }
-
-    @Test
-    void should_show_the_notifications_on_by_default() {
-        open();
-
-        then(form.getNotificationsCheck().isSelected()).isTrue();
-    }
-
-    @Test
-    void should_switch_the_notifications_off_save_it_and_report_it() {
-        open();
-        tick(false);
-
-        save();
-
-        then(NotificationsEnabled.read(settings)).isFalse();
-        then(switches).containsExactly(false);
-        then(saved).isEmpty();
-        then(leadTimes).isEmpty();
+        then(PollInterval.read(settings)).isEqualTo(Duration.ofMinutes(15));
+        then(polls).containsExactly(Duration.ofMinutes(15));
         then(dialog.isShowing()).isFalse();
     }
 
     @Test
-    void should_show_the_saved_state_when_opened_again() {
-        NotificationsEnabled.save(settings, false);
+    void should_show_the_saved_poll_interval_when_opened_again() {
+        PollInterval.save(settings, 30);
 
         open();
 
-        then(form.getNotificationsCheck().isSelected()).isFalse();
+        then(form.getPollBox().getValue()).isEqualTo(30);
     }
 
     @Test
-    void should_switch_the_notifications_back_on() {
-        NotificationsEnabled.save(settings, false);
+    void should_report_nothing_when_the_poll_interval_is_left_as_it_was() {
         open();
-        tick(true);
 
         save();
 
-        then(NotificationsEnabled.read(settings)).isTrue();
-        then(switches).containsExactly(true);
+        then(polls).isEmpty();
     }
 
     @Test
-    void should_report_nothing_when_the_switch_is_left_as_it_was() {
+    void should_not_save_the_poll_interval_when_cancelled() {
         open();
-        tick(true);
-
-        save();
-
-        then(switches).isEmpty();
-    }
-
-    @Test
-    void should_not_switch_when_cancelled() {
-        open();
-        tick(false);
+        choosePoll(15);
 
         robot.interact(form::handleCancel);
 
-        then(NotificationsEnabled.read(settings)).isTrue();
-        then(switches).isEmpty();
+        then(PollInterval.read(settings)).isEqualTo(Duration.ofMinutes(5));
+        then(polls).isEmpty();
     }
 
     @Test
-    void should_not_switch_when_another_setting_is_wrong() {
+    void should_poll_again_only_once_when_the_poll_interval_and_the_lead_time_change_together() {
         open();
-        tick(false);
-        type("hello");
+        choosePoll(10);
+        choose(15);
 
         save();
 
-        then(NotificationsEnabled.read(settings)).isTrue();
-        then(switches).isEmpty();
+        then(polls).containsExactly(Duration.ofMinutes(10));
+        then(leadTimes).isEmpty();
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(15));
+    }
+
+    @Test
+    void should_allow_a_lead_time_shorter_than_the_poll_interval() {
+        PollInterval.save(settings, 15);
+        open();
+        choose(1);
+
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(1));
+        then(leadTimes).containsExactly(Duration.ofMinutes(1));
     }
 
     // ---- settings/US-000018
@@ -502,18 +461,6 @@ class SettingsDialogTest {
         then(dialog.isShowing()).isTrue();
         then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));   // edits are not saved by a test
         then(leadTimes).isEmpty();
-    }
-
-    @Test
-    void should_ask_for_a_test_notification_also_when_the_notifications_are_switched_off() {
-        NotificationsEnabled.save(settings, false);
-        open();
-
-        robot.interact(form::handleTestNotification);
-
-        then(tests).isEqualTo(1);
-        then(NotificationsEnabled.read(settings)).isFalse();   // the switch is unaffected
-        then(switches).isEmpty();
     }
 
     @Test
@@ -599,7 +546,7 @@ class SettingsDialogTest {
     @Test
     void should_not_tell_the_listener_when_the_sound_did_not_change() {
         open();
-        robot.interact(() -> form.getNotificationsCheck().setSelected(false));
+        choose(10);
 
         save();
 
