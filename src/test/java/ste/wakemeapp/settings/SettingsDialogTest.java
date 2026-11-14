@@ -515,7 +515,7 @@ class SettingsDialogTest {
         robot.interact(form::handlePreview);
 
         then(previews).containsExactly("BUNDLED:bell@30");
-        then(settings.get(SoundSetting.SOUND_KEY)).isNull();
+        then(settings.keys()).doesNotContain(SoundSetting.SOUND_KEY);
         then(form.getVolumeLabel().getText()).isEqualTo("30 %");
     }
 

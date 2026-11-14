@@ -76,7 +76,7 @@
         <dependency>
             <groupId>com.dorkbox</groupId>
             <artifactId>SystemTray</artifactId>
-            <version>4.5</version>
+            <version>4.4</version>
         </dependency>
 
         <!-- FileLogHandler (and directories-jvm, which it uses to find the system folders) -->
