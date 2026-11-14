@@ -149,7 +149,7 @@ class SettingsDialogTest {
 
         open();
 
-        then(form.getCalendarField().getText()).isEqualTo("https://outlook.office365.com/…");
+        then(form.getCalendarField().getText()).isEqualTo("https://outlook.office365.com/…/calendar.ics");
         then(form.getKindLabel().getText()).isEqualTo("ICS link");
     }
 

@@ -357,7 +357,7 @@ class NotificationCommandTest {
 
         then(exitCode).isZero();
         then(out.toString()).doesNotContain("abc123").doesNotContain("secret456")
-            .doesNotContain("calendar.ics");
+            .contains("https://outlook.office365.com/\u2026/calendar.ics");
         then(node.keys()).isEmpty();
     }
 
@@ -532,7 +532,7 @@ class NotificationCommandTest {
         line.execute("--print-config");
 
         then(out.toString()).contains("https://outlook.office365.com/\u2026/calendar.ics").contains("(stored)")
-            .doesNotContain("abc123").doesNotContain("secret456").doesNotContain("calendar.ics");
+            .doesNotContain("abc123").doesNotContain("secret456");
     }
 
     @Test
