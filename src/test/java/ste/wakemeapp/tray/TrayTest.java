@@ -17,6 +17,7 @@ class TrayTest {
         @Override public void show() { events.add("show"); }
         @Override public void setAlert(boolean alert) { events.add("alert=" + alert); }
         @Override public void setTooltip(String tooltip) { events.add("tooltip=" + tooltip); }
+        @Override public void close() { events.add("close"); }
     }
 
     private final FakeView view = new FakeView();
@@ -66,5 +67,23 @@ class TrayTest {
 
         then(view.events).isEmpty();
         then(logged).anyMatch(m -> m.contains("tray is not available"));
+    }
+
+    @Test
+    void should_remove_the_icon_when_closed() {
+        Tray tray = new Tray(view, () -> true);
+        tray.start(true);
+        view.events.clear();
+
+        tray.close();
+
+        then(view.events).containsExactly("close");
+    }
+
+    @Test
+    void should_not_touch_the_view_when_closed_without_a_tray() {
+        new Tray(view, () -> false).close();
+
+        then(view.events).isEmpty();
     }
 }

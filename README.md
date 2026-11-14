@@ -78,7 +78,9 @@ exclamation mark, and the tooltip says "WakeMeApp - no calendar configured", whi
 (set one in the settings dialog, below, or start with `--calendar`). With `--calendar` the application works as
 described below and shows the icon too. The menu has **Settings…**, which opens the settings dialog, and **Quit**,
 which cancels the pending reminders and ends the application. On a desktop without a system tray the log says so and
-the application keeps running; stop it with Ctrl+C.
+the application keeps running; stop it with Ctrl+C. The icon is drawn by [dorkbox SystemTray](https://github.com/dorkbox/SystemTray): on Linux it uses AppIndicator
+(install `libappindicator3` on Ubuntu), GtkStatusIcon or Swing, whichever the desktop supports; AppIndicator shows no tooltip, and
+GNOME 3 may need the AppIndicator extension to show the icon.
 
 ### The settings dialog
 

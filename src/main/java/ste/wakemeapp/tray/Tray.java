@@ -2,7 +2,6 @@ package ste.wakemeapp.tray;
 
 import java.util.function.BooleanSupplier;
 import java.util.logging.Logger;
-import javafx.stage.Stage;
 
 /**
  * The application's tray / menu bar icon: normal when a calendar is configured, with an
@@ -30,8 +29,17 @@ public final class Tray {
      * the JavaFX Application Thread, and "Quit", which runs {@code onQuit}. Call on the JavaFX
      * Application Thread.
      */
-    public static Tray create(Stage stage, Runnable onSettings, Runnable onQuit) {
-        return new Tray(FxTrayView.supported() ? new FxTrayView(stage, onSettings, onQuit) : null, FxTrayView::supported);
+    public static Tray create(Runnable onSettings, Runnable onQuit) {
+        SystemTrayView view = SystemTrayView.create(onSettings, onQuit);
+        return new Tray(view, () -> view != null);
+    }
+
+    /** Removes the icon (the application is ending). */
+    public void close() {
+        if (started) {
+            started = false;
+            view.close();
+        }
     }
 
     /** Shows the icon in the state that matches {@code configured}. */

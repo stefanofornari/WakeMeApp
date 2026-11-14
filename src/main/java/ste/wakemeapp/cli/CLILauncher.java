@@ -127,7 +127,7 @@ public class CLILauncher extends Application {
             registerShutdownHook();
             boolean configured = hasCalendar();
             if (configured || parsedCommand.isTrayOnly()) {
-                tray = Tray.create(primaryStage, this::showSettings, this::shutdown);
+                tray = Tray.create(this::showSettings, this::shutdown);
                 tray.start(configured);
             }
             if (parsedCommand.isSettings()) {
@@ -471,6 +471,9 @@ public class CLILauncher extends Application {
 
     private void registerShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (tray != null) {
+                tray.close();
+            }
             if (poller != null) {
                 poller.close();
             }

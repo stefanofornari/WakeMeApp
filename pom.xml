@@ -72,16 +72,11 @@
             <version>${javafx.version}</version>
         </dependency>
 
-        <!-- tray / menu bar icon on macOS, Windows and Linux (settings/US-000054); javafx-swing is its dependency -->
+        <!-- tray / menu bar icon on macOS, Windows and Linux (settings/US-000054) -->
         <dependency>
-            <groupId>com.dustinredmond.fxtrayicon</groupId>
-            <artifactId>FXTrayIcon</artifactId>
-            <version>4.2.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-swing</artifactId>
-            <version>${javafx.version}</version>
+            <groupId>com.dorkbox</groupId>
+            <artifactId>SystemTray</artifactId>
+            <version>4.5</version>
         </dependency>
 
         <!-- FileLogHandler (and directories-jvm, which it uses to find the system folders) -->

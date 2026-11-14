@@ -10,4 +10,7 @@ interface TrayView {
     void setAlert(boolean alert);
 
     void setTooltip(String tooltip);
+
+    /** Removes the icon. */
+    void close();
 }
