@@ -56,11 +56,11 @@
 | settings/US-000015 | Default Lead Time Setting | DONE |
 | settings/US-000016 | Sound Selection | DONE |
 | settings/US-000018 | Test Notification Button | DONE |
-| settings/US-000044 | Document How to Inspect the Stored Settings | TODO |
+| settings/US-000044 | Document How to Inspect the Stored Settings | DONE |
 | settings/US-000045 | Store Settings in Java Preferences | DONE |
 | settings/US-000046 | Overrule Settings from the Command Line | DONE |
 | settings/US-000047 | Print the Effective Configuration | DONE |
-| settings/US-000054 | Start in the Tray | WIP |
+| settings/US-000054 | Start in the Tray | DONE |
 | settings/US-000055 | Keep the Calendar Value in an Owner-Only File | DONE |
 | settings/US-000056 | Open the Settings Dialog | DONE |
 | settings/US-000057 | Set the Calendar in the Settings Dialog | DONE |

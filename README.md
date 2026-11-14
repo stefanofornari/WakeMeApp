@@ -198,7 +198,7 @@ comes from, on any platform:
 mvn javafx:run -Djavafx.args="--print-config"
 ```
 
-Where the stored values are, if you want to look at them directly:
+Where the stored values are, if you want to look at them directly (details, reset commands and the application data files in [docs/settings.md](docs/settings.md)):
 
 * **Linux**: `~/.java/.userPrefs/ste/wakemeapp/prefs.xml`
 * **Windows**: registry key `HKCU\Software\JavaSoft\Prefs\ste\wakemeapp` (`reg query` or regedit)
