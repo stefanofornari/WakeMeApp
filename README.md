@@ -229,6 +229,34 @@ failed and whether it will try again. The usual ones:
 mvn test
 ```
 
+## Installing from a package
+
+```
+mvn package
+```
+
+builds `target/wakemeapp-<version>.tar.gz`, and the same tree unpacked in `target/wakemeapp-<version>/WakeMeApp`.
+Unpack the archive in the directory where you want to install it; it contains one directory, `WakeMeApp`:
+
+```
+/installation/dir/WakeMeApp/
+    bin/wakemeapp.sh      starts the application (any option of the command line is passed on)
+    conf/logging.properties   the logging configuration
+    lib/                  the application and its libraries
+    lib/modules/          JavaFX
+```
+
+```
+/installation/dir/WakeMeApp/bin/wakemeapp.sh                 # starts in the tray
+/installation/dir/WakeMeApp/bin/wakemeapp.sh --settings      # and opens the settings dialog
+```
+
+It needs Java 21 or later: `JAVA_HOME` is used if it is set, else the `java` in the path. `JAVA_OPTS` adds options
+for the JVM, and `conf/wakemeapp.conf`, if you create it, is read before starting (it can set `JAVA_OPTS` or
+`JAVA_HOME`). The script can be started through a symbolic link, from any directory, and a relative path in an
+option (`--calendar meetings.csv`) is relative to where you are. The JavaFX jars in the package are those of the platform that built it
+(`mvn package` on Linux gives a Linux package, on macOS a macOS one). The single-jar build is `target/wakemeapp-<version>-shaded.jar`.
+
 The user stories and their notes are under [`uzz/stories`](uzz/stories/index.md); the scope is in
 [`uzz/stories/scope.md`](uzz/stories/scope.md).
 
