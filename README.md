@@ -264,6 +264,24 @@ for the JVM, and `conf/wakemeapp.conf` (`conf\wakemeapp.cmd` on Windows), if you
 option (`--calendar meetings.csv`) is relative to where you are. The JavaFX jars in the package are those of the platform that built it
 (`mvn package` on Linux gives a Linux package, on macOS a macOS one, on Windows a Windows one). The single-jar build is `target/wakemeapp-<version>-shaded.jar`.
 
+### The macOS bundle
+
+On a Mac, `mvn package` also builds a light application bundle (Maven profile `mac-app`, active on macOS only):
+
+```
+target/wakemeapp-<version>-mac-app.zip          unzip it and drag WakeMeApp.app to Applications
+target/wakemeapp-<version>-mac-app/WakeMeApp.app
+```
+
+It has no Java runtime inside: it uses the JDK or JRE 21 or later of the Mac (`JAVA_HOME` if set, else the newest
+one `/usr/libexec/java_home` finds), and asks you to install one if there is none. Inside, `Contents/app` is the
+package above, so the bundle runs the same `wakemeapp.sh`. It starts in the menu bar, with no Dock icon.
+Options go after `--args`: `open -a WakeMeApp --args --settings`.
+
+The bundle is **not signed**: the first time, open it with right-click, **Open**, or run
+`xattr -dr com.apple.quarantine /Applications/WakeMeApp.app` after downloading it. The icon is drawn by
+`tools/make_icon.py` (Pillow) into `src/main/dist/mac/WakeMeApp.icns`.
+
 The user stories and their notes are under [`uzz/stories`](uzz/stories/index.md); the scope is in
 [`uzz/stories/scope.md`](uzz/stories/scope.md).
 

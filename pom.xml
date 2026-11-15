@@ -284,6 +284,39 @@
     </build>
 
     <profiles>
+        <!-- The light macOS bundle (WakeMeApp.app, uses the Java of the Mac), built on macOS only: its JavaFX jars are
+             those of the building platform. `-Pmac-app` builds it elsewhere too (of little use there). -->
+        <profile>
+            <id>mac-app</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>make-mac-app</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>src/main/assembly/mac-app.xml</descriptor>
+                                    </descriptors>
+                                    <appendAssemblyId>true</appendAssemblyId>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- Activate with `-Pheadful` to watch the JavaFX UI while tests run,
              instead of the default headless (Monocle) mode. -->
         <profile>
