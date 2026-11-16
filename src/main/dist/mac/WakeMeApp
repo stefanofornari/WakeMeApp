@@ -34,4 +34,7 @@ then
   exit 1
 fi
 
-exec "$app/bin/wakemeapp.sh" "$@"
+# No exec: with exec the process Launch Services registered turns into the java of the JDK, and macOS then refuses it
+# a tray icon (the menu bar agent rejects the connection). Java is started in the background and this script ends.
+"$app/bin/wakemeapp.sh" "$@" </dev/null >/dev/null 2>&1 &
+exit 0

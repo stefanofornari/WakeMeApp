@@ -30,8 +30,7 @@ public final class Tray {
      * Application Thread.
      */
     public static Tray create(Runnable onSettings, Runnable onAbout, Runnable onQuit) {
-        SystemTrayView view = SystemTrayView.create(onSettings, onAbout, onQuit);
-        return new Tray(view, () -> view != null);
+        return new Tray(SystemTrayView.create(onSettings, onAbout, onQuit), () -> true);
     }
 
     /** Removes the icon (the application is ending). */
