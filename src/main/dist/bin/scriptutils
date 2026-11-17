@@ -1,0 +1,52 @@
+#!/bin/sh
+
+#
+# Functions shared by the scripts of bin/ (derived from the scripts of the Viber distribution).
+#
+
+#
+# Sets $javacmd: the java of JAVA_HOME if there is one, else the java in the path.
+#
+set_java() {
+  javacmd="java"
+
+  if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]
+  then
+      javacmd="$JAVA_HOME/bin/java"
+  fi
+}
+
+#
+# Sets $classpath: the main jar first, then every other jar of the directory. It does not change the
+# current directory, so a relative path given on the command line (--calendar meetings.csv) still means
+# what the user meant.
+#
+# Parameters:
+#
+# 1. directory to scan for jars
+# 2. main artifact prefix
+#
+set_classpath() {
+  mainjar=""
+  others=""
+  for jarfile in "$1"/*.jar
+  do
+    name=$(basename "$jarfile")
+    case "$name" in
+      "$2"*) mainjar="$jarfile" ;;
+      *)     others="$others:$jarfile" ;;
+    esac
+  done
+
+  classpath="$mainjar$others"
+}
+
+#
+# Loads (if it exists) the optional configuration file $1/$2.conf, which may set JAVA_OPTS or JAVA_HOME.
+#
+load_config() {
+  if [ -f "$1/$2.conf" ]
+  then
+    . "$1/$2.conf"
+  fi
+}

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The distribution: WakeMeApp/ with bin/wakemeapp.sh (Linux, macOS) and bin/wakemeapp.cmd (Windows), conf/, lib/
+  and lib/modules/ (the JavaFX modules).
+  Built by `mvn package` into target/wakemeapp-<version>/WakeMeApp (directory) and
+  target/wakemeapp-<version>.tar.gz (to unpack in the installation directory).
+  The JavaFX jars are the ones of the platform that builds the package, so a package is for that platform.
+-->
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+    <id>dist</id>
+    <formats>
+        <format>dir</format>
+        <format>tar.gz</format>
+    </formats>
+
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>WakeMeApp</baseDirectory>
+
+    <dependencySets>
+        <dependencySet>
+            <!-- the application jar and everything it needs except JavaFX: on the class path -->
+            <outputDirectory>lib</outputDirectory>
+            <useProjectArtifact>true</useProjectArtifact>
+            <excludes>
+                <exclude>org.openjfx:*</exclude>
+            </excludes>
+        </dependencySet>
+        <dependencySet>
+            <!-- JavaFX goes on the module path, see bin/wakemeapp.sh -->
+            <outputDirectory>lib/modules</outputDirectory>
+            <useProjectArtifact>false</useProjectArtifact>
+            <includes>
+                <include>org.openjfx:*</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+
+    <fileSets>
+        <fileSet>
+            <!-- the shell scripts (Linux, macOS) -->
+            <directory>src/main/dist/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <excludes>
+                <exclude>*.cmd</exclude>
+            </excludes>
+            <lineEnding>unix</lineEnding>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+        <fileSet>
+            <!-- the command scripts (Windows) -->
+            <directory>src/main/dist/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <includes>
+                <include>*.cmd</include>
+            </includes>
+            <lineEnding>dos</lineEnding>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+        <fileSet>
+            <!-- the logging configuration is the one of the sources, not a copy -->
+            <directory>src/main/resources/ste/wakemeapp/log</directory>
+            <outputDirectory>conf</outputDirectory>
+            <includes>
+                <include>logging.properties</include>
+            </includes>
+            <lineEnding>unix</lineEnding>
+            <fileMode>0644</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>LICENSE</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+    </fileSets>
+</assembly>

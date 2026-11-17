@@ -1,0 +1,40 @@
+#!/bin/sh
+
+#
+# The executable of WakeMeApp.app (CFBundleExecutable). It finds a Java and starts the same script as the
+# distribution, Contents/app/bin/wakemeapp.sh. Finder starts an application without the environment of a
+# shell, so JAVA_HOME and the path of a terminal are not there: Java is looked for with /usr/libexec/java_home.
+#
+# Options given to the executable (open -a WakeMeApp --args --settings) are passed on.
+#
+
+here=$(cd "$(dirname "$0")" && pwd)
+app="$here/../app"
+
+# macOS used to add -psn_... to the arguments of an application started from Finder
+for arg in "$@"
+do
+  shift
+  case "$arg" in
+    -psn_*) ;;
+    *) set -- "$@" "$arg" ;;
+  esac
+done
+
+if [ -z "$JAVA_HOME" ] || [ ! -x "$JAVA_HOME/bin/java" ]
+then
+  JAVA_HOME=$(/usr/libexec/java_home -v 21+ 2>/dev/null) || JAVA_HOME=""
+  export JAVA_HOME
+fi
+
+if [ -z "$JAVA_HOME" ] && ! command -v java >/dev/null 2>&1
+then
+  /usr/bin/osascript -e 'display alert "WakeMeApp needs Java 21 or later" message "Install a JDK or JRE 21 or later and open WakeMeApp again." as critical' >/dev/null 2>&1
+  echo "WakeMeApp needs Java 21 or later" >&2
+  exit 1
+fi
+
+# No exec: with exec the process Launch Services registered turns into the java of the JDK, and macOS then refuses it
+# a tray icon (the menu bar agent rejects the connection). Java is started in the background and this script ends.
+"$app/bin/wakemeapp.sh" "$@" </dev/null >/dev/null 2>&1 &
+exit 0

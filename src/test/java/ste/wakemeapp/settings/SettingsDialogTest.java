@@ -1,0 +1,630 @@
+package ste.wakemeapp.settings;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.testfx.api.FxRobot;
+import org.testfx.framework.junit5.ApplicationExtension;
+import org.testfx.framework.junit5.Start;
+import static org.assertj.core.api.BDDAssertions.then;
+
+/** The settings dialog: how it opens (settings/US-000056) and the calendar field (settings/US-000057). */
+@ExtendWith(ApplicationExtension.class)
+class SettingsDialogTest {
+
+    private static final String LINK = "https://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics";
+    private static final String GRAPH = "https://graph.microsoft.com/v1.0/me/calendars/AAMk";
+
+    private final FxRobot robot = new FxRobot();
+    private final List<String> saved = new ArrayList<>();
+    private final List<Duration> leadTimes = new ArrayList<>();
+    private final List<Duration> polls = new ArrayList<>();
+    private final List<String> previews = new ArrayList<>();
+    private int soundsSaved;
+    private int tests;
+    private final SettingsListener listener = new SettingsListener() {
+        @Override public void calendarSaved(String value) { saved.add(value); }
+        @Override public void leadTimeSaved(Duration leadTime) { leadTimes.add(leadTime); }
+        @Override public void pollIntervalSaved(Duration pollInterval) { polls.add(pollInterval); }
+        @Override public void previewSound(SoundChoice choice, int volume) { previews.add(choice.kind() + ":" + choice.value() + "@" + volume); }
+        @Override public void soundSaved() { soundsSaved++; }
+        @Override public void testNotificationRequested() { tests++; }
+    };
+    private Settings settings;
+    private StoredCalendar stored;
+    private SettingsDialog dialog;
+    private SettingsController form;
+
+    @Start
+    private void start(Stage stage) throws IOException {
+        saved.clear();
+        leadTimes.clear();
+        polls.clear();
+        tests = 0;
+        previews.clear();
+        soundsSaved = 0;
+        settings = new Settings(new MemoryPreferences());
+        stored = new StoredCalendar(Files.createTempDirectory("settings").resolve("calendar.txt"));
+        dialog = new SettingsDialog(stored, settings, listener);
+        form = dialog.getController();
+    }
+
+    private void open() {
+        robot.interact(dialog::show);
+    }
+
+    private void type(String text) {
+        robot.interact(() -> form.getCalendarField().setText(text));
+    }
+
+    private void save() {
+        robot.interact(form::handleSave);
+    }
+
+    // ---- US-56
+
+    @Test
+    void should_open_a_titled_dialog_that_does_not_block_the_rest_of_the_application() {
+        open();
+
+        then(dialog.isShowing()).isTrue();
+        then(dialog.getStage().getTitle()).isEqualTo("WakeMeApp Settings");
+        then(dialog.getStage().getModality()).isEqualTo(Modality.NONE);
+    }
+
+    @Test
+    void should_have_no_window_decoration_and_not_be_resizable() {
+        open();
+
+        then(dialog.getStage().getStyle()).isEqualTo(javafx.stage.StageStyle.UNDECORATED);
+        then(dialog.getStage().isResizable()).isFalse();
+    }
+
+    @Test
+    void should_not_be_open_before_it_is_asked_for() {
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_keep_one_dialog_and_the_edits_when_opened_again() {
+        open();
+        type("meetings.csv");
+
+        open();
+
+        then(dialog.isShowing()).isTrue();
+        then(form.getCalendarField().getText()).isEqualTo("meetings.csv");
+    }
+
+    @Test
+    void should_change_nothing_on_cancel() throws IOException {
+        stored.save("meetings.csv");
+        open();
+        type(LINK);
+
+        robot.interact(form::handleCancel);
+
+        then(dialog.isShowing()).isFalse();
+        then(stored.value()).hasValue("meetings.csv");
+        then(saved).isEmpty();
+    }
+
+    @Test
+    void should_show_what_is_saved_again_after_a_cancel() throws IOException {
+        stored.save("meetings.csv");
+        open();
+        type("other.csv");
+        robot.interact(form::handleCancel);
+
+        open();
+
+        then(form.getCalendarField().getText()).isEqualTo("meetings.csv");
+    }
+
+    // ---- US-57
+
+    @Test
+    void should_save_a_valid_link_report_it_and_close() {
+        open();
+        type(LINK);
+
+        save();
+
+        then(stored.value()).hasValue(LINK);
+        then(saved).containsExactly(LINK);
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_show_the_saved_link_masked() throws IOException {
+        stored.save(LINK);
+
+        open();
+
+        then(form.getCalendarField().getText()).isEqualTo("https://outlook.office365.com/…/calendar.ics");
+        then(form.getKindLabel().getText()).isEqualTo("ICS link");
+    }
+
+    @Test
+    void should_keep_the_saved_link_when_the_masked_text_is_saved_untouched() throws IOException {
+        stored.save(LINK);
+        open();
+
+        save();
+
+        then(stored.value()).hasValue(LINK);
+        then(saved).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_show_the_kind_while_typing() {
+        open();
+
+        type(LINK);
+        then(form.getKindLabel().getText()).isEqualTo("ICS link");
+        type("meetings.csv");
+        then(form.getKindLabel().getText()).isEqualTo("CSV file");
+        type("hello");
+        then(form.getKindLabel().getText()).isEmpty();
+    }
+
+    @Test
+    void should_refuse_a_plain_http_link_and_store_nothing() {
+        open();
+        type("http://outlook.office365.com/owa/calendar/abc123/secret456/calendar.ics");
+
+        save();
+
+        then(form.getErrorLabel().isVisible()).isTrue();
+        then(form.getErrorLabel().getText()).contains("https://").doesNotContain("secret456");
+        then(form.getCalendarField().getStyleClass()).contains("settings-invalid");
+        then(stored.value()).isEmpty();
+        then(saved).isEmpty();
+        then(dialog.isShowing()).isTrue();
+    }
+
+    @Test
+    void should_refuse_a_missing_file() {
+        open();
+        type("/no/such/meetings.csv");
+
+        save();
+
+        then(form.getErrorLabel().getText()).contains("cannot be read");
+        then(stored.value()).isEmpty();
+    }
+
+    @Test
+    void should_refuse_a_value_of_no_known_kind_without_echoing_it() {
+        open();
+        type("hello");
+
+        save();
+
+        then(form.getErrorLabel().getText()).contains("CSV").doesNotContain("hello");
+        then(stored.value()).isEmpty();
+    }
+
+    @Test
+    void should_clear_the_error_when_the_user_types_again() {
+        open();
+        type("hello");
+        save();
+
+        type("hello2");
+
+        then(form.getErrorLabel().isVisible()).isFalse();
+        then(form.getCalendarField().getStyleClass()).doesNotContain("settings-invalid");
+    }
+
+    @Test
+    void should_ask_for_the_microsoft_account_for_a_graph_address() {
+        open();
+
+        type(GRAPH);
+
+        then(form.getKindLabel().getText()).isEqualTo("Microsoft Graph address");
+        then(form.getHintLabel().isVisible()).isTrue();
+        type(LINK);
+        then(form.getHintLabel().isVisible()).isFalse();
+    }
+
+    @Test
+    void should_save_a_graph_address() {
+        open();
+        type(GRAPH);
+
+        save();
+
+        then(stored.value()).hasValue(GRAPH);
+        then(saved).containsExactly(GRAPH);
+    }
+
+    @Test
+    void should_remove_the_calendar_when_the_field_is_emptied() throws IOException {
+        stored.save(LINK);
+        open();
+        type("");
+
+        save();
+
+        then(stored.value()).isEmpty();
+        then(saved).hasSize(1);
+        then(saved.get(0)).isNull();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_report_nothing_when_nothing_was_saved_and_the_field_is_empty() {
+        open();
+
+        save();
+
+        then(saved).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_say_it_cannot_save_without_the_link_when_the_file_cannot_be_written() throws IOException {
+        Path blocked = Files.createTempDirectory("settings").resolve("calendar.txt");
+        Files.createDirectories(blocked.resolve("inner"));   // a non-empty directory where the file should go
+        stored = new StoredCalendar(blocked);
+        robot.interact(() -> dialog = new SettingsDialog(stored, settings, listener));
+        form = dialog.getController();
+        open();
+        type(LINK);
+
+        save();
+
+        then(form.getErrorLabel().getText()).startsWith("The calendar could not be saved").doesNotContain("secret456");
+        then(saved).isEmpty();
+        then(dialog.isShowing()).isTrue();
+    }
+
+    // ---- settings/US-000015
+
+    private void choose(Integer minutes) {
+        robot.interact(() -> form.getLeadTimeBox().setValue(minutes));
+    }
+
+    @Test
+    void should_offer_only_the_choices() {
+        open();
+
+        then(form.getLeadTimeBox().getItems()).containsExactly(1, 2, 5, 10, 15);
+    }
+
+    @Test
+    void should_show_the_default_lead_time() {
+        open();
+
+        then(form.getLeadTimeBox().getValue()).isEqualTo(5);
+    }
+
+    @Test
+    void should_show_the_saved_lead_time() {
+        LeadTime.save(settings, 10);
+
+        open();
+
+        then(form.getLeadTimeBox().getValue()).isEqualTo(10);
+    }
+
+    @Test
+    void should_save_a_lead_time_report_it_and_close() {
+        open();
+        choose(10);
+
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(10));
+        then(leadTimes).containsExactly(Duration.ofMinutes(10));
+        then(saved).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_report_the_calendar_only_when_both_are_changed() {
+        Path csv;
+        try {
+            csv = Files.writeString(Files.createTempDirectory("m").resolve("meetings.csv"), "x\n");
+        } catch (IOException x) {
+            throw new IllegalStateException(x);
+        }
+        open();
+        choose(10);
+        type(csv.toString());
+
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(10));
+        then(saved).containsExactly(csv.toString());
+        then(leadTimes).isEmpty();   // the new calendar is polled with the new lead time anyway
+    }
+
+    @Test
+    void should_save_nothing_when_the_calendar_is_wrong_even_if_the_lead_time_is_right() {
+        open();
+        choose(10);
+        type("hello");
+
+        save();
+
+        then(form.getErrorLabel().isVisible()).isTrue();
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));
+        then(leadTimes).isEmpty();
+        then(dialog.isShowing()).isTrue();
+    }
+
+    @Test
+    void should_report_nothing_when_the_lead_time_is_left_as_it_was() {
+        open();
+
+        save();
+
+        then(leadTimes).isEmpty();
+        then(dialog.isShowing()).isFalse();
+    }
+
+    // ---- poll interval
+
+    private void choosePoll(int minutes) {
+        robot.interact(() -> form.getPollBox().setValue(minutes));
+    }
+
+    @Test
+    void should_offer_every_poll_interval_and_every_lead_time_with_5_minutes_selected() {
+        open();
+
+        then(form.getPollBox().getItems()).containsExactly(1, 2, 5, 10, 15, 30);
+        then(form.getPollBox().getValue()).isEqualTo(5);
+        then(form.getLeadTimeBox().getItems()).containsExactly(1, 2, 5, 10, 15);   // none is ruled out by the poll interval
+    }
+
+    @Test
+    void should_save_the_poll_interval_and_report_it() {
+        open();
+        choosePoll(15);
+
+        save();
+
+        then(PollInterval.read(settings)).isEqualTo(Duration.ofMinutes(15));
+        then(polls).containsExactly(Duration.ofMinutes(15));
+        then(dialog.isShowing()).isFalse();
+    }
+
+    @Test
+    void should_show_the_saved_poll_interval_when_opened_again() {
+        PollInterval.save(settings, 30);
+
+        open();
+
+        then(form.getPollBox().getValue()).isEqualTo(30);
+    }
+
+    @Test
+    void should_report_nothing_when_the_poll_interval_is_left_as_it_was() {
+        open();
+
+        save();
+
+        then(polls).isEmpty();
+    }
+
+    @Test
+    void should_not_save_the_poll_interval_when_cancelled() {
+        open();
+        choosePoll(15);
+
+        robot.interact(form::handleCancel);
+
+        then(PollInterval.read(settings)).isEqualTo(Duration.ofMinutes(5));
+        then(polls).isEmpty();
+    }
+
+    @Test
+    void should_poll_again_only_once_when_the_poll_interval_and_the_lead_time_change_together() {
+        open();
+        choosePoll(10);
+        choose(15);
+
+        save();
+
+        then(polls).containsExactly(Duration.ofMinutes(10));
+        then(leadTimes).isEmpty();
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(15));
+    }
+
+    @Test
+    void should_allow_a_lead_time_shorter_than_the_poll_interval() {
+        PollInterval.save(settings, 15);
+        open();
+        choose(1);
+
+        save();
+
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(1));
+        then(leadTimes).containsExactly(Duration.ofMinutes(1));
+    }
+
+    // ---- settings/US-000018
+
+    @Test
+    void should_ask_for_a_test_notification_without_closing_or_saving() {
+        open();
+        choose(10);
+
+        robot.interact(form::handleTestNotification);
+
+        then(tests).isEqualTo(1);
+        then(dialog.isShowing()).isTrue();
+        then(LeadTime.read(settings)).isEqualTo(Duration.ofMinutes(5));   // edits are not saved by a test
+        then(leadTimes).isEmpty();
+    }
+
+    @Test
+    void should_have_a_test_button_in_the_dialog() {
+        then(form.getTestButton().getText()).isEqualTo("Test Notification");
+    }
+
+    // ---- US-16
+
+    private void pick(SettingsController.SoundOption option) {
+        robot.interact(() -> form.getSoundBox().setValue(option));
+    }
+
+    private Path audio(String name, byte[] content) throws IOException {
+        Path file = Files.createTempDirectory("snd").resolve(name);
+        Files.write(file, content);
+        return file;
+    }
+
+    private Path wav() throws IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(8000, 16, 1, true, false);
+        byte[] data = new byte[1600];
+        try (javax.sound.sampled.AudioInputStream in = new javax.sound.sampled.AudioInputStream(
+                new java.io.ByteArrayInputStream(data), format, 800)) {
+            javax.sound.sampled.AudioSystem.write(in, javax.sound.sampled.AudioFileFormat.Type.WAVE, out);
+        }
+        return audio("ding.wav", out.toByteArray());
+    }
+
+    private SettingsController.SoundOption bundled(String name) {
+        return SettingsController.SoundOption.of(SoundChoice.bundled(name));
+    }
+
+    @Test
+    void should_list_the_bundled_sounds_silent_and_custom_file_with_chime_at_80_by_default() {
+        open();
+
+        then(form.getSoundBox().getItems()).extracting(SettingsController.SoundOption::label)
+            .containsExactly("Chime", "Pop", "Ping", "Bell", "None (Silent)", "Custom file\u2026");
+        then(form.getSoundBox().getValue().label()).isEqualTo("Chime");
+        then(form.getVolumeSlider().getValue()).isEqualTo(80.0);
+        then(form.getVolumeLabel().getText()).isEqualTo("80 %");
+    }
+
+    @Test
+    void should_preview_the_selected_sound_at_the_slider_volume_without_saving() {
+        open();
+        pick(bundled("bell"));
+        robot.interact(() -> form.getVolumeSlider().setValue(30));
+
+        robot.interact(form::handlePreview);
+
+        then(previews).containsExactly("BUNDLED:bell@30");
+        then(settings.keys()).doesNotContain(SoundSetting.SOUND_KEY);
+        then(form.getVolumeLabel().getText()).isEqualTo("30 %");
+    }
+
+    @Test
+    void should_save_the_sound_and_volume_and_tell_the_listener() {
+        open();
+        pick(bundled("ping"));
+        robot.interact(() -> form.getVolumeSlider().setValue(40));
+
+        save();
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.bundled("ping"));
+        then(SoundSetting.volume(settings)).isEqualTo(40);
+        then(soundsSaved).isEqualTo(1);
+    }
+
+    @Test
+    void should_save_none_as_silent() {
+        open();
+        pick(SettingsController.SoundOption.NONE);
+
+        save();
+
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.none());
+        then(soundsSaved).isEqualTo(1);
+    }
+
+    @Test
+    void should_not_tell_the_listener_when_the_sound_did_not_change() {
+        open();
+        choose(10);
+
+        save();
+
+        then(soundsSaved).isZero();
+    }
+
+    @Test
+    void should_select_a_custom_file_show_its_name_and_save_its_path() throws IOException {
+        Path file = wav();
+        form.setFilePicker(() -> file.toFile());
+        open();
+
+        pick(SettingsController.SoundOption.PICK);
+        save();
+
+        then(form.getSoundBox().getValue().label()).isEqualTo("ding.wav");
+        then(SoundSetting.choice(settings)).isEqualTo(SoundChoice.custom(file.toAbsolutePath().toString()));
+    }
+
+    @Test
+    void should_go_back_to_the_previous_sound_when_the_file_picker_is_cancelled() {
+        form.setFilePicker(() -> null);
+        open();
+        pick(bundled("pop"));
+
+        pick(SettingsController.SoundOption.PICK);
+
+        then(form.getSoundBox().getValue().label()).isEqualTo("Pop");
+    }
+
+    @Test
+    void should_refuse_a_file_that_is_not_audio_and_clear_the_custom_selection() throws IOException {
+        Path text = audio("notes.txt", "hello".getBytes());
+        form.setFilePicker(() -> text.toFile());
+        open();
+
+        pick(SettingsController.SoundOption.PICK);
+
+        then(form.getSoundErrorLabel().isVisible()).isTrue();
+        then(form.getSoundErrorLabel().getText()).isEqualTo("Selected file is not a valid audio format (WAV or AIFF)");
+        then(form.getSoundBox().getValue().label()).isEqualTo("Chime");
+        then(form.getSoundBox().getItems()).extracting(SettingsController.SoundOption::label).doesNotContain("notes.txt");
+    }
+
+    @Test
+    void should_warn_when_the_stored_custom_file_is_missing() {
+        SoundSetting.save(settings, SoundChoice.custom("/nowhere/gone.wav"), 80);
+
+        open();
+
+        then(form.getSoundWarningLabel().isVisible()).isTrue();
+        then(form.getSoundBox().getValue().label()).isEqualTo("gone.wav");
+    }
+
+    @Test
+    void should_not_warn_when_the_stored_custom_file_is_usable() throws IOException {
+        SoundSetting.save(settings, SoundChoice.custom(wav().toAbsolutePath().toString()), 80);
+
+        open();
+
+        then(form.getSoundWarningLabel().isVisible()).isFalse();
+    }
+
+    @Test
+    void should_show_the_stored_sound_and_volume() {
+        SoundSetting.save(settings, SoundChoice.none(), 25);
+
+        open();
+
+        then(form.getSoundBox().getValue().label()).isEqualTo("None (Silent)");
+        then(form.getVolumeSlider().getValue()).isEqualTo(25.0);
+    }
+}

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The light macOS bundle: WakeMeApp.app, with no Java runtime inside (it uses the JDK or JRE 21+ of the Mac, as
+  the launcher Contents/MacOS/WakeMeApp finds it). Inside, Contents/app is the distribution of bin.xml (bin,
+  conf, lib, lib/modules), so the bundle runs the same wakemeapp.sh.
+  Built by `mvn package` on macOS (profile mac-app) into target/wakemeapp-<version>-mac-app.zip and the same
+  tree in target/wakemeapp-<version>-mac-app/WakeMeApp.app. The JavaFX jars are those of the Mac that builds it
+  (Apple Silicon or Intel).
+-->
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+    <id>mac-app</id>
+    <formats>
+        <format>zip</format>
+        <format>dir</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/WakeMeApp.app/Contents/app/lib</outputDirectory>
+            <useProjectArtifact>true</useProjectArtifact>
+            <excludes>
+                <exclude>org.openjfx:*</exclude>
+            </excludes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/WakeMeApp.app/Contents/app/lib/modules</outputDirectory>
+            <useProjectArtifact>false</useProjectArtifact>
+            <includes>
+                <include>org.openjfx:*</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+
+    <fileSets>
+        <fileSet>
+            <!-- the shell scripts of the distribution -->
+            <directory>src/main/dist/bin</directory>
+            <outputDirectory>/WakeMeApp.app/Contents/app/bin</outputDirectory>
+            <excludes>
+                <exclude>*.cmd</exclude>
+            </excludes>
+            <lineEnding>unix</lineEnding>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+        <fileSet>
+            <directory>src/main/resources/ste/wakemeapp/log</directory>
+            <outputDirectory>/WakeMeApp.app/Contents/app/conf</outputDirectory>
+            <includes>
+                <include>logging.properties</include>
+            </includes>
+            <lineEnding>unix</lineEnding>
+            <fileMode>0644</fileMode>
+            <directoryMode>0755</directoryMode>
+        </fileSet>
+    </fileSets>
+
+    <files>
+        <!-- the executable of the bundle: the name is CFBundleExecutable of Info.plist -->
+        <file>
+            <source>src/main/dist/mac/WakeMeApp</source>
+            <outputDirectory>/WakeMeApp.app/Contents/MacOS</outputDirectory>
+            <lineEnding>unix</lineEnding>
+            <fileMode>0755</fileMode>
+        </file>
+        <!-- ${project.version} is replaced in the plist (the scripts are never filtered: they are full of ${} of the shell) -->
+        <file>
+            <source>src/main/dist/mac/Info.plist</source>
+            <outputDirectory>/WakeMeApp.app/Contents</outputDirectory>
+            <filtered>true</filtered>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>src/main/dist/mac/PkgInfo</source>
+            <outputDirectory>/WakeMeApp.app/Contents</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>src/main/dist/mac/WakeMeApp.icns</source>
+            <outputDirectory>/WakeMeApp.app/Contents/Resources</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>LICENSE</source>
+            <outputDirectory>/WakeMeApp.app/Contents/Resources</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+    </files>
+</assembly>
