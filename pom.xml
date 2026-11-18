@@ -296,6 +296,12 @@
             </plugin>
         </plugins>
     </build>
+    
+    <scm>
+        <connection>scm:git:https://github.com/stefanofornari/WakeMeApp</connection>
+        <developerConnection>scm:git:git@github.com:stefanofornari/WakeMeApp.git</developerConnection>
+        <url>https://github.com/stefanofornari/WakeMeApp</url>
+    </scm>
 
     <profiles>
         <!-- The light macOS bundle (WakeMeApp.app, uses the Java of the Mac), built on macOS only: its JavaFX jars are
