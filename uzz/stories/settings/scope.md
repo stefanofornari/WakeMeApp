@@ -26,6 +26,7 @@ How the application gets, keeps and shows its configuration.
   - [ ] Started without arguments the application lives in the tray / menu bar; with no calendar configured the tray icon shows an exclamation mark and a tooltip saying so, and clears when a calendar is saved
   - [ ] Tray / menu bar item "Settings…" opens the dialog; `--settings` opens it at launch (settings/US-000014 and following)
   - [ ] Tray / menu bar item "About WakeMeApp" shows an About dialog with the name, version, project link and licence (settings/US-000058)
+  - [ ] Tray / menu bar: after "Quit", a separator and a read-only item with the time of the last successful calendar read ("Last update: 16:49", "—" if none), stored in `calendar.last_update`, cleared when the calendar is changed (settings/US-000060)
   - [ ] One dialog at a time; Save applies without a restart; Cancel changes nothing
   - [ ] One calendar field: the kind (ICS link, Graph address, CSV file) is detected as for `--calendar`, validated per kind, and shown to the user
   - [ ] The stored calendar value is kept in an owner-only file, never in Preferences, never logged; an ICS link is shown as host only and masked after saving

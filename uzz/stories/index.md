@@ -66,6 +66,7 @@
 | settings/US-000057 | Set the Calendar in the Settings Dialog | DONE |
 | settings/US-000058 | Show an About Dialog from the Tray Menu | DONE |
 | settings/US-000059 | Poll Interval Setting | DONE |
+| settings/US-000060 | Last Update in the Tray Menu | TODO |
 
 ## logging
 | ID | Title | Status |
@@ -83,4 +84,4 @@
 
 ---
 
-**Total Stories:** 53
+**Total Stories:** 54
