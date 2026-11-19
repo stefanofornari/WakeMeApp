@@ -254,7 +254,10 @@ Unpack the archive in the directory where you want to install it; it contains on
 /installation/dir/WakeMeApp/bin/wakemeapp.sh --settings      # and opens the settings dialog
 ```
 
-On Windows: `C:\installation\dir\WakeMeApp\bin\wakemeapp.bat`.
+On Windows: `C:\installation\dir\WakeMeApp\bin\wakemeapp.bat`. It starts the app with `javaw`, so the
+command window can close independently. `--help`, `--version` and `--print-config` still run with console
+output; set `WAKEMEAPP_CONSOLE=1` to keep other launches attached to the console. The debug launcher sets
+this automatically.
 
 To debug, `bin/dbg wakemeapp.sh [options]` (`bin\dbg.bat wakemeapp.bat [options]` on Windows) starts the JVM suspended until a debugger attaches to `localhost:1044`
 (`DEBUG_PORT` changes the port, `DEBUG_SUSPEND=n` does not wait).

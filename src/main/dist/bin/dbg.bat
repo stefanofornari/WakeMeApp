@@ -31,5 +31,6 @@ goto next
 
 :run
 rem the working directory is not changed: a relative path in an option is relative to where the user is
+set "WAKEMEAPP_CONSOLE=1"
 call "%~dp0%SCRIPT%" %ARGS%
 exit /b %ERRORLEVEL%
