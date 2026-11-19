@@ -11,6 +11,9 @@ interface TrayView {
 
     void setTooltip(String tooltip);
 
+    /** The text of the read-only item that closes the menu ("Last update: 16:49"). */
+    void setLastUpdate(String text);
+
     /** Removes the icon. */
     void close();
 }

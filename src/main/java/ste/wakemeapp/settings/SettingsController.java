@@ -263,6 +263,7 @@ public final class SettingsController {
             }
             if (calendarChanged) {
                 stored.save(calendarText);
+                LastUpdate.clear(settings);   // the time of the last read belonged to the old calendar
             }
         } catch (IOException x) {
             showError("The calendar could not be saved: " + x.getMessage());

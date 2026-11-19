@@ -98,6 +98,13 @@ class ConfigReportTest {
     }
 
     @Test
+    void the_last_update_is_not_listed_as_an_unknown_key() {
+        stored.putString("calendar.last_update", "2026-11-19T15:49:12Z");
+
+        then(ConfigReport.lines(null, null, stored).stream().filter(l -> l.contains("unknown key")).count()).isZero();
+    }
+
+    @Test
     void the_poll_interval_shows_its_default_and_its_stored_value() {
         then(lineOf(ConfigReport.lines(null, null, stored), "poll.intervalMinutes")).contains("5").contains("(default)");
 

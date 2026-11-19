@@ -27,6 +27,7 @@ keeps what it read and writes it back when you save in the dialog.
 | `notify.sound` | `chime`, `pop`, `ping`, `bell`, `none` or `custom` | `chime` |
 | `notify.soundFile` | Absolute path of the custom sound (WAV or AIFF), used when `notify.sound` is `custom` | none |
 | `notify.soundVolume` | Volume of the sound, 0 to 100 (0 is silent) | 80 |
+| `calendar.last_update` | State, not a setting: when the calendar was last read successfully (UTC, ISO-8601), shown in the tray menu. Written by the application, cleared when the calendar is changed; not in the dialog | none |
 
 A key that is missing is simply at its default. A stored value that is not one of the allowed ones is ignored
 with a warning in the log, and the default is used. A key that is not in this table is reported by

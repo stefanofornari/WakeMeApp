@@ -57,6 +57,7 @@ public final class CalendarPoller implements AutoCloseable {
     /** What has been handed to the scheduler for each event id: its start and the notification. */
     private final Map<String, Known> known = new ConcurrentHashMap<>();
     private final DismissedMeetings dismissed;
+    private volatile Runnable onSuccess = () -> { };
     /** What was known of the meetings dismissed in this run, to give back on undo. */
     private final Map<String, Known> dismissedKnown = new ConcurrentHashMap<>();
 
@@ -109,6 +110,14 @@ public final class CalendarPoller implements AutoCloseable {
         return window.compareTo(minimum) < 0 ? minimum : window;
     }
 
+    /**
+     * What to do after each poll that read the calendar (even if it returned no meeting); a failed poll does not
+     * call it. It runs on the polling thread.
+     */
+    public void onSuccessfulPoll(Runnable onSuccess) {
+        this.onSuccess = onSuccess;
+    }
+
     /** Polls now and then every poll interval. */
     public void start() {
         executor.scheduleAtFixedRate(this::pollOnce, 0, pollInterval.toMillis(), TimeUnit.MILLISECONDS);
@@ -123,6 +132,7 @@ public final class CalendarPoller implements AutoCloseable {
      * already scheduled keeps its time.
      */
     public void pollOnce() {
+        boolean read = false;
         try {
             LocalDateTime now = LocalDateTime.now(clock);
             Set<String> returned = new HashSet<>();
@@ -158,6 +168,7 @@ public final class CalendarPoller implements AutoCloseable {
                     }
                 }
             }
+            read = true;
         } catch (CalendarAccessException e) {
             if (e.isTemporary()) {
                 LOG.warning(() -> "Cannot read the calendar, will try again in " + phrase(pollInterval) + ": " + e.getMessage());
@@ -168,6 +179,13 @@ public final class CalendarPoller implements AutoCloseable {
             LOG.log(Level.FINE, "Details of the calendar failure", e);
         } catch (Exception e) {
             LOG.log(Level.WARNING, e, () -> "Calendar poll failed, will retry in " + phrase(pollInterval) + ": " + e.getMessage());
+        }
+        if (read) {
+            try {
+                onSuccess.run();
+            } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "What follows a successful poll failed: " + e.getMessage(), e);
+            }
         }
     }
 

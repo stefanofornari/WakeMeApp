@@ -1,5 +1,9 @@
 package ste.wakemeapp.tray;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.logging.Logger;
 
@@ -17,11 +21,20 @@ public final class Tray {
 
     private final TrayView view;
     private final BooleanSupplier supported;
+    private final Clock clock;
+    private final Locale locale;
     private boolean started;
+    private Optional<Instant> lastUpdate = Optional.empty();
 
     Tray(TrayView view, BooleanSupplier supported) {
+        this(view, supported, Clock.systemDefaultZone(), Locale.getDefault());
+    }
+
+    Tray(TrayView view, BooleanSupplier supported, Clock clock, Locale locale) {
         this.view = view;
         this.supported = supported;
+        this.clock = clock;
+        this.locale = locale;
     }
 
     /**
@@ -49,6 +62,7 @@ public final class Tray {
         }
         started = true;
         apply(configured);
+        view.setLastUpdate(LastUpdateText.of(lastUpdate, clock, locale));
         view.show();
     }
 
@@ -56,6 +70,17 @@ public final class Tray {
     public void setConfigured(boolean configured) {
         if (started) {
             apply(configured);
+        }
+    }
+
+    /**
+     * Shows when the calendar was last read successfully, in the last item of the menu: "Last update: 16:49" today,
+     * with the date if it was another day, a dash if there is none. May be called before {@link #start}.
+     */
+    public void setLastUpdate(Optional<Instant> instant) {
+        lastUpdate = instant;
+        if (started) {
+            view.setLastUpdate(LastUpdateText.of(instant, clock, locale));
         }
     }
 

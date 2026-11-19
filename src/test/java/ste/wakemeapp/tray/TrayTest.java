@@ -17,6 +17,7 @@ class TrayTest {
         @Override public void show() { events.add("show"); }
         @Override public void setAlert(boolean alert) { events.add("alert=" + alert); }
         @Override public void setTooltip(String tooltip) { events.add("tooltip=" + tooltip); }
+        @Override public void setLastUpdate(String text) { events.add("lastUpdate=" + text); }
         @Override public void close() { events.add("close"); }
     }
 
@@ -83,6 +84,55 @@ class TrayTest {
     @Test
     void should_not_touch_the_view_when_closed_without_a_tray() {
         new Tray(view, () -> false).close();
+
+        then(view.events).isEmpty();
+    }
+
+    private static final java.time.Clock NOW = java.time.Clock.fixed(
+        java.time.Instant.parse("2026-11-19T16:00:00Z"), java.time.ZoneId.of("Europe/Rome"));
+
+    private Tray tray() {
+        return new Tray(view, () -> true, NOW, java.util.Locale.UK);
+    }
+
+    @Test
+    void should_show_the_last_update_when_started_and_when_it_changes() {
+        Tray tray = tray();
+        tray.start(true);
+
+        tray.setLastUpdate(java.util.Optional.of(java.time.Instant.parse("2026-11-19T15:49:00Z")));
+
+        then(view.events).containsExactly("alert=false", "tooltip=WakeMeApp", "lastUpdate=Last update: \u2014", "show",
+            "lastUpdate=Last update: 16:49");
+    }
+
+    @Test
+    void should_show_a_last_update_given_before_the_start_when_it_starts() {
+        Tray tray = tray();
+        tray.setLastUpdate(java.util.Optional.of(java.time.Instant.parse("2026-11-18T15:49:00Z")));
+
+        tray.start(true);
+
+        then(view.events).containsExactly("alert=false", "tooltip=WakeMeApp", "lastUpdate=Last update: 18 Nov, 16:49", "show");
+    }
+
+    @Test
+    void should_go_back_to_the_dash_when_the_last_update_is_cleared() {
+        Tray tray = tray();
+        tray.start(true);
+        view.events.clear();
+
+        tray.setLastUpdate(java.util.Optional.empty());
+
+        then(view.events).containsExactly("lastUpdate=Last update: \u2014");
+    }
+
+    @Test
+    void should_not_touch_the_view_for_a_last_update_when_there_is_no_tray() {
+        Tray tray = new Tray(view, () -> false, NOW, java.util.Locale.UK);
+        tray.start(true);
+
+        tray.setLastUpdate(java.util.Optional.of(java.time.Instant.parse("2026-11-19T15:49:00Z")));
 
         then(view.events).isEmpty();
     }

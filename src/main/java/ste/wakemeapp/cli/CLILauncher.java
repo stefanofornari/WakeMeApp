@@ -32,6 +32,7 @@ import ste.wakemeapp.settings.ConnectionSettings;
 import ste.wakemeapp.settings.CalendarInput;
 import ste.wakemeapp.settings.LeadTime;
 import ste.wakemeapp.settings.Settings;
+import ste.wakemeapp.settings.LastUpdate;
 import ste.wakemeapp.settings.SettingsDialog;
 import ste.wakemeapp.settings.SettingsListener;
 import ste.wakemeapp.settings.SoundChoice;
@@ -134,6 +135,7 @@ public class CLILauncher extends Application {
             if (configured || parsedCommand.isTrayOnly()) {
                 tray = Tray.create(this::showSettings, this::showAbout, this::shutdown);
                 tray.start(configured);
+                tray.setLastUpdate(LastUpdate.read(Settings.user()));
             }
             if (parsedCommand.isSettings()) {
                 showSettings();
@@ -219,6 +221,9 @@ public class CLILauncher extends Application {
      */
     private void calendarChanged(String value) {
         stopPolling();
+        if (tray != null) {
+            tray.setLastUpdate(java.util.Optional.empty());   // the dialog cleared the stored time: it was of the old calendar
+        }
         if (value == null) {
             if (tray != null) {
                 tray.setConfigured(false);
@@ -285,6 +290,17 @@ public class CLILauncher extends Application {
     private Duration window() {
         return CalendarPoller.effectiveWindow(parsedCommand.getWindow(), parsedCommand.getPollInterval(),
             LeadTime.read(Settings.user()));
+    }
+
+    /** A poll read the calendar (polling thread): remembers when, and shows it in the tray. */
+    private void calendarRead() {
+        java.time.Instant now = java.time.Instant.now();
+        LastUpdate.save(Settings.user(), now);
+        Platform.runLater(() -> {
+            if (tray != null) {
+                tray.setLastUpdate(java.util.Optional.of(now));
+            }
+        });
     }
 
     private void stopPolling() {
@@ -401,6 +417,7 @@ public class CLILauncher extends Application {
         poller = new CalendarPoller(new CsvCalendarSource(calendarFile), scheduler,
             parsedCommand.getPollInterval(), window(), Clock.systemDefaultZone(),
             new DismissedMeetings(DismissedMeetings.defaultFile()));
+        poller.onSuccessfulPoll(this::calendarRead);
         poller.start();
         LOG.info(() -> "Polling " + calendarFile + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + window().toMinutes() + " min");
@@ -420,6 +437,7 @@ public class CLILauncher extends Application {
         poller = new CalendarPoller(calendar, scheduler,
             parsedCommand.getPollInterval(), window(), Clock.systemDefaultZone(),
             new DismissedMeetings(DismissedMeetings.defaultFile()));
+        poller.onSuccessfulPoll(this::calendarRead);
         poller.start();
         LOG.info(() -> "Polling the calendar feed on " + IcsAddress.hostOf(feed) + " every "
             + parsedCommand.getPollInterval().toMinutes() + " min for meetings starting in the next "
@@ -453,6 +471,7 @@ public class CLILauncher extends Application {
         poller = new CalendarPoller(calendar, scheduler,
             parsedCommand.getPollInterval(), window(), Clock.systemDefaultZone(),
             new DismissedMeetings(DismissedMeetings.defaultFile()));
+        poller.onSuccessfulPoll(this::calendarRead);
         poller.start();
         LOG.info(() -> "Polling " + address + " every " + parsedCommand.getPollInterval().toMinutes()
             + " min for meetings starting in the next " + window().toMinutes() + " min");

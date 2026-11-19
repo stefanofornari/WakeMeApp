@@ -34,7 +34,7 @@ public final class ConfigReport {
             SoundSetting::isValidVolume));
         for (String key : new TreeSet<>(stored.keys())) {
             if (!key.equals(ConnectionSettings.CLIENT_ID_KEY) && !key.equals(ConnectionSettings.TENANT_KEY)
-                && !key.equals(LeadTime.KEY) && !key.equals(PollInterval.KEY)
+                && !key.equals(LeadTime.KEY) && !key.equals(PollInterval.KEY) && !key.equals(LastUpdate.KEY)
                 && !key.equals(SoundSetting.SOUND_KEY) && !key.equals(SoundSetting.FILE_KEY)
                 && !key.equals(SoundSetting.VOLUME_KEY)) {
                 lines.add(format(key, stored.getString(key, ""), "stored, unknown key", null));

@@ -264,6 +264,29 @@ class SettingsDialogTest {
     }
 
     @Test
+    void should_forget_the_last_update_when_the_calendar_changes() throws IOException {
+        stored.save(LINK);
+        LastUpdate.save(settings, java.time.Instant.parse("2026-11-19T15:49:12Z"));
+        open();
+        type(GRAPH);
+
+        save();
+
+        then(LastUpdate.read(settings)).isEmpty();
+    }
+
+    @Test
+    void should_keep_the_last_update_when_the_calendar_is_not_changed() throws IOException {
+        stored.save(LINK);
+        LastUpdate.save(settings, java.time.Instant.parse("2026-11-19T15:49:12Z"));
+        open();
+
+        save();
+
+        then(LastUpdate.read(settings)).isPresent();
+    }
+
+    @Test
     void should_report_nothing_when_nothing_was_saved_and_the_field_is_empty() {
         open();
 

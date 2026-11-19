@@ -595,4 +595,40 @@ class CalendarPollerTest {
         then(CalendarPoller.effectiveWindow(Duration.ofMinutes(15), Duration.ofMinutes(5), Duration.ofMinutes(5)))
             .isEqualTo(Duration.ofMinutes(15));
     }
+
+    @Test
+    void should_tell_after_each_poll_that_read_the_calendar_even_without_meetings() {
+        java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+        poller = new CalendarPoller(new InMemoryCalendarSource(), scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone());
+        poller.onSuccessfulPoll(reads::incrementAndGet);
+
+        poller.pollOnce();
+        poller.pollOnce();
+
+        then(reads.get()).isEqualTo(2);
+    }
+
+    @Test
+    void should_not_tell_after_a_poll_that_failed() {
+        java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+        poller = new CalendarPoller((from, to) -> { throw new CalendarAccessException("down", true); },
+            scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone());
+        poller.onSuccessfulPoll(reads::incrementAndGet);
+
+        poller.pollOnce();
+
+        then(reads.get()).isZero();
+    }
+
+    @Test
+    void should_keep_polling_when_what_follows_a_successful_poll_fails() {
+        InMemoryCalendarSource source = new InMemoryCalendarSource();
+        source.add(event("standup", LocalDateTime.now().plusMinutes(12)));
+        poller = new CalendarPoller(source, scheduler, POLL_INTERVAL, WINDOW, Clock.systemDefaultZone());
+        poller.onSuccessfulPoll(() -> { throw new IllegalStateException("boom"); });
+
+        poller.pollOnce();
+
+        then(poller.scheduled()).hasSize(1);
+    }
 }
