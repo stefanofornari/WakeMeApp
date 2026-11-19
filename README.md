@@ -235,14 +235,15 @@ mvn test
 mvn package
 ```
 
-builds `target/wakemeapp-<version>.tar.gz`, and the same tree unpacked in `target/wakemeapp-<version>/WakeMeApp`.
+builds `target/wakemeapp-<version>-linux-app.tar.gz` on Linux, and the same tree unpacked in
+`target/wakemeapp-<version>-linux-app/WakeMeApp`.
 Unpack the archive in the directory where you want to install it; it contains one directory, `WakeMeApp`:
 
 ```
 /installation/dir/WakeMeApp/
     bin/wakemeapp.sh      starts the application on Linux and macOS (any option of the command line is passed on)
-    bin/wakemeapp.cmd     the same for Windows
-    bin/dbg, bin/dbg.cmd  run one of them waiting for a debugger on localhost:1044
+    bin/wakemeapp.bat     the same for Windows (`.cmd` is also included)
+    bin/dbg, bin/dbg.bat  run one of them waiting for a debugger on localhost:1044
     conf/logging.properties   the logging configuration
     lib/                  the application and its libraries
     lib/modules/          JavaFX
@@ -253,13 +254,13 @@ Unpack the archive in the directory where you want to install it; it contains on
 /installation/dir/WakeMeApp/bin/wakemeapp.sh --settings      # and opens the settings dialog
 ```
 
-On Windows: `C:\installation\dir\WakeMeApp\bin\wakemeapp.cmd`.
+On Windows: `C:\installation\dir\WakeMeApp\bin\wakemeapp.bat`.
 
-To debug, `bin/dbg wakemeapp.sh [options]` (`bin\dbg.cmd wakemeapp.cmd [options]` on Windows) starts the JVM suspended until a debugger attaches to `localhost:1044`
+To debug, `bin/dbg wakemeapp.sh [options]` (`bin\dbg.bat wakemeapp.bat [options]` on Windows) starts the JVM suspended until a debugger attaches to `localhost:1044`
 (`DEBUG_PORT` changes the port, `DEBUG_SUSPEND=n` does not wait).
 
 It needs Java 21 or later: `JAVA_HOME` is used if it is set, else the `java` in the path. `JAVA_OPTS` adds options
-for the JVM, and `conf/wakemeapp.conf` (`conf\wakemeapp.cmd` on Windows), if you create it, is read before starting (it can set
+for the JVM, and `conf/wakemeapp.conf` (`conf\wakemeapp.bat` on Windows), if you create it, is read before starting (it can set
 `JAVA_OPTS` or `JAVA_HOME`). The script can be started through a symbolic link, from any directory, and a relative path in an
 option (`--calendar meetings.csv`) is relative to where you are. The JavaFX jars in the package are those of the platform that built it
 (`mvn package` on Linux gives a Linux package, on macOS a macOS one, on Windows a Windows one). The single-jar build is `target/wakemeapp-<version>-shaded.jar`.

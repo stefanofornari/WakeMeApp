@@ -34,7 +34,7 @@ global lead-time configuration.
   - [ ] Enable/disable notifications
   - [ ] Test notification button
 * **Packaging**
-  - [ ] One archive per platform with `bin/wakemeapp.sh` (Linux, macOS) and `bin/wakemeapp.cmd` (Windows), built with the assembly plugin (packaging/US-000019)
+  - [ ] One archive per platform with `bin/wakemeapp.sh` (Linux, macOS) and `bin/wakemeapp.bat` (Windows), built with the assembly plugin (packaging/US-000019)
   - [ ] Auto-start at login (scheduler/US-000013); installers with a bundled JRE, signing and notarization are future work
 
 ## Detailed Scopes

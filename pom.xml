@@ -303,6 +303,25 @@
   </scm>
 
     <profiles>
+        <profile>
+            <id>linux-app</id>
+            <activation>
+                <os>
+                    <name>Linux</name>
+                </os>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <configuration>
+                            <finalName>${project.build.finalName}-linux-app</finalName>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- The light macOS bundle (WakeMeApp.app, uses the Java of the Mac), built on macOS only: its JavaFX jars are
              those of the building platform. `-Pmac-app` builds it elsewhere too (of little use there). -->
         <profile>
