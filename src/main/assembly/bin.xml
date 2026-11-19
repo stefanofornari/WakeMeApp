@@ -39,24 +39,9 @@
 
     <fileSets>
         <fileSet>
-            <!-- the shell scripts (Linux, macOS) -->
             <directory>src/main/dist/bin</directory>
             <outputDirectory>bin</outputDirectory>
-            <excludes>
-                <exclude>*.cmd</exclude>
-            </excludes>
             <lineEnding>unix</lineEnding>
-            <fileMode>0755</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-        <fileSet>
-            <!-- the command scripts (Windows) -->
-            <directory>src/main/dist/bin</directory>
-            <outputDirectory>bin</outputDirectory>
-            <includes>
-                <include>*.cmd</include>
-            </includes>
-            <lineEnding>dos</lineEnding>
             <fileMode>0755</fileMode>
             <directoryMode>0755</directoryMode>
         </fileSet>

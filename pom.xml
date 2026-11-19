@@ -127,6 +127,12 @@
             <artifactId>xtest</artifactId>
             <version>3.14.0</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.stefanofornari</groupId>
+                    <artifactId>uzzo-llm</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

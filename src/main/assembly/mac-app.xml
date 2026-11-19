@@ -39,9 +39,6 @@
             <!-- the shell scripts of the distribution -->
             <directory>src/main/dist/bin</directory>
             <outputDirectory>/WakeMeApp.app/Contents/app/bin</outputDirectory>
-            <excludes>
-                <exclude>*.cmd</exclude>
-            </excludes>
             <lineEnding>unix</lineEnding>
             <fileMode>0755</fileMode>
             <directoryMode>0755</directoryMode>
