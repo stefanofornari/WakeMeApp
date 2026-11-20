@@ -41,6 +41,7 @@
             <outputDirectory>/WakeMeApp.app/Contents/app/bin</outputDirectory>
             <excludes>
                 <exclude>*.cmd</exclude>
+                <exclude>*.bat</exclude>
             </excludes>
             <lineEnding>unix</lineEnding>
             <fileMode>0755</fileMode>

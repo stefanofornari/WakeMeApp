@@ -44,6 +44,7 @@
             <outputDirectory>bin</outputDirectory>
             <excludes>
                 <exclude>*.cmd</exclude>
+                <exclude>*.bat</exclude>
             </excludes>
             <lineEnding>unix</lineEnding>
             <fileMode>0755</fileMode>
@@ -55,6 +56,7 @@
             <outputDirectory>bin</outputDirectory>
             <includes>
                 <include>*.cmd</include>
+                <include>*.bat</include>
             </includes>
             <lineEnding>dos</lineEnding>
             <fileMode>0755</fileMode>
