@@ -27,14 +27,14 @@ class TrayTest {
     void should_show_the_exclamation_mark_and_the_tooltip_when_no_calendar_is_configured() {
         new Tray(view, () -> true).start(false);
 
-        then(view.events).containsExactly("alert=true", "tooltip=WakeMeApp - no calendar configured", "show");
+        then(view.events).containsExactly("alert=true", "tooltip=WakeMeApp - no calendar configured", "lastUpdate=Last update: \u2014", "show");
     }
 
     @Test
     void should_show_the_normal_icon_when_a_calendar_is_configured() {
         new Tray(view, () -> true).start(true);
 
-        then(view.events).containsExactly("alert=false", "tooltip=WakeMeApp", "show");
+        then(view.events).containsExactly("alert=false", "tooltip=WakeMeApp", "lastUpdate=Last update: \u2014", "show");
     }
 
     @Test
