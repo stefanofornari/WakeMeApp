@@ -543,7 +543,7 @@ class CalendarPollerTest {
     @Test
     void should_notify_again_a_dismissed_meeting_whose_time_changed() {
         DismissedMeetings dismissed = new DismissedMeetings();
-        LocalDateTime start = LocalDateTime.now().plusMinutes(12);
+        LocalDateTime start = LocalDateTime.now().plusMinutes(10);
         dismissed.dismiss("standup", start);
         InMemoryCalendarSource source = new InMemoryCalendarSource();
         source.add(event("standup", start.plusMinutes(3)));

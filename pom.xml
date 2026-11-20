@@ -15,14 +15,12 @@
   limitations under the License.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.github.stefanofornari</groupId>
     <artifactId>wakemeapp</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>WakeMeApp</name>
@@ -129,6 +127,12 @@
             <artifactId>xtest</artifactId>
             <version>3.14.0</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.stefanofornari</groupId>
+                    <artifactId>uzzo-llm</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -296,8 +300,34 @@
             </plugin>
         </plugins>
     </build>
+    
+    <scm>
+        <connection>scm:git:https://github.com/stefanofornari/WakeMeApp</connection>
+        <developerConnection>scm:git:git@github.com:stefanofornari/WakeMeApp.git</developerConnection>
+        <url>https://github.com/stefanofornari/WakeMeApp</url>
+      <tag>HEAD</tag>
+  </scm>
 
     <profiles>
+        <profile>
+            <id>linux-app</id>
+            <activation>
+                <os>
+                    <name>Linux</name>
+                </os>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <configuration>
+                            <finalName>${project.build.finalName}-linux-app</finalName>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- The light macOS bundle (WakeMeApp.app, uses the Java of the Mac), built on macOS only: its JavaFX jars are
              those of the building platform. `-Pmac-app` builds it elsewhere too (of little use there). -->
         <profile>

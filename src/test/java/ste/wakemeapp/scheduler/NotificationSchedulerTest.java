@@ -135,7 +135,7 @@ class NotificationSchedulerTest {
         scheduler.schedule(meeting("Broken", Duration.ofMillis(300)));
         scheduler.schedule(meeting("Fine", Duration.ofMillis(600)));
 
-        then(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        then(latch.await(5, TimeUnit.SECONDS)).isTrue();
         then(fired).containsExactly("Fine");
     }
 

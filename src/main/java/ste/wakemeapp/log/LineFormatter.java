@@ -43,7 +43,7 @@ public final class LineFormatter extends Formatter {
         if (record.getThrown() != null) {
             StringWriter trace = new StringWriter();
             record.getThrown().printStackTrace(new PrintWriter(trace));
-            line.append(trace);
+            line.append(trace.toString().replace(System.lineSeparator(), "\n"));
         }
         return line.toString();
     }

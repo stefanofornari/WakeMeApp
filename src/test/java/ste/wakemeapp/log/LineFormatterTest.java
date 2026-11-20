@@ -54,6 +54,6 @@ class LineFormatterTest {
         String line = formatter.format(record);
 
         then(line).startsWith(time() + " ERROR Cannot show the notification\n");
-        then(line).contains("\njava.lang.IllegalStateException: boom\n").contains("\tat ");
+        then(line).contains("\njava.lang.IllegalStateException: boom\n").contains("\tat ").doesNotContain("\r");
     }
 }
