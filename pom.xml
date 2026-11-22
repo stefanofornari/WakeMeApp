@@ -20,7 +20,7 @@
 
     <groupId>com.github.stefanofornari</groupId>
     <artifactId>wakemeapp</artifactId>
-    <version>0.0.0</version>
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>WakeMeApp</name>
@@ -308,7 +308,7 @@
         <connection>scm:git:https://github.com/stefanofornari/WakeMeApp</connection>
         <developerConnection>scm:git:git@github.com:stefanofornari/WakeMeApp.git</developerConnection>
         <url>https://github.com/stefanofornari/WakeMeApp</url>
-      <tag>wakemeapp-0.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <profiles>
