@@ -37,6 +37,8 @@
         <ical4j.version>4.4.0</ical4j.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
         <javafx.mainClass>ste.wakemeapp.WakeMeApp</javafx.mainClass>
+        <javafx.args></javafx.args>
+        <distribution.platform>unknown</distribution.platform>
         <logging.config>${project.basedir}/src/main/resources/ste/wakemeapp/log/logging.properties</logging.config>
         <testfx.version>4.0.18</testfx.version>
         <testfx.headless>true</testfx.headless>
@@ -290,6 +292,7 @@
                         <descriptor>src/main/assembly/bin.xml</descriptor>
                     </descriptors>
                     <appendAssemblyId>false</appendAssemblyId>
+                    <finalName>${project.artifactId}-${project.version}-${distribution.platform}</finalName>
                 </configuration>
             </plugin>
             <plugin>
@@ -303,7 +306,7 @@
             </plugin>
         </plugins>
     </build>
-    
+
     <scm>
         <connection>scm:git:https://github.com/stefanofornari/WakeMeApp</connection>
         <developerConnection>scm:git:git@github.com:stefanofornari/WakeMeApp.git</developerConnection>
@@ -321,6 +324,9 @@
                     <family>mac</family>
                 </os>
             </activation>
+            <properties>
+                <distribution.platform>mac</distribution.platform>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -343,6 +349,30 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <profile>
+            <id>linux-package</id>
+            <activation>
+                <os>
+                    <name>Linux</name>
+                </os>
+            </activation>
+            <properties>
+                <distribution.platform>linux</distribution.platform>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>windows-package</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <distribution.platform>win</distribution.platform>
+            </properties>
         </profile>
 
         <!-- Activate with `-Pheadful` to watch the JavaFX UI while tests run,
