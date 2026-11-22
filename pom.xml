@@ -128,6 +128,12 @@
             <groupId>com.github.stefanofornari</groupId>
             <artifactId>xtest</artifactId>
             <version>3.14.0</version>
+            <exclusions>
+        <exclusion>
+            <groupId>com.github.stefanofornari</groupId>
+            <artifactId>uzzo-llm</artifactId>
+        </exclusion>
+    </exclusions>
             <scope>test</scope>
         </dependency>
 
@@ -209,7 +215,7 @@
                     <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
                     <!-- JavaFX is on the class path (an unnamed module): exports and opens to javafx.* modules
-                         would only print "Unknown module" warnings, and are not needed -->
+                    would only print "Unknown module" warnings, and are not needed -->
                     <useModulePath>false</useModulePath>
                     <argLine>
                         -Djava.util.logging.config.file=${logging.config}
@@ -254,7 +260,7 @@
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-<mainClass>ste.wakemeapp.WakeMeApp</mainClass>
+                                    <mainClass>ste.wakemeapp.WakeMeApp</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
@@ -289,7 +295,7 @@
                 </executions>
                 <configuration>
                     <descriptors>
-                        <descriptor>src/main/assembly/bin.xml</descriptor>
+                        <descriptor>src/main/assembly/app.xml</descriptor>
                     </descriptors>
                     <appendAssemblyId>false</appendAssemblyId>
                     <finalName>${project.artifactId}-${project.version}-${distribution.platform}</finalName>
@@ -311,12 +317,12 @@
         <connection>scm:git:https://github.com/stefanofornari/WakeMeApp</connection>
         <developerConnection>scm:git:git@github.com:stefanofornari/WakeMeApp.git</developerConnection>
         <url>https://github.com/stefanofornari/WakeMeApp</url>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <profiles>
         <!-- The light macOS bundle (WakeMeApp.app, uses the Java of the Mac), built on macOS only: its JavaFX jars are
-             those of the building platform. `-Pmac-app` builds it elsewhere too (of little use there). -->
+        those of the building platform. `-Pmac-app` builds it elsewhere too (of little use there). -->
         <profile>
             <id>mac-app</id>
             <activation>
@@ -376,7 +382,7 @@
         </profile>
 
         <!-- Activate with `-Pheadful` to watch the JavaFX UI while tests run,
-             instead of the default headless (Monocle) mode. -->
+        instead of the default headless (Monocle) mode. -->
         <profile>
             <id>headful</id>
             <build>
